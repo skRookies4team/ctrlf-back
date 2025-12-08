@@ -6,11 +6,13 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 
 @Entity
 @Table(name = "rag_document_chunk", schema = "infra")
@@ -37,7 +39,8 @@ public class RagDocumentChunk {
     @Column(name = "chunk_text", columnDefinition = "text")
     private String chunkText;
 
-    /** 임베딩 벡터(pgvector); 단순 문자열로 매핑(추후 커스텀 타입 적용) */
+    /** 임베딩 벡터(pgvector) */
+    @JdbcTypeCode(Types.OTHER)
     @Column(name = "embedding", columnDefinition = "vector(1536)")
     private String embedding;
 
