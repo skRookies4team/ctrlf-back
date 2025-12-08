@@ -1,0 +1,63 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: api-gateway
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/ctrlf
+          # alternatively:
+          # jwk-set-uri: http://localhost:8080/realms/ctrlf/protocol/openid-connect/certs
+
+  cloud:
+    gateway:
+      routes:
+        - id: chat-route
+          uri: http://localhost:9001
+          predicates:
+            - Path=/api/chat/**
+          filters:
+            - StripPrefix=2
+        - id: education-route
+          uri: http://localhost:9002
+          predicates:
+            - Path=/api/edu/**
+          filters:
+            - StripPrefix=2
+        - id: infra-route
+          uri: http://localhost:9003
+          predicates:
+            - Path=/api/infra/**
+          filters:
+            - StripPrefix=2
+        - id: quiz-route
+          uri: http://localhost:9004
+          predicates:
+            - Path=/api/quiz/**
+          filters:
+            - StripPrefix=2
+
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          "[/**]":
+            allowedOrigins:
+              - http://localhost:5173
+              - http://localhost:3000
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

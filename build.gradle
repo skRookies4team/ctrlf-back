@@ -21,6 +21,14 @@ subprojects {
         mavenCentral()
     }
 
+    // Centralize BOMs for all modules (incl. api-gateway)
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.3.3"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.3"
+        }
+    }
+
     dependencies {
         compileOnly 'org.projectlombok:lombok:1.18.32'
         annotationProcessor 'org.projectlombok:lombok:1.18.32'
