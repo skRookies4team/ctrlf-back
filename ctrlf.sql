@@ -56,7 +56,8 @@ CREATE TABLE "infra"."rag_document" (
   "domain" varchar(50),
   "uploader_uuid" char(36),
   "source_url" varchar(255),
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "infra"."rag_document_chunk" (
@@ -65,7 +66,8 @@ CREATE TABLE "infra"."rag_document_chunk" (
   "chunk_index" int,
   "chunk_text" text,
   "embedding" vector(1536),
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "infra"."rag_fail_chunk" (
@@ -73,7 +75,8 @@ CREATE TABLE "infra"."rag_fail_chunk" (
   "document_id" uuid,
   "chunk_index" int,
   "fail_reason" text,
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "chat"."chat_session" (
@@ -83,7 +86,7 @@ CREATE TABLE "chat"."chat_session" (
   "domain" varchar(50),
   "created_at" timestamp,
   "updated_at" timestamp,
-  "deleted" boolean
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "chat"."chat_section" (
@@ -93,7 +96,8 @@ CREATE TABLE "chat"."chat_section" (
   "summary" text,
   "retry_count" int,
   "created_at" timestamp,
-  "closed_at" timestamp
+  "closed_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "chat"."chat_message" (
@@ -105,7 +109,8 @@ CREATE TABLE "chat"."chat_message" (
   "tokens_in" int,
   "tokens_out" int,
   "llm_model" varchar(50),
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "chat"."chat_feedback" (
@@ -116,7 +121,8 @@ CREATE TABLE "chat"."chat_feedback" (
   "user_uuid" uuid,
   "score" int,
   "comment" varchar(500),
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "chat"."chat_session_feedback" (
@@ -125,7 +131,8 @@ CREATE TABLE "chat"."chat_session_feedback" (
   "user_uuid" uuid,
   "score" int,
   "comment" text,
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "chat"."faq" (
@@ -136,7 +143,8 @@ CREATE TABLE "chat"."faq" (
   "is_active" boolean,
   "priority" int,
   "created_at" timestamp,
-  "updated_at" timestamp
+  "updated_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "chat"."faq_candidate" (
@@ -146,7 +154,8 @@ CREATE TABLE "chat"."faq_candidate" (
   "frequency" int,
   "score" float,
   "is_disabled" boolean,
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."education" (
@@ -159,7 +168,8 @@ CREATE TABLE "education"."education" (
   "pass_ratio" int,
   "require" boolean,
   "created_at" timestamp,
-  "updated_at" timestamp
+  "updated_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."education_source_doc" (
@@ -169,7 +179,8 @@ CREATE TABLE "education"."education_source_doc" (
   "file_url" varchar(255),
   "file_type" varchar(20),
   "page_count" int,
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."education_video" (
@@ -182,7 +193,8 @@ CREATE TABLE "education"."education_video" (
   "is_main" boolean,
   "status" varchar(50),
   "target_dept_code" varchar(50),
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."education_video_progress" (
@@ -195,7 +207,8 @@ CREATE TABLE "education"."education_video_progress" (
   "total_watch_seconds" int,
   "is_completed" boolean,
   "updated_at" timestamp,
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."education_script" (
@@ -205,7 +218,8 @@ CREATE TABLE "education"."education_script" (
   "version" int,
   "content" text,
   "created_by" uuid,
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."video_generation_job" (
@@ -218,7 +232,8 @@ CREATE TABLE "education"."video_generation_job" (
   "generated_video_url" varchar(255),
   "retry_count" int,
   "created_at" timestamp,
-  "updated_at" timestamp
+  "updated_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."education_progress" (
@@ -239,7 +254,8 @@ CREATE TABLE "education"."education_video_review" (
   "reviewer_uuid" uuid,
   "status" varchar(50),
   "comment" text,
-  "created_at" timestamp
+  "created_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."quiz_attempt" (
@@ -251,7 +267,8 @@ CREATE TABLE "education"."quiz_attempt" (
   "attempt_no" int,
   "created_at" timestamp,
   "time_limit" int,
-  "submitted_at" timestamp
+  "submitted_at" timestamp,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."quiz_question" (
@@ -261,7 +278,8 @@ CREATE TABLE "education"."quiz_question" (
   "options" text,
   "correct_option_idx" int,
   "explanation" text,
-  "user_selected_option_idx" int
+  "user_selected_option_idx" int,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "education"."quiz_leave_tracking" (
@@ -269,7 +287,8 @@ CREATE TABLE "education"."quiz_leave_tracking" (
   "attempt_id" uuid,
   "leave_count" int,
   "total_leave_seconds" int,
-  "last_leave_at" timestamp
+  "last_leave_at" timestamp,
+  "deleted_at" timestamp
 );
 
 COMMENT ON COLUMN "infra"."user_profile"."id" IS '프로필 PK';
@@ -352,6 +371,8 @@ COMMENT ON COLUMN "infra"."rag_document"."source_url" IS '원본 파일 URL';
 
 COMMENT ON COLUMN "infra"."rag_document"."created_at" IS '문서 등록 시각';
 
+COMMENT ON COLUMN "infra"."rag_document"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "infra"."rag_document_chunk"."id" IS '문서 청크 PK';
 
 COMMENT ON COLUMN "infra"."rag_document_chunk"."document_id" IS '원본 문서 ID';
@@ -364,6 +385,8 @@ COMMENT ON COLUMN "infra"."rag_document_chunk"."embedding" IS '임베딩 벡터'
 
 COMMENT ON COLUMN "infra"."rag_document_chunk"."created_at" IS '임베딩 생성 시각';
 
+COMMENT ON COLUMN "infra"."rag_document_chunk"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "infra"."rag_fail_chunk"."id" IS '임베딩 실패 로그 PK';
 
 COMMENT ON COLUMN "infra"."rag_fail_chunk"."document_id" IS '문서 ID';
@@ -373,6 +396,8 @@ COMMENT ON COLUMN "infra"."rag_fail_chunk"."chunk_index" IS '실패한 청크 �
 COMMENT ON COLUMN "infra"."rag_fail_chunk"."fail_reason" IS '실패 사유';
 
 COMMENT ON COLUMN "infra"."rag_fail_chunk"."created_at" IS '기록 시각';
+
+COMMENT ON COLUMN "infra"."rag_fail_chunk"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "chat"."chat_session"."id" IS '대화 세션(채팅방) PK';
 
@@ -386,7 +411,7 @@ COMMENT ON COLUMN "chat"."chat_session"."created_at" IS '세션 생성 시각';
 
 COMMENT ON COLUMN "chat"."chat_session"."updated_at" IS '마지막 메시지 업데이트 시각';
 
-COMMENT ON COLUMN "chat"."chat_session"."deleted" IS '삭제 여부(소프트 삭제)';
+COMMENT ON COLUMN "chat"."chat_session"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "chat"."chat_section"."id" IS '대화 섹션 PK';
 
@@ -401,6 +426,8 @@ COMMENT ON COLUMN "chat"."chat_section"."retry_count" IS '재질문/재시도 �
 COMMENT ON COLUMN "chat"."chat_section"."created_at" IS '섹션 시작 시각';
 
 COMMENT ON COLUMN "chat"."chat_section"."closed_at" IS '섹션 종료 시각';
+
+COMMENT ON COLUMN "chat"."chat_section"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "chat"."chat_message"."id" IS '메시지 PK';
 
@@ -420,6 +447,8 @@ COMMENT ON COLUMN "chat"."chat_message"."llm_model" IS '사용된 LLM 모델명'
 
 COMMENT ON COLUMN "chat"."chat_message"."created_at" IS '메시지 생성 시각';
 
+COMMENT ON COLUMN "chat"."chat_message"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "chat"."chat_feedback"."id" IS '메시지 피드백 PK';
 
 COMMENT ON COLUMN "chat"."chat_feedback"."session_id" IS '세션 ID';
@@ -436,6 +465,8 @@ COMMENT ON COLUMN "chat"."chat_feedback"."comment" IS '선택 코멘트';
 
 COMMENT ON COLUMN "chat"."chat_feedback"."created_at" IS '생성 시각';
 
+COMMENT ON COLUMN "chat"."chat_feedback"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "chat"."chat_session_feedback"."id" IS '세션 총평 피드백 PK';
 
 COMMENT ON COLUMN "chat"."chat_session_feedback"."session_id" IS '세션 ID';
@@ -447,6 +478,8 @@ COMMENT ON COLUMN "chat"."chat_session_feedback"."score" IS '세션 전체 만�
 COMMENT ON COLUMN "chat"."chat_session_feedback"."comment" IS '선택 의견';
 
 COMMENT ON COLUMN "chat"."chat_session_feedback"."created_at" IS '평가 시각';
+
+COMMENT ON COLUMN "chat"."chat_session_feedback"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "chat"."faq"."id" IS 'FAQ PK';
 
@@ -464,6 +497,8 @@ COMMENT ON COLUMN "chat"."faq"."created_at" IS '생성 시각';
 
 COMMENT ON COLUMN "chat"."faq"."updated_at" IS '수정 시각';
 
+COMMENT ON COLUMN "chat"."faq"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "chat"."faq_candidate"."id" IS '후보 질문 PK';
 
 COMMENT ON COLUMN "chat"."faq_candidate"."question" IS '사용자가 남긴 원본 질문';
@@ -477,6 +512,8 @@ COMMENT ON COLUMN "chat"."faq_candidate"."score" IS 'LLM 추천 점수';
 COMMENT ON COLUMN "chat"."faq_candidate"."is_disabled" IS '비활성 여부';
 
 COMMENT ON COLUMN "chat"."faq_candidate"."created_at" IS '수집 시각';
+
+COMMENT ON COLUMN "chat"."faq_candidate"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "education"."education"."id" IS '교육 PK';
 
@@ -498,6 +535,8 @@ COMMENT ON COLUMN "education"."education"."created_at" IS '생성 시각';
 
 COMMENT ON COLUMN "education"."education"."updated_at" IS '수정 시각';
 
+COMMENT ON COLUMN "education"."education"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "education"."education_source_doc"."id" IS '교육 원본 문서 PK';
 
 COMMENT ON COLUMN "education"."education_source_doc"."education_id" IS '교육 ID';
@@ -511,6 +550,8 @@ COMMENT ON COLUMN "education"."education_source_doc"."file_type" IS '파일 형�
 COMMENT ON COLUMN "education"."education_source_doc"."page_count" IS '페이지 수';
 
 COMMENT ON COLUMN "education"."education_source_doc"."created_at" IS '업로드 시각';
+
+COMMENT ON COLUMN "education"."education_source_doc"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "education"."education_video"."id" IS '교육 영상 PK';
 
@@ -532,6 +573,8 @@ COMMENT ON COLUMN "education"."education_video"."target_dept_code" IS '대상 �
 
 COMMENT ON COLUMN "education"."education_video"."created_at" IS '생성 시각';
 
+COMMENT ON COLUMN "education"."education_video"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "education"."education_video_progress"."id" IS '영상별 시청 진행도 PK';
 
 COMMENT ON COLUMN "education"."education_video_progress"."user_uuid" IS '사용자 UUID';
@@ -552,6 +595,8 @@ COMMENT ON COLUMN "education"."education_video_progress"."updated_at" IS '갱신
 
 COMMENT ON COLUMN "education"."education_video_progress"."created_at" IS '생성 시각';
 
+COMMENT ON COLUMN "education"."education_video_progress"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "education"."education_script"."id" IS '스크립트 버전 PK';
 
 COMMENT ON COLUMN "education"."education_script"."education_id" IS '교육 ID';
@@ -565,6 +610,8 @@ COMMENT ON COLUMN "education"."education_script"."content" IS '스크립트 내�
 COMMENT ON COLUMN "education"."education_script"."created_by" IS '스크립트 작성자 UUID';
 
 COMMENT ON COLUMN "education"."education_script"."created_at" IS '작성 시각';
+
+COMMENT ON COLUMN "education"."education_script"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "education"."video_generation_job"."id" IS '영상 생성 작업 PK';
 
@@ -585,6 +632,8 @@ COMMENT ON COLUMN "education"."video_generation_job"."retry_count" IS '재시도
 COMMENT ON COLUMN "education"."video_generation_job"."created_at" IS '생성 시각';
 
 COMMENT ON COLUMN "education"."video_generation_job"."updated_at" IS '갱신 시각';
+
+COMMENT ON COLUMN "education"."video_generation_job"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "education"."education_progress"."id" IS '학습 진행도 PK';
 
@@ -616,6 +665,8 @@ COMMENT ON COLUMN "education"."education_video_review"."comment" IS '검토 코�
 
 COMMENT ON COLUMN "education"."education_video_review"."created_at" IS '검토 시각';
 
+COMMENT ON COLUMN "education"."education_video_review"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "education"."quiz_attempt"."id" IS '퀴즈 시도 PK';
 
 COMMENT ON COLUMN "education"."quiz_attempt"."user_uuid" IS '사용자 UUID';
@@ -634,6 +685,8 @@ COMMENT ON COLUMN "education"."quiz_attempt"."time_limit" IS '시간 제한(초)
 
 COMMENT ON COLUMN "education"."quiz_attempt"."submitted_at" IS '제출 시각';
 
+COMMENT ON COLUMN "education"."quiz_attempt"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "education"."quiz_question"."id" IS '생성된 퀴즈 문항 PK';
 
 COMMENT ON COLUMN "education"."quiz_question"."attempt_id" IS '시도 ID';
@@ -648,6 +701,8 @@ COMMENT ON COLUMN "education"."quiz_question"."explanation" IS '해설';
 
 COMMENT ON COLUMN "education"."quiz_question"."user_selected_option_idx" IS '사용자 선택 보기';
 
+COMMENT ON COLUMN "education"."quiz_question"."deleted_at" IS '삭제 시각';
+
 COMMENT ON COLUMN "education"."quiz_leave_tracking"."id" IS '이탈 로그 PK';
 
 COMMENT ON COLUMN "education"."quiz_leave_tracking"."attempt_id" IS '시도 ID';
@@ -657,6 +712,8 @@ COMMENT ON COLUMN "education"."quiz_leave_tracking"."leave_count" IS '탭/창 �
 COMMENT ON COLUMN "education"."quiz_leave_tracking"."total_leave_seconds" IS '이탈 누적 시간(초)';
 
 COMMENT ON COLUMN "education"."quiz_leave_tracking"."last_leave_at" IS '마지막 이탈 시각';
+
+COMMENT ON COLUMN "education"."quiz_leave_tracking"."deleted_at" IS '삭제 시각';
 
 ALTER TABLE "chat"."chat_section" ADD FOREIGN KEY ("session_id") REFERENCES "chat"."chat_session" ("id");
 
