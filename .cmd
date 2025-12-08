@@ -3,7 +3,7 @@ docker exec -it platform-postgres psql -U postgres -d db
 # 실행
 ./gradlew :chat-service:bootRun
 ./gradlew :education-service:bootRun
-그럼 
+./gradlew :infra-service:bootRun
 ./gradlew :chat-service:bootRun
 ./gradlew :api-gateway:bootRun
  
