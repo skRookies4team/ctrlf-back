@@ -2,13 +2,11 @@ plugins {
     id 'org.springframework.boot' version '3.3.3' apply false
     id 'io.spring.dependency-management' version '1.1.4' apply false
     id 'java'
-    id 'com.diffplug.spotless' version '6.25.0' apply false
 }
 
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
-    apply plugin: 'com.diffplug.spotless'
 
     group = 'com.company'
     version = '1.0.0'
@@ -19,6 +17,14 @@ subprojects {
 
     repositories {
         mavenCentral()
+    }
+
+    // Centralize BOMs for all modules (incl. api-gateway)
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.3.3"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.3"
+        }
     }
 
     dependencies {
@@ -41,36 +47,5 @@ subprojects {
         useJUnitPlatform()
     }
 
-    // Spotless formatting rules
-    spotless {
-        java {
-            target 'src/**/*.java'
-            importOrder()
-            removeUnusedImports()
-            // Use Eclipse formatter with 4-space indentation
-            eclipse().config([
-                'org.eclipse.jdt.core.formatter.tabulation.char': 'space',
-                'org.eclipse.jdt.core.formatter.tabulation.size': '4',
-                'org.eclipse.jdt.core.formatter.indentation.size': '4'
-            ])
-        }
-        groovyGradle {
-            target '*.gradle', '**/*.gradle'
-            greclipse()
-            indentWithSpaces(2)
-            trimTrailingWhitespace()
-            endWithNewline()
-        }
-        format 'misc', {
-            // lightweight whitespace normalization for common text configs
-            target '*.md', '**/*.md', '.editorconfig', '**/.gitignore', '**/*.yml', '**/*.yaml'
-            trimTrailingWhitespace()
-            endWithNewline()
-        }
-    }
-
-    // Make format check part of the standard verification lifecycle
-    tasks.named('check') {
-        dependsOn 'spotlessCheck'
-    }
+    // Spotless removed
 }

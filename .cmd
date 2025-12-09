@@ -5,6 +5,7 @@ docker exec -it platform-postgres psql -U postgres -d db
 ./gradlew :education-service:bootRun
 ./gradlew :infra-service:bootRun
 ./gradlew :chat-service:bootRun
+./gradlew :api-gateway:bootRun
  
 # DB (Docker Compose)
 

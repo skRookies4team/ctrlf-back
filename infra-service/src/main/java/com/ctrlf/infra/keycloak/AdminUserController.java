@@ -1,6 +1,7 @@
 package com.ctrlf.infra.keycloak;
 
 import com.ctrlf.infra.keycloak.dto.UserRequestDto;
+import com.ctrlf.infra.keycloak.dto.PasswordTokenRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -10,7 +11,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,9 +35,12 @@ import java.util.Map;
 public class AdminUserController {
 
     private final KeycloakAdminService service;
+    private final KeycloakAdminProperties props;
+    private final RestTemplate restTemplate = new RestTemplate();
 
-    public AdminUserController(KeycloakAdminService service) {
+    public AdminUserController(KeycloakAdminService service, KeycloakAdminProperties props) {
         this.service = service;
+        this.props = props;
     }
 
     @GetMapping
@@ -151,6 +161,59 @@ public class AdminUserController {
     ) {
         service.resetPassword(userId, req.getValue(), req.getTemporary() != null ? req.getTemporary() : false);
         return ResponseEntity.noContent().build();
+    }
+
+    // ===== Development helper: issue Keycloak tokens (exposed under /admin/users/token/**) =====
+
+    private String tokenEndpoint() {
+        return props.getBaseUrl() + "/realms/" + props.getRealm() + "/protocol/openid-connect/token";
+    }
+
+    @PostMapping("/token/client")
+    @Operation(
+        summary = "[DEV] client_credentials 토큰 발급",
+        description = "keycloak.admin(client_id / client_secret)로 client_credentials 토큰을 발급합니다.",
+        security = {}
+    )
+    public ResponseEntity<Map> clientCredentialsToken() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "client_credentials");
+        form.add("client_id", props.getClientId());
+        form.add("client_secret", props.getClientSecret());
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(form, headers);
+        Map body = restTemplate.postForObject(tokenEndpoint(), entity, Map.class);
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/token/password")
+    @Operation(
+        summary = "[DEV] password(grant) 토큰 발급",
+        description = "username/password로 토큰 발급(Direct Access Grants). clientId/Secret 미지정 시 keycloak.admin 설정 사용.",
+        security = {}
+    )
+    public ResponseEntity<Map> passwordToken(@RequestBody PasswordTokenRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        String clientId = (request.getClientId() != null && !request.getClientId().isBlank())
+            ? request.getClientId() : props.getClientId();
+        String clientSecret = (request.getClientSecret() != null && !request.getClientSecret().isBlank())
+            ? request.getClientSecret() : props.getClientSecret();
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "password");
+        form.add("client_id", clientId);
+        if (clientSecret != null && !clientSecret.isBlank()) {
+            form.add("client_secret", clientSecret);
+        }
+        form.add("username", request.getUsername());
+        form.add("password", request.getPassword());
+        if (request.getScope() != null && !request.getScope().isBlank()) {
+            form.add("scope", request.getScope());
+        }
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(form, headers);
+        Map body = restTemplate.postForObject(tokenEndpoint(), entity, Map.class);
+        return ResponseEntity.ok(body);
     }
 }
 

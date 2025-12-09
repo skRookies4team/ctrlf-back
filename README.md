@@ -39,7 +39,8 @@ docker compose up -d
 ./gradlew :chat-service:bootRun
 ./gradlew :education-service:bootRun
 ./gradlew :infra-service:bootRun
-./gradlew :quiz-service:bootRun
+./gradlew :chat-service:bootRun
+./gradlew :api-gateway:bootRun
 ```
 
 - DB 연결 정보는 각 서비스의 `application.yml`에 정의되어 있습니다(호스트 기준 `localhost:5432`).
