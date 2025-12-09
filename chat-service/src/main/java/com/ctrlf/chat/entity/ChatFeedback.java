@@ -1,11 +1,6 @@
 package com.ctrlf.chat.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
@@ -52,5 +47,9 @@ public class ChatFeedback {
     /** 생성 시각 */
     @Column(name = "created_at")
     private Instant createdAt;
-}
 
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = Instant.now();
+    }
+}

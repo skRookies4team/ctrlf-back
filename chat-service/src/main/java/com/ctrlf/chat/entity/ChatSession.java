@@ -1,11 +1,6 @@
 package com.ctrlf.chat.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
@@ -45,8 +40,31 @@ public class ChatSession {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    /** 삭제 플래그(마이그레이션: deleted 또는 deleted_at 대체) */
+    /** 삭제 플래그 */
     @Column(name = "deleted")
     private Boolean deleted;
-}
 
+    // ✅ 자동 생성 시간 세팅
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+        this.deleted = false;
+    }
+
+    // ✅ 수정 시간 자동 갱신
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = Instant.now();
+    }
+
+    // ✅ 세션 제목 수정
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    // ✅ Soft Delete
+    public void softDelete() {
+        this.deleted = true;
+    }
+}
