@@ -1,4 +1,4 @@
 package com.ctrlf.chat.repository;
 
-public interface ChatSessionFeedbackRepository {
+public class ChatSessionFeedbackRepository {
 }
