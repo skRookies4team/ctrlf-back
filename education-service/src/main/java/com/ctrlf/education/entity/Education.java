@@ -9,6 +9,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
@@ -34,8 +36,9 @@ public class Education {
     private String title;
 
     /** 카테고리(예: MANDATORY, JOB, ETC) */
+    @Enumerated(EnumType.STRING)
     @Column(name = "category")
-    private String category;
+    private EducationCategory category;
 
     /** 대상 부서 범위(JSON 문자열; 부서 코드 배열을 직렬화) */
     @Column(name = "department_scope")

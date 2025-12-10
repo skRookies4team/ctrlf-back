@@ -1,14 +1,15 @@
 package com.ctrlf.education.service;
 
+import com.ctrlf.common.dto.MutationResponse;
 import com.ctrlf.education.dto.EducationRequests.CreateEducationRequest;
 import com.ctrlf.education.dto.EducationRequests.UpdateEducationRequest;
 import com.ctrlf.education.dto.EducationRequests.VideoProgressUpdateRequest;
 import com.ctrlf.education.dto.EducationResponses;
 import com.ctrlf.education.dto.EducationResponses.EducationDetailResponse;
 import com.ctrlf.education.dto.EducationResponses.EducationVideosResponse;
-import com.ctrlf.education.dto.EducationResponses.MandatoryEducationDto;
 import com.ctrlf.education.dto.EducationResponses.VideoProgressResponse;
 import com.ctrlf.education.entity.Education;
+import com.ctrlf.education.entity.EducationCategory;
 import com.ctrlf.education.entity.EducationVideo;
 import com.ctrlf.education.entity.EducationVideoProgress;
 import com.ctrlf.education.repository.EducationRepository;
@@ -55,7 +56,7 @@ public class EducationService {
      * @return 생성된 교육 ID
      */
     @Transactional
-    public UUID createEducation(CreateEducationRequest req) {
+    public MutationResponse<UUID> createEducation(CreateEducationRequest req) {
         validateCreate(req);
         String departmentScopeJson = null;
         if (req.getDepartmentScope() != null) {
@@ -66,17 +67,30 @@ public class EducationService {
         }
         Education e = new Education();
         e.setTitle(req.getTitle());
-        e.setCategory(req.getCategory());
+        e.setCategory(parseCategory(req.getCategory()));
         e.setDepartmentScope(departmentScopeJson);
         e.setDescription(req.getDescription());
         e.setPassScore(req.getPassScore());
         e.setPassRatio(req.getPassRatio());
         e.setRequire(req.getRequire());
-        return educationRepository.save(e).getId();
+        UUID id = educationRepository.save(e).getId();
+        return new MutationResponse<>(id);
     }
 
     /**
-     * 교육 목록 조회(간략 정보).
+     * 교육 생성 - 표준 MutationResponse 형태 반환.
+     */
+    @Transactional
+    public MutationResponse<UUID> createEducationMutation(CreateEducationRequest req) {
+        MutationResponse<UUID> id = createEducation(req);
+        return id;
+    }
+
+    /**
+     * 교육 목록 조회(사용자 기준).
+     *
+     * - 카테고리/필수 여부/이수 상태(미이수/진행중/완료)/제목/설명/대상 부서를 반환합니다.
+     * - sort: UPDATED(최신 업데이트순), TITLE(제목 오름차순)
      *
      * @param page 페이지 번호(0-base)
      * @param size 페이지 크기
@@ -84,16 +98,25 @@ public class EducationService {
      * @param yearFilter 연도 필터
      * @param categoryFilter 카테고리 필터(MANDATORY/JOB/ETC)
      * @param userUuid 사용자 UUID(옵션)
-     * @return 간략 정보 DTO 목록
+     * @param sort 정렬 기준(UPDATED|TITLE)
+     * @return 목록 DTO
      */
-    public List<MandatoryEducationDto> getEducations(
+    public List<EducationResponses.EducationListItem> getEducationsMe(
         Integer page,
         Integer size,
         Optional<Boolean> completedFilter,
         Optional<Integer> yearFilter,
         Optional<String> categoryFilter,
-        Optional<UUID> userUuid
+        Optional<UUID> userUuid,
+        String sort
     ) {
+        // sort 유효성 검증: 허용값(UPDATED|TITLE)이 아니면 400
+        if (StringUtils.hasText(sort)) {
+            String s = sort.trim().toUpperCase();
+            if (!s.equals("UPDATED") && !s.equals("TITLE")) {
+                throw new IllegalArgumentException("invalid sort: " + sort + " (allowed: UPDATED, TITLE)");
+            }
+        }
         int pageSafe = page == null ? 0 : Math.max(page, 0);
         int sizeSafe = size == null ? 10 : Math.min(Math.max(size, 1), 100);
         int offset = pageSafe * sizeSafe;
@@ -104,21 +127,52 @@ public class EducationService {
 
         Optional<Boolean> effectiveCompleted = userUuid.isPresent() ? completedFilter : Optional.empty();
 
+        // 정렬 키 정규화: 기본 UPDATED, 제목순은 TITLE
+        String sortKey = (!StringUtils.hasText(sort) || "UPDATED".equalsIgnoreCase(sort.trim())) ? "UPDATED" : "TITLE";
         List<Object[]> rows = educationRepository.findEducationsNative(
             offset,
             sizeSafe,
             effectiveCompleted.orElse(null),
             yearFilter.orElse(null),
             sanitizedCategory.orElse(null),
-            userUuid.orElse(null)
+            userUuid.orElse(null),
+            sortKey
         );
-        List<MandatoryEducationDto> result = new ArrayList<>();
+        List<EducationResponses.EducationListItem> result = new ArrayList<>();
         for (Object[] r : rows) {
             UUID id = (UUID) r[0];
             String title = (String) r[1];
-            Boolean required = (Boolean) r[2];
-            Boolean isCompleted = (Boolean) r[3];
-            result.add(new MandatoryEducationDto(id, title, isCompleted != null && isCompleted, required != null && required));
+            String description = (String) r[2];
+            String category = (String) r[3];
+            Boolean required = (Boolean) r[4];
+            String deptScopeJson = (String) r[5];
+            Boolean isCompleted = (Boolean) r[6];
+            Boolean hasProgress = (Boolean) r[7];
+            List<String> targetDepts = new ArrayList<>();
+            if (deptScopeJson != null && !deptScopeJson.isBlank()) {
+                try {
+                    targetDepts = objectMapper.readValue(deptScopeJson, objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                } catch (Exception ignored) {
+                }
+            }
+            // 이수 상태 계산: 완료 > 진행중(진행내역 존재) > 미이수
+            String status;
+            if (Boolean.TRUE.equals(isCompleted)) {
+                status = "완료";
+            } else if (Boolean.TRUE.equals(hasProgress)) {
+                status = "진행중";
+            } else {
+                status = "미이수";
+            }
+            result.add(new EducationResponses.EducationListItem(
+                id,
+                title,
+                description,
+                category,
+                required != null && required,
+                status,
+                targetDepts
+            ));
         }
         return result;
     }
@@ -162,7 +216,7 @@ public class EducationService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
         if (StringUtils.hasText(req.getTitle())) e.setTitle(req.getTitle());
         if (req.getDescription() != null) e.setDescription(req.getDescription());
-        if (StringUtils.hasText(req.getCategory())) e.setCategory(req.getCategory());
+        if (StringUtils.hasText(req.getCategory())) e.setCategory(parseCategory(req.getCategory()));
         if (req.getRequire() != null) e.setRequire(req.getRequire());
         if (req.getPassScore() != null) e.setPassScore(req.getPassScore());
         if (req.getPassRatio() != null) e.setPassRatio(req.getPassRatio());
@@ -177,6 +231,15 @@ public class EducationService {
     }
 
     /**
+     * 교육 수정 - 표준 MutationResponse 형태 반환.
+     */
+    @Transactional
+    public MutationResponse<UUID> updateEducationMutation(UUID id, UpdateEducationRequest req) {
+        updateEducation(id, req);
+        return new MutationResponse<>(id);
+    }
+
+    /**
      * 교육 삭제.
      * 연관된 영상/진행 정보는 단순 삭제 처리합니다.
      *
@@ -184,12 +247,15 @@ public class EducationService {
      */
     @Transactional
     public void deleteEducation(UUID id) {
-        // 연관 리소스 정리는 간단 처리(필요시 CASCADE/소프트삭제로 대체)
-        educationVideoProgressRepository.deleteByEducationId(id);
-        educationVideoRepository.deleteByEducationId(id);
-        educationRepository.deleteById(id);
+        educationVideoProgressRepository.softDeleteByEducationId(id);
+        educationVideoRepository.softDeleteByEducationId(id);
+        int affected = educationRepository.softDeleteById(id);
+        if (affected == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found");
+        }
+        return new MutationResponse<>(id);
     }
-
+    
     /**
      * 교육 영상 목록 조회. 사용자 UUID가 있으면 각 영상의 진행률 정보를 포함합니다.
      *
@@ -346,6 +412,22 @@ public class EducationService {
         if (!StringUtils.hasText(req.getTitle())) throw new IllegalArgumentException("title is required");
         if (!StringUtils.hasText(req.getCategory())) throw new IllegalArgumentException("category is required");
         if (req.getRequire() == null) throw new IllegalArgumentException("require is required");
+    }
+
+    /**
+     * 문자열 카테고리를 enum(EducationCategory)으로 변환.
+     * - 허용값: MANDATORY, JOB, ETC (대소문자 무시)
+     */
+    private EducationCategory parseCategory(String category) {
+        String normalized = category == null ? null : category.trim().toUpperCase();
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("category is required");
+        }
+        try {
+            return EducationCategory.valueOf(normalized);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("invalid category: " + category + " (allowed: MANDATORY, JOB, ETC)");
+        }
     }
 }
 

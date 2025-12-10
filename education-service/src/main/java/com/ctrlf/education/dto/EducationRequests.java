@@ -3,6 +3,7 @@ package com.ctrlf.education.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -27,6 +28,7 @@ public final class EducationRequests {
         private String description;
         // 카테고리 (필수) 예) MANDATORY, JOB, ETC
         @NotBlank
+        @Schema(description = "카테고리 (MANDATORY, JOB, ETC)", allowableValues = {"MANDATORY", "JOB", "ETC"}, example = "MANDATORY")
         private String category;
         // 필수 교육인지 여부
         @NotNull
@@ -50,6 +52,7 @@ public final class EducationRequests {
         private String title;
         private String description;
         // 카테고리 예) MANDATORY, JOB, ETC
+        @Schema(description = "카테고리 (MANDATORY, JOB, ETC)", allowableValues = {"MANDATORY", "JOB", "ETC"})
         private String category;
         private Boolean require;
         // 통과 기준 점수

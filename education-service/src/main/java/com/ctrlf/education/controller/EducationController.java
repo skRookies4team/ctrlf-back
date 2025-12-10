@@ -1,14 +1,13 @@
 package com.ctrlf.education.controller;
 
+import com.ctrlf.common.dto.MutationResponse;
 import com.ctrlf.education.dto.EducationRequests.CreateEducationRequest;
 import com.ctrlf.education.dto.EducationRequests.UpdateEducationRequest;
 import com.ctrlf.education.dto.EducationRequests.VideoProgressUpdateRequest;
-import com.ctrlf.education.dto.EducationResponses.CreateEducationResponse;
+import com.ctrlf.education.dto.SortOption;
 import com.ctrlf.education.dto.EducationResponses.EducationDetailResponse;
 import com.ctrlf.education.dto.EducationResponses.EducationVideosResponse;
-import com.ctrlf.education.dto.EducationResponses.MandatoryEducationDto;
 import com.ctrlf.education.dto.EducationResponses.VideoProgressResponse;
-import com.ctrlf.education.dto.EducationResponses.UpdateEducationResponse;
 
 import com.ctrlf.education.service.EducationService;
 import java.net.URI;
@@ -38,6 +37,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 /**
  * 교육 도메인 REST 컨트롤러.
  * <p>
@@ -50,14 +50,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @Tag(name = "Education", description = "교육 리소스 API")
 @SecurityRequirement(name = "bearer-jwt")
+@RequiredArgsConstructor
 @RequestMapping
 public class EducationController {
 
     private final EducationService educationService;
-
-    public EducationController(EducationService educationService) {
-        this.educationService = educationService;
-    }
 
     /**
      * 교육 생성.
@@ -71,11 +68,11 @@ public class EducationController {
         @ApiResponse(responseCode = "201", description = "생성됨"),
         @ApiResponse(responseCode = "400", description = "잘못된 요청")
     })
-    public ResponseEntity<CreateEducationResponse> createEducation(@jakarta.validation.Valid @RequestBody CreateEducationRequest req) {
-        UUID id = educationService.createEducation(req);
+    public ResponseEntity<MutationResponse<UUID>> createEducation(@jakarta.validation.Valid @RequestBody CreateEducationRequest req) {
+        MutationResponse<UUID> res = educationService.createEducation(req);
         return ResponseEntity
-            .created(URI.create("/edu/" + id))
-            .body(new CreateEducationResponse(id));
+            .created(URI.create("/edu/" + res.getId()))
+            .body(res);
     }
 
     /**
@@ -89,23 +86,23 @@ public class EducationController {
      * @param jwt 인증 토큰
      * @return 간략 교육 목록
      */
-    @GetMapping("/edus")
-    @Operation(summary = "교육 목록 조회", description = "페이지네이션 및 필터로 교육 목록을 조회합니다.")
+    @GetMapping("/edus/me")
+    @Operation(summary = "사용자 자신 교육 목록 조회", description = "페이지네이션 및 필터로 교육 목록을 조회합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "성공")
     })
-    public ResponseEntity<List<MandatoryEducationDto>> getEducations(
+    public ResponseEntity<List<com.ctrlf.education.dto.EducationResponses.EducationListItem>> getEducationsMe(
         @Parameter(description = "페이지 번호(0-base)") @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
         @Parameter(description = "페이지 크기(기본 10)") @RequestParam(name = "size", required = false, defaultValue = "10") Integer size,
         @Parameter(description = "이수 여부 필터") @RequestParam(name = "completed", required = false) Boolean completed,
         @Parameter(description = "연도 필터") @RequestParam(name = "year", required = false) Integer year,
         @Parameter(description = "카테고리 필터(MANDATORY/JOB/ETC)") @RequestParam(name = "category", required = false) String category,
+        @Parameter(description = "정렬 기준") @RequestParam(name = "sort", required = false, defaultValue = "UPDATED") SortOption sort,
         @AuthenticationPrincipal Jwt jwt
     ) {
         Optional<UUID> userUuid = SecurityUtils.extractUserUuid(jwt);
-        
-        List<MandatoryEducationDto> result = educationService.getEducations(
-            page, size, Optional.ofNullable(completed), Optional.ofNullable(year), Optional.ofNullable(category), userUuid
+        List<com.ctrlf.education.dto.EducationResponses.EducationListItem> result = educationService.getEducationsMe(
+            page, size, Optional.ofNullable(completed), Optional.ofNullable(year), Optional.ofNullable(category), userUuid, sort.name()
         );
         return ResponseEntity.ok(result);
     }

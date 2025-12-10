@@ -96,16 +96,20 @@ public final class EducationResponses {
     }
 
     /**
-     * 교육 목록 조회용 간략 DTO.
-     * 필수 여부와 이수 상태를 함께 제공합니다.
+     * 교육 목록 조회 응답(확장).
+     * 카테고리/필수 여부/이수 상태/제목/설명/대상 부서를 제공합니다.
      */
     @Getter
     @AllArgsConstructor
-    public static class MandatoryEducationDto {
+    public static class EducationListItem {
         private UUID id;
         private String title;
-        private boolean isCompleted;
+        private String description;
+        private String category;
         private boolean required;
+        /** 미이수/진행중/완료 */
+        private String status;
+        private List<String> targetDepartments;
     }
 
     /**
