@@ -34,14 +34,24 @@ public class ChatMessageController {
         );
     }
 
-    // ✅ 메시지 목록 조회
+    // ✅ ✅ 특정 섹션 메시지 조회
     @GetMapping("/sessions/{sessionId}/sections/{sectionId}/messages")
-    public ResponseEntity<List<ChatMessage>> getMessages(
+    public ResponseEntity<List<ChatMessage>> getMessagesBySection(
         @PathVariable UUID sessionId,
         @PathVariable UUID sectionId
     ) {
         return ResponseEntity.ok(
             chatMessageService.getMessages(sessionId, sectionId)
+        );
+    }
+
+    // ✅ ✅ ✅ 세션 전체 메시지 조회 (신규 분리)
+    @GetMapping("/sessions/{sessionId}/sections/messages")
+    public ResponseEntity<List<ChatMessage>> getMessagesBySession(
+        @PathVariable UUID sessionId
+    ) {
+        return ResponseEntity.ok(
+            chatMessageService.getMessagesBySession(sessionId)
         );
     }
 
@@ -55,4 +65,16 @@ public class ChatMessageController {
             chatMessageService.retryMessage(sessionId, sectionId)
         );
     }
+
+    // ✅ Regen (재생성)
+    @PostMapping("/sessions/{sessionId}/sections/{sectionId}/regen")
+    public ResponseEntity<ChatMessage> regenMessage(
+        @PathVariable UUID sessionId,
+        @PathVariable UUID sectionId
+    ) {
+        return ResponseEntity.ok(
+            chatMessageService.regenMessage(sessionId, sectionId)
+        );
+    }
 }
+

@@ -1,4 +1,7 @@
 package com.ctrlf.chat.dto.request;
 
-public class ChatSessionFeedbackRequest {
+public record ChatSessionFeedbackRequest(
+    Integer score,   // 1~5
+    String comment
+) {
 }

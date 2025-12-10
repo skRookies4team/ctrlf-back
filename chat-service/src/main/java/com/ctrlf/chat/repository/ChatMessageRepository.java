@@ -15,12 +15,18 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
         UUID sectionId
     );
 
-    // ✅ Retry용 최신 메시지
+    // ✅ Retry / Regen 최신 메시지 조회
     Optional<ChatMessage> findTopBySessionIdAndSectionIdOrderByCreatedAtDesc(
         UUID sessionId,
         UUID sectionId
     );
 
-    // ✅ ✅ ✅ 세션 히스토리용 (🔥 이게 없어서 터졌던 거)
-    List<ChatMessage> findAllBySessionId(UUID sessionId);
+    // ✅ ✅ ✅ 세션 전체 메시지 조회
+    List<ChatMessage> findAllBySessionIdOrderByCreatedAtAsc(UUID sessionId);
+
+    // ✅ ✅ ✅ 섹션 요약용 (신규 추가)
+    List<ChatMessage> findAllBySessionIdAndSectionId(
+        UUID sessionId,
+        UUID sectionId
+    );
 }

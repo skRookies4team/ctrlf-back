@@ -100,7 +100,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         );
     }
 
-    // ✅ 세션 삭제
+    // ✅ 세션 삭제 (Soft Delete)
     @Override
     public void deleteSession(UUID sessionId) {
         ChatSession session = chatSessionRepository.findActiveById(sessionId);
@@ -112,7 +112,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         session.softDelete();
     }
 
-    // ✅ ✅ ✅ 세션 히스토리 조회 (최종 정상 버전)
+    // ✅ ✅ ✅ 세션 히스토리 조회 (🔥 완전 최종 정상 버전)
     @Override
     public ChatSessionHistoryResponse getSessionHistory(UUID sessionId) {
         ChatSession session = chatSessionRepository.findActiveById(sessionId);
@@ -121,9 +121,9 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             throw new ChatSessionNotFoundException();
         }
 
-        // ✅ 현재 존재하는 Repository 메서드 사용
+        // ✅ 여기만 바뀐 핵심 부분
         List<ChatMessage> messages =
-            chatMessageRepository.findAllBySessionId(sessionId);
+            chatMessageRepository.findAllBySessionIdOrderByCreatedAtAsc(sessionId);
 
         return new ChatSessionHistoryResponse(
             session.getId(),
