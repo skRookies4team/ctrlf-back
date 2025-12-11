@@ -2,6 +2,7 @@ package com.ctrlf.infra.s3.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,11 +23,14 @@ public final class PresignDtos {
     @NoArgsConstructor
     public static class UploadRequest {
         @NotBlank
+        @Schema(example = "test.png")
         private String filename;
         @NotBlank
+        @Schema(example = "image/png")
         private String contentType;
         @NotBlank
         @Pattern(regexp = "^(image|docs|video)$", message = "type must be one of: image, docs, video")
+        @Schema(allowableValues = {"image","docs","video"}, example = "image")
         private String type;
     }
 

@@ -46,5 +46,5 @@ app:
       enabled: false
 
   s3:
-    bucket: your-bucket-name
+    bucket: ctrl-s3
     ttlSeconds: 600
