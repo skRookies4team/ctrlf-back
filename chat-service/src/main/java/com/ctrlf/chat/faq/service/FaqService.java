@@ -3,6 +3,7 @@ package com.ctrlf.chat.faq.service;
 import com.ctrlf.chat.faq.dto.request.FaqCreateRequest;
 import com.ctrlf.chat.faq.dto.request.FaqUpdateRequest;
 import com.ctrlf.chat.faq.dto.response.FaqResponse;
+import com.ctrlf.chat.faq.dto.response.FaqCandidateResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -16,4 +17,7 @@ public interface FaqService {
     void delete(UUID id);
 
     List<FaqResponse> getAll();
+
+    // ✅ 추가됨: FAQ 후보 목록 조회
+    List<FaqCandidateResponse> getCandidates();
 }

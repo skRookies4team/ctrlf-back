@@ -4,10 +4,9 @@ import java.util.UUID;
 
 public interface ChatFeedbackService {
 
-    // ✅ 메시지 피드백
+    // ✅ 메시지 피드백 (sectionId 제거)
     void submitMessageFeedback(
         UUID sessionId,
-        UUID sectionId,
         UUID messageId,
         UUID userUuid,
         Integer score,

@@ -3,6 +3,7 @@ package com.ctrlf.chat.faq.controller;
 import com.ctrlf.chat.faq.dto.request.FaqCreateRequest;
 import com.ctrlf.chat.faq.dto.request.FaqUpdateRequest;
 import com.ctrlf.chat.faq.dto.response.FaqResponse;
+import com.ctrlf.chat.faq.dto.response.FaqCandidateResponse;
 import com.ctrlf.chat.faq.service.FaqService;
 import java.util.List;
 import java.util.UUID;
@@ -40,9 +41,15 @@ public class FaqController {
         return ResponseEntity.ok().build();
     }
 
-    // ✅ FAQ 조회 (유저)
+    // ✅ FAQ 전체 조회 (유저)
     @GetMapping
     public ResponseEntity<List<FaqResponse>> getAll() {
         return ResponseEntity.ok(faqService.getAll());
+    }
+
+    // ✅ FAQ 후보 목록 조회 (유저/관리자)
+    @GetMapping("/candidates")
+    public ResponseEntity<List<FaqCandidateResponse>> getCandidates() {
+        return ResponseEntity.ok(faqService.getCandidates());
     }
 }

@@ -23,9 +23,6 @@ public class ChatMessage {
     @Column(name = "session_id", nullable = false)
     private UUID sessionId;
 
-    @Column(name = "section_id", nullable = false)
-    private UUID sectionId;
-
     @Column(nullable = false, length = 20)
     private String role; // user / assistant
 
@@ -49,20 +46,16 @@ public class ChatMessage {
         this.createdAt = Instant.now();
     }
 
-    // ✅ USER 메시지
-    public static ChatMessage userMessage(UUID sessionId, UUID sectionId, String content) {
+    public static ChatMessage userMessage(UUID sessionId, String content) {
         ChatMessage m = new ChatMessage();
         m.sessionId = sessionId;
-        m.sectionId = sectionId;
         m.role = "user";
         m.content = content;
         return m;
     }
 
-    // ✅ AI 메시지
     public static ChatMessage assistantMessage(
         UUID sessionId,
-        UUID sectionId,
         String content,
         Integer tokensIn,
         Integer tokensOut,
@@ -70,7 +63,6 @@ public class ChatMessage {
     ) {
         ChatMessage m = new ChatMessage();
         m.sessionId = sessionId;
-        m.sectionId = sectionId;
         m.role = "assistant";
         m.content = content;
         m.tokensIn = tokensIn;

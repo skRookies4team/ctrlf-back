@@ -17,12 +17,10 @@ public class ChatFeedbackController {
 
     private final ChatFeedbackService chatFeedbackService;
 
-    // ✅ ✅ ✅ 메시지별 피드백만 담당
-    // POST /chat/sessions/{sessionId}/sections/{sectionId}/messages/{messageId}/feedback
-    @PostMapping("/sessions/{sessionId}/sections/{sectionId}/messages/{messageId}/feedback")
+    // ✅ 메시지 피드백 (섹션 제거)
+    @PostMapping("/sessions/{sessionId}/messages/{messageId}/feedback")
     public ResponseEntity<Void> messageFeedback(
         @PathVariable UUID sessionId,
-        @PathVariable UUID sectionId,
         @PathVariable UUID messageId,
         @RequestBody ChatFeedbackRequest request,
         @AuthenticationPrincipal Jwt jwt
@@ -31,7 +29,6 @@ public class ChatFeedbackController {
 
         chatFeedbackService.submitMessageFeedback(
             sessionId,
-            sectionId,
             messageId,
             userUuid,
             request.score(),

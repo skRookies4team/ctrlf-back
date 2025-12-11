@@ -12,8 +12,6 @@ public interface ChatSessionService {
 
     ChatSessionResponse createSession(ChatSessionCreateRequest request);
 
-    ChatSessionResponse getSession(UUID sessionId);
-
     List<ChatSessionResponse> getSessionList();
 
     ChatSessionResponse updateSession(UUID sessionId, ChatSessionUpdateRequest request);

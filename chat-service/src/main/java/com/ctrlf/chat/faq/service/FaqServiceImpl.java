@@ -3,9 +3,12 @@ package com.ctrlf.chat.faq.service;
 import com.ctrlf.chat.faq.dto.request.FaqCreateRequest;
 import com.ctrlf.chat.faq.dto.request.FaqUpdateRequest;
 import com.ctrlf.chat.faq.dto.response.FaqResponse;
+import com.ctrlf.chat.faq.dto.response.FaqCandidateResponse;
 import com.ctrlf.chat.faq.entity.Faq;
+import com.ctrlf.chat.faq.entity.FaqCandidate;
 import com.ctrlf.chat.faq.exception.FaqNotFoundException;
 import com.ctrlf.chat.faq.repository.FaqRepository;
+import com.ctrlf.chat.faq.repository.FaqCandidateRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class FaqServiceImpl implements FaqService {
 
     private final FaqRepository faqRepository;
+    private final FaqCandidateRepository faqCandidateRepository;
 
     @Override
     public UUID create(FaqCreateRequest request) {
@@ -63,6 +67,16 @@ public class FaqServiceImpl implements FaqService {
         return faqRepository.findByIsActiveTrueOrderByPriorityAsc()
             .stream()
             .map(FaqResponse::from)
+            .toList();
+    }
+
+    // ✅ FAQ 후보 목록 조회 추가됨
+    @Override
+    @Transactional(readOnly = true)
+    public List<FaqCandidateResponse> getCandidates() {
+        return faqCandidateRepository.findAllByIsDisabledFalseOrderByCreatedAtDesc()
+            .stream()
+            .map(FaqCandidateResponse::from)
             .toList();
     }
 }

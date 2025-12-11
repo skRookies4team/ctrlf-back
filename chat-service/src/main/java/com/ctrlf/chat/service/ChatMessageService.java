@@ -9,22 +9,11 @@ import java.util.UUID;
 
 public interface ChatMessageService {
 
-    // ✅ 메시지 전송
-    ChatMessageSendResponse sendMessage(
-        ChatMessageSendRequest request,
-        UUID userId,
-        String domain
-    );
+    ChatMessageSendResponse sendMessage(ChatMessageSendRequest request, UUID userId, String domain);
 
-    // ✅ 특정 섹션 메시지 조회
-    List<ChatMessage> getMessages(UUID sessionId, UUID sectionId);
-
-    // ✅ ✅ ✅ 세션 전체 메시지 조회
     List<ChatMessage> getMessagesBySession(UUID sessionId);
 
-    // ✅ Retry
-    ChatMessage retryMessage(UUID sessionId, UUID sectionId);
+    ChatMessage retryMessage(UUID sessionId);
 
-    // ✅ Regen
-    ChatMessage regenMessage(UUID sessionId, UUID sectionId);
+    ChatMessage regenMessage(UUID sessionId);
 }

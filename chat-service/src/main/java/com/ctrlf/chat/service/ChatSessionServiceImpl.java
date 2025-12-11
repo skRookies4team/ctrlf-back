@@ -44,24 +44,9 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         );
     }
 
-    // ✅ 세션 단건 조회
-    @Override
-    public ChatSessionResponse getSession(UUID sessionId) {
-        ChatSession session = chatSessionRepository.findActiveById(sessionId);
-
-        if (session == null) {
-            throw new ChatSessionNotFoundException();
-        }
-
-        return new ChatSessionResponse(
-            session.getId(),
-            session.getTitle(),
-            session.getDomain(),
-            session.getUserUuid(),
-            session.getCreatedAt(),
-            session.getUpdatedAt()
-        );
-    }
+    // ❌ 단건 조회 제거됨 → 인터페이스에도 없음
+    // @Override
+    // public ChatSessionResponse getSession(UUID sessionId) { ... }
 
     // ✅ 세션 목록 조회
     @Override
@@ -112,7 +97,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         session.softDelete();
     }
 
-    // ✅ ✅ ✅ 세션 히스토리 조회 (🔥 완전 최종 정상 버전)
+    // ✅ 세션 히스토리 조회
     @Override
     public ChatSessionHistoryResponse getSessionHistory(UUID sessionId) {
         ChatSession session = chatSessionRepository.findActiveById(sessionId);
@@ -121,7 +106,6 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             throw new ChatSessionNotFoundException();
         }
 
-        // ✅ 여기만 바뀐 핵심 부분
         List<ChatMessage> messages =
             chatMessageRepository.findAllBySessionIdOrderByCreatedAtAsc(sessionId);
 

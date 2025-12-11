@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/chat/sessions")
+@RequestMapping("/chat/sessions")
 public class ChatSessionController {
 
     private final ChatSessionService chatSessionService;
@@ -24,11 +24,7 @@ public class ChatSessionController {
         return chatSessionService.createSession(request);
     }
 
-    // ✅ 세션 단건 조회
-    @GetMapping("/{sessionId}")
-    public ChatSessionResponse get(@PathVariable UUID sessionId) {
-        return chatSessionService.getSession(sessionId);
-    }
+    // ❌ 세션 단건 조회 제거됨(API 명세서에 없는내용임)
 
     // ✅ 세션 목록 조회
     @GetMapping
@@ -37,7 +33,7 @@ public class ChatSessionController {
     }
 
     // ✅ 세션 수정
-    @PutMapping("/{sessionId}")
+    @PatchMapping("/{sessionId}")
     public ChatSessionResponse update(
         @PathVariable UUID sessionId,
         @RequestBody ChatSessionUpdateRequest request

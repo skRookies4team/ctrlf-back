@@ -39,7 +39,7 @@ docker compose up -d
 ./gradlew :chat-service:bootRun
 ./gradlew :education-service:bootRun
 ./gradlew :infra-service:bootRun
-./gradlew :chat-service:bootRun
+./gradlew :quiz-service:bootRun
 ./gradlew :api-gateway:bootRun
 ```
 

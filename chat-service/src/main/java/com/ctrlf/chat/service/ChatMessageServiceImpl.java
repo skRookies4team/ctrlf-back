@@ -18,28 +18,27 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     private final ChatMessageRepository chatMessageRepository;
 
-    // ✅ 메시지 전송
     @Override
     public ChatMessageSendResponse sendMessage(
         ChatMessageSendRequest request,
         UUID userId,
         String domain
     ) {
-        ChatMessage userMessage = ChatMessage.userMessage(
-            request.sessionId(),
-            request.sectionId(),
-            request.content()
-        );
+        // 1) User 메시지 저장
+        ChatMessage userMessage =
+            ChatMessage.userMessage(request.sessionId(), request.content());
         chatMessageRepository.save(userMessage);
 
-        ChatMessage assistantMessage = ChatMessage.assistantMessage(
-            request.sessionId(),
-            request.sectionId(),
-            "임시 AI 응답입니다.",
-            10,
-            20,
-            "gpt-4o-mini"
-        );
+        // 2) 임시 AI 응답 저장
+        ChatMessage assistantMessage =
+            ChatMessage.assistantMessage(
+                request.sessionId(),
+                "임시 AI 응답입니다.",
+                10,
+                20,
+                "gpt-4o-mini"
+            );
+
         chatMessageRepository.save(assistantMessage);
 
         return new ChatMessageSendResponse(
@@ -50,15 +49,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         );
     }
 
-    // ✅ 특정 섹션 메시지 조회
-    @Override
-    @Transactional(readOnly = true)
-    public List<ChatMessage> getMessages(UUID sessionId, UUID sectionId) {
-        return chatMessageRepository
-            .findBySessionIdAndSectionIdOrderByCreatedAtAsc(sessionId, sectionId);
-    }
-
-    // ✅ ✅ ✅ 세션 전체 메시지 조회
     @Override
     @Transactional(readOnly = true)
     public List<ChatMessage> getMessagesBySession(UUID sessionId) {
@@ -66,16 +56,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             .findAllBySessionIdOrderByCreatedAtAsc(sessionId);
     }
 
-    // ✅ Retry
     @Override
-    public ChatMessage retryMessage(UUID sessionId, UUID sectionId) {
-        chatMessageRepository
-            .findTopBySessionIdAndSectionIdOrderByCreatedAtDesc(sessionId, sectionId)
+    public ChatMessage retryMessage(UUID sessionId) {
+        chatMessageRepository.findTopBySessionIdOrderByCreatedAtDesc(sessionId)
             .orElseThrow(() -> new IllegalStateException("Retry할 메시지가 없습니다."));
 
         ChatMessage retryMessage = ChatMessage.assistantMessage(
             sessionId,
-            sectionId,
             "Retry된 AI 응답입니다.",
             15,
             30,
@@ -85,16 +72,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         return chatMessageRepository.save(retryMessage);
     }
 
-    // ✅ Regen
     @Override
-    public ChatMessage regenMessage(UUID sessionId, UUID sectionId) {
-        chatMessageRepository
-            .findTopBySessionIdAndSectionIdOrderByCreatedAtDesc(sessionId, sectionId)
+    public ChatMessage regenMessage(UUID sessionId) {
+        chatMessageRepository.findTopBySessionIdOrderByCreatedAtDesc(sessionId)
             .orElseThrow(() -> new IllegalStateException("재생성할 메시지가 없습니다."));
 
         ChatMessage regenMessage = ChatMessage.assistantMessage(
             sessionId,
-            sectionId,
             "재생성된 AI 응답입니다.",
             20,
             40,

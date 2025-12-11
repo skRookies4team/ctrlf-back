@@ -20,7 +20,7 @@ public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
 
-    // ✅ 메시지 전송
+    // 메시지 전송
     @PostMapping("/messages")
     public ResponseEntity<ChatMessageSendResponse> sendMessage(
         @RequestBody ChatMessageSendRequest request,
@@ -34,19 +34,8 @@ public class ChatMessageController {
         );
     }
 
-    // ✅ ✅ 특정 섹션 메시지 조회
-    @GetMapping("/sessions/{sessionId}/sections/{sectionId}/messages")
-    public ResponseEntity<List<ChatMessage>> getMessagesBySection(
-        @PathVariable UUID sessionId,
-        @PathVariable UUID sectionId
-    ) {
-        return ResponseEntity.ok(
-            chatMessageService.getMessages(sessionId, sectionId)
-        );
-    }
-
-    // ✅ ✅ ✅ 세션 전체 메시지 조회 (신규 분리)
-    @GetMapping("/sessions/{sessionId}/sections/messages")
+    // 세션 전체 메시지 조회
+    @GetMapping("/sessions/{sessionId}/messages")
     public ResponseEntity<List<ChatMessage>> getMessagesBySession(
         @PathVariable UUID sessionId
     ) {
@@ -55,26 +44,23 @@ public class ChatMessageController {
         );
     }
 
-    // ✅ Retry
-    @PostMapping("/sessions/{sessionId}/sections/{sectionId}/retry")
+    // 메시지 Retry
+    @PostMapping("/sessions/{sessionId}/retry")
     public ResponseEntity<ChatMessage> retryMessage(
-        @PathVariable UUID sessionId,
-        @PathVariable UUID sectionId
+        @PathVariable UUID sessionId
     ) {
         return ResponseEntity.ok(
-            chatMessageService.retryMessage(sessionId, sectionId)
+            chatMessageService.retryMessage(sessionId)
         );
     }
 
-    // ✅ Regen (재생성)
-    @PostMapping("/sessions/{sessionId}/sections/{sectionId}/regen")
+    // 메시지 Regen
+    @PostMapping("/sessions/{sessionId}/regen")
     public ResponseEntity<ChatMessage> regenMessage(
-        @PathVariable UUID sessionId,
-        @PathVariable UUID sectionId
+        @PathVariable UUID sessionId
     ) {
         return ResponseEntity.ok(
-            chatMessageService.regenMessage(sessionId, sectionId)
+            chatMessageService.regenMessage(sessionId)
         );
     }
 }
-

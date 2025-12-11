@@ -20,7 +20,6 @@ public class ChatFeedbackServiceImpl implements ChatFeedbackService {
     @Override
     public void submitMessageFeedback(
         UUID sessionId,
-        UUID sectionId,
         UUID messageId,
         UUID userUuid,
         Integer score,
@@ -28,7 +27,6 @@ public class ChatFeedbackServiceImpl implements ChatFeedbackService {
     ) {
         ChatFeedback feedback = new ChatFeedback();
         feedback.setSessionId(sessionId);
-        feedback.setSectionId(sectionId);
         feedback.setMessageId(messageId);
         feedback.setUserUuid(userUuid);
         feedback.setScore(score);

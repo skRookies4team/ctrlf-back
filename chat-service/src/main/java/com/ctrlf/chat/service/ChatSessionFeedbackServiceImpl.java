@@ -12,7 +12,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ChatSessionFeedbackServiceImpl
+public class  ChatSessionFeedbackServiceImpl
     implements ChatSessionFeedbackService {
 
     private final ChatSessionFeedbackRepository chatSessionFeedbackRepository;
