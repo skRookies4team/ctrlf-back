@@ -1,4 +1,4 @@
-package com.ctrlf.chat.entity;
+package com.ctrlf.chat.faq.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

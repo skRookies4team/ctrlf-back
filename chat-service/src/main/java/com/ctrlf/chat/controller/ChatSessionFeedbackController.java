@@ -1,7 +1,7 @@
 package com.ctrlf.chat.controller;
 
-import com.ctrlf.chat.dto.request.ChatFeedbackRequest;
-import com.ctrlf.chat.service.ChatFeedbackService;
+import com.ctrlf.chat.dto.request.ChatSessionFeedbackRequest;
+import com.ctrlf.chat.service.ChatSessionFeedbackService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,26 +13,22 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/chat")
 @RequiredArgsConstructor
-public class ChatFeedbackController {
+public class ChatSessionFeedbackController {
 
-    private final ChatFeedbackService chatFeedbackService;
+    private final ChatSessionFeedbackService chatSessionFeedbackService;
 
-    // ✅ ✅ ✅ 메시지별 피드백만 담당
-    // POST /chat/sessions/{sessionId}/sections/{sectionId}/messages/{messageId}/feedback
-    @PostMapping("/sessions/{sessionId}/sections/{sectionId}/messages/{messageId}/feedback")
-    public ResponseEntity<Void> messageFeedback(
+    // ✅ ✅ ✅ 세션 종료 및 총평
+    // POST /chat/sessions/{sessionId}/feedback
+    @PostMapping("/sessions/{sessionId}/feedback")
+    public ResponseEntity<Void> sessionFeedback(
         @PathVariable UUID sessionId,
-        @PathVariable UUID sectionId,
-        @PathVariable UUID messageId,
-        @RequestBody ChatFeedbackRequest request,
+        @RequestBody ChatSessionFeedbackRequest request,
         @AuthenticationPrincipal Jwt jwt
     ) {
         UUID userUuid = UUID.fromString(jwt.getSubject());
 
-        chatFeedbackService.submitMessageFeedback(
+        chatSessionFeedbackService.submitSessionFeedback(
             sessionId,
-            sectionId,
-            messageId,
             userUuid,
             request.score(),
             request.comment()

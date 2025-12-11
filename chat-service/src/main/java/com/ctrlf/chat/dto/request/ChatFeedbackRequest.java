@@ -1,6 +1,7 @@
 package com.ctrlf.chat.dto.request;
 
 public record ChatFeedbackRequest(
-    Boolean isHelpful,
+    Integer score,
     String comment
-) {}
+) {
+}

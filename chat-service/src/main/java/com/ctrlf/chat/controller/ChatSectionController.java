@@ -2,6 +2,7 @@ package com.ctrlf.chat.controller;
 
 import com.ctrlf.chat.dto.request.ChatSectionCreateRequest;
 import com.ctrlf.chat.dto.response.ChatSectionResponse;
+import com.ctrlf.chat.dto.response.ChatSectionSummaryResponse;
 import com.ctrlf.chat.service.ChatSectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -40,5 +41,14 @@ public class ChatSectionController {
         @PathVariable UUID sectionId
     ) {
         chatSectionService.closeSection(sessionId, sectionId);
+    }
+
+    // ✅ ✅ ✅ 섹션 요약 조회 (신규)
+    @GetMapping("/{sectionId}/summary")
+    public ChatSectionSummaryResponse getSectionSummary(
+        @PathVariable UUID sessionId,
+        @PathVariable UUID sectionId
+    ) {
+        return chatSectionService.getSectionSummary(sessionId, sectionId);
     }
 }

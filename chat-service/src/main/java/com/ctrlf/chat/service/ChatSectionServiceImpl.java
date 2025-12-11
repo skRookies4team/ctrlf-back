@@ -2,7 +2,10 @@ package com.ctrlf.chat.service;
 
 import com.ctrlf.chat.dto.request.ChatSectionCreateRequest;
 import com.ctrlf.chat.dto.response.ChatSectionResponse;
+import com.ctrlf.chat.dto.response.ChatSectionSummaryResponse;
+import com.ctrlf.chat.entity.ChatMessage;
 import com.ctrlf.chat.entity.ChatSection;
+import com.ctrlf.chat.repository.ChatMessageRepository;
 import com.ctrlf.chat.repository.ChatSectionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ import java.util.UUID;
 public class ChatSectionServiceImpl implements ChatSectionService {
 
     private final ChatSectionRepository chatSectionRepository;
+    private final ChatMessageRepository chatMessageRepository;
 
     // ✅ 섹션 생성
     @Override
@@ -25,8 +29,8 @@ public class ChatSectionServiceImpl implements ChatSectionService {
         ChatSection section = new ChatSection();
         section.setSessionId(sessionId);
         section.setTitle(request.title());
-        section.setSummary(null);           // ✅ 요약은 나중에 LLM으로 채움
-        section.setRetryCount(0);           // ✅ 최초 0
+        section.setSummary(null);
+        section.setRetryCount(0);
         section.setCreatedAt(Instant.now());
         section.setClosedAt(null);
 
@@ -66,5 +70,33 @@ public class ChatSectionServiceImpl implements ChatSectionService {
             .orElseThrow(() -> new IllegalArgumentException("섹션이 존재하지 않습니다."));
 
         section.setClosedAt(Instant.now());
+    }
+
+    // ✅ ✅ ✅ 섹션 요약 조회 (신규)
+    @Override
+    @Transactional(readOnly = true)
+    public ChatSectionSummaryResponse getSectionSummary(
+        UUID sessionId,
+        UUID sectionId
+    ) {
+        List<ChatMessage> messages =
+            chatMessageRepository.findAllBySessionIdAndSectionId(sessionId, sectionId);
+
+        if (messages.isEmpty()) {
+            throw new IllegalStateException("요약할 메시지가 없습니다.");
+        }
+
+        // ✅ 임시 요약 로직 (나중에 AI 대체)
+        String summary = messages.stream()
+            .map(ChatMessage::getContent)
+            .limit(5)
+            .reduce("", (a, b) -> a + " " + b);
+
+        return new ChatSectionSummaryResponse(
+            sessionId,
+            sectionId,
+            summary.trim(),
+            Instant.now()
+        );
     }
 }

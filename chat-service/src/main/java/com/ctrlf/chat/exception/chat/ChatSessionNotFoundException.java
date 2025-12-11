@@ -1,8 +1,10 @@
 package com.ctrlf.chat.exception.chat;
 
-public class ChatSessionNotFoundException extends RuntimeException {
+import com.ctrlf.chat.exception.ErrorCode;
+
+public class ChatSessionNotFoundException extends ChatException {
 
     public ChatSessionNotFoundException() {
-        super("채팅 세션을 찾을 수 없습니다.");
+        super(ErrorCode.CHAT_SESSION_NOT_FOUND);
     }
 }
