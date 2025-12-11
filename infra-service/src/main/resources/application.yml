@@ -44,3 +44,7 @@ app:
     description: Infra service endpoints for Keycloak admin operations
     security:
       enabled: false
+
+  s3:
+    bucket: ctrl-s3
+    ttlSeconds: 600
