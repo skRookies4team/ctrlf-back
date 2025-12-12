@@ -6,6 +6,7 @@ spring:
     url: jdbc:postgresql://localhost:5432/db
     username: postgres
     password: postgres
+
   jpa:
     properties:
       hibernate:
@@ -13,11 +14,18 @@ spring:
         format_sql: true
     hibernate:
       ddl-auto: validate
+
   flyway:
     enabled: true
     schemas: chat
     default-schema: chat
     locations: classpath:db/migration
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/ctrlf
 
 management:
   endpoints:
