@@ -29,3 +29,24 @@ management:
     health:
       probes:
         enabled: true
+
+# AI 서버 설정 (영상 생성)
+app:
+  video:
+    ai:
+      base-url: http://localhost:8000
+      token: "" # 내부 호출 토큰 (필요시 설정)
+
+# Feign 클라이언트 설정
+spring.cloud.openfeign:
+  client:
+    config:
+      video-ai-client:
+        connect-timeout: 5000
+        read-timeout: 30000
+        logger-level: BASIC
+
+# Feign 로깅 (DEBUG 레벨에서 활성화)
+logging:
+  level:
+    com.ctrlf.education.client: DEBUG

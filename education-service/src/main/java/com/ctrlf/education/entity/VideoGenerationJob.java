@@ -8,7 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -23,7 +22,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Table(name = "video_generation_job", schema = "education")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
 public class VideoGenerationJob {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -53,6 +52,10 @@ public class VideoGenerationJob {
     /** 생성된 결과 영상 URL(성공 시) */
     @Column(name = "generated_video_url")
     private String generatedVideoUrl;
+
+    /** 영상 길이(초) */
+    @Column(name = "duration")
+    private Integer duration;
 
     /** 재시도 횟수 */
     @Column(name = "retry_count")
