@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,23 +30,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 영상 생성 관련 REST API 컨트롤러.
- *
- * <p>제공 API:
- * <ul>
- *   <li>GET /video/script/{scriptId} - 스크립트 조회</li>
- *   <li>PUT /video/script/{scriptId} - 스크립트 수정</li>
- *   <li>POST /video/script/complete - 스크립트 생성 완료 콜백 (AI → 백엔드)</li>
- *   <li>POST /video/material/{materialId}/process - 전처리/임베딩/스크립트 생성 요청</li>
- *   <li>POST /video/job - 영상 생성 요청</li>
- *   <li>POST /video/job/{jobId}/retry - 영상 재시도</li>
- *   <li>POST /video/job/{jobId}/complete - 영상 생성 완료 콜백 (AI → 백엔드)</li>
- * </ul>
  */
 @Tag(name = "Video", description = "영상 생성 관련 API")
 @RestController
@@ -78,6 +70,45 @@ public class VideoController {
         @PathVariable UUID scriptId
     ) {
         return ResponseEntity.ok(videoService.getScript(scriptId));
+    }
+
+    /**
+     * 스크립트 목록을 페이징으로 조회합니다.
+     *
+     * @param page 페이지 번호(0-base)
+     * @param size 페이지 크기
+     * @return 스크립트 목록
+     */
+    @Operation(summary = "스크립트 목록 조회", description = "스크립트 목록을 페이징으로 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = ScriptResponse.class)))
+    })
+    @GetMapping("/scripts")
+    public ResponseEntity<List<ScriptResponse>> listScripts(
+        @RequestParam(value = "page", defaultValue = "0") int page,
+        @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(videoService.listScripts(page, size));
+    }
+
+    /**
+     * 스크립트를 삭제합니다.
+     *
+     * @param scriptId 스크립트 ID
+     */
+    @Operation(summary = "스크립트 삭제", description = "스크립트를 삭제합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "삭제 성공"),
+        @ApiResponse(responseCode = "404", description = "스크립트를 찾을 수 없음", content = @Content)
+    })
+    @DeleteMapping("/script/{scriptId}")
+    public ResponseEntity<Void> deleteScript(
+        @Parameter(description = "스크립트 ID", required = true)
+        @PathVariable UUID scriptId
+    ) {
+        videoService.deleteScript(scriptId);
+        return ResponseEntity.noContent().build();
     }
 
     /**

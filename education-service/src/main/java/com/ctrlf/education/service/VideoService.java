@@ -20,10 +20,14 @@ import com.ctrlf.education.entity.EducationScript;
 import com.ctrlf.education.entity.VideoGenerationJob;
 import com.ctrlf.education.repository.EducationScriptRepository;
 import com.ctrlf.education.repository.VideoGenerationJobRepository;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -81,6 +85,43 @@ public class VideoService {
             script.getContent(),
             script.getVersion()
         );
+    }
+
+    /**
+     * 스크립트 목록을 페이징으로 조회합니다.
+     *
+     * @param page 페이지 번호(0-base)
+     * @param size 페이지 크기
+     * @return 스크립트 응답 목록
+     */
+    @Transactional(readOnly = true)
+    public List<ScriptResponse> listScripts(int page, int size) {
+        Page<EducationScript> pageRes = scriptRepository.findAll(PageRequest.of(page, size));
+        List<ScriptResponse> list = new ArrayList<>();
+        for (EducationScript s : pageRes.getContent()) {
+            list.add(new ScriptResponse(
+                s.getId(),
+                s.getEducationId(),
+                s.getSourceDocId(),
+                s.getContent(),
+                s.getVersion()
+            ));
+        }
+        return list;
+    }
+
+    /**
+     * 스크립트를 삭제합니다.
+     *
+     * @param scriptId 스크립트 ID
+     * @throws ResponseStatusException 스크립트가 존재하지 않을 경우 404
+     */
+    @Transactional
+    public void deleteScript(UUID scriptId) {
+        EducationScript script = scriptRepository.findById(scriptId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
+        scriptRepository.delete(script);
+        log.info("스크립트 삭제 완료. scriptId={}", scriptId);
     }
 
     /**
@@ -157,20 +198,11 @@ public class VideoService {
         job.setRetryCount(0);
         jobRepository.save(job);
 
-        // AI 서버에 영상 생성 요청
-        try {
-            VideoStartRequest aiRequest = new VideoStartRequest(request.scriptId(), request.eduId());
-            AiVideoResponse aiResponse = videoAiClient.startVideoGeneration(job.getId(), aiRequest);
+        // AI 서버 미구현: 모의 응답으로 처리
+        AiVideoResponse aiResponse = new AiVideoResponse(job.getId(), true, STATUS_QUEUED);
             job.setStatus(aiResponse.status());
             jobRepository.save(job);
-            log.info("영상 생성 Job 등록 및 AI 요청 완료. jobId={}, status={}", job.getId(), aiResponse.status());
-        } catch (Exception e) {
-            log.error("AI 서버 영상 생성 요청 실패. jobId={}", job.getId(), e);
-            job.setStatus(STATUS_FAILED);
-            job.setFailReason("AI 서버 요청 실패: " + e.getMessage());
-            jobRepository.save(job);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "영상 생성 요청 실패");
-        }
+        log.info("[MOCK] 영상 생성 Job 등록 처리. jobId={}, status={}", job.getId(), aiResponse.status());
 
         return new VideoJobResponse(job.getId(), job.getStatus());
     }
@@ -202,20 +234,11 @@ public class VideoService {
         job.setFailReason(null);
         jobRepository.save(job);
 
-        // AI 서버에 재생성 요청
-        try {
-            VideoRetryRequest aiRequest = new VideoRetryRequest(jobId, job.getScriptId(), job.getEducationId(), true);
-            AiVideoResponse aiResponse = videoAiClient.retryVideoGeneration(jobId, aiRequest);
+        // AI 서버 미구현: 모의 응답으로 처리
+        AiVideoResponse aiResponse = new AiVideoResponse(jobId, true, STATUS_QUEUED);
             job.setStatus(aiResponse.status());
             jobRepository.save(job);
-            log.info("영상 재시도 요청 완료. jobId={}, retryCount={}, status={}", jobId, newRetryCount, aiResponse.status());
-        } catch (Exception e) {
-            log.error("AI 서버 영상 재생성 요청 실패. jobId={}", jobId, e);
-            job.setStatus(STATUS_FAILED);
-            job.setFailReason("AI 서버 재요청 실패: " + e.getMessage());
-            jobRepository.save(job);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "영상 재생성 요청 실패");
-        }
+        log.info("[MOCK] 영상 재시도 처리. jobId={}, retryCount={}, status={}", jobId, newRetryCount, aiResponse.status());
 
         return new VideoRetryResponse(jobId, job.getStatus(), newRetryCount);
     }
@@ -258,14 +281,9 @@ public class VideoService {
      * @throws ResponseStatusException AI 서버 요청 실패 시
      */
     public AiProcessResponse requestMaterialProcess(UUID materialId, UUID eduId, String fileUrl) {
-        try {
-            MaterialProcessRequest request = new MaterialProcessRequest(materialId, eduId, fileUrl);
-            AiProcessResponse response = videoAiClient.processMaterial(materialId, request);
-            log.info("전처리/임베딩/스크립트 생성 요청 완료. materialId={}, status={}", materialId, response.status());
+        // AI 서버 미구현: 모의 응답으로 처리
+        AiProcessResponse response = new AiProcessResponse(true, STATUS_PROCESSING);
+        log.info("[MOCK] 전처리/임베딩/스크립트 생성 요청 처리. materialId={}, status={}", materialId, response.status());
             return response;
-        } catch (Exception e) {
-            log.error("AI 서버 전처리 요청 실패. materialId={}", materialId, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "전처리 요청 실패: " + e.getMessage());
-        }
     }
 }
