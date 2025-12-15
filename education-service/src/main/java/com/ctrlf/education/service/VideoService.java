@@ -7,7 +7,12 @@ import com.ctrlf.education.dto.VideoDtos.MaterialProcessRequest;
 import com.ctrlf.education.dto.VideoDtos.ScriptCompleteCallback;
 import com.ctrlf.education.dto.VideoDtos.ScriptCompleteResponse;
 import com.ctrlf.education.dto.VideoDtos.ScriptResponse;
+import com.ctrlf.education.dto.VideoDtos.ScriptDetailResponse;
+import com.ctrlf.education.dto.VideoDtos.ChapterItem;
+import com.ctrlf.education.dto.VideoDtos.SceneItem;
 import com.ctrlf.education.dto.VideoDtos.ScriptUpdateRequest;
+import com.ctrlf.education.dto.VideoDtos.ChapterUpsert;
+import com.ctrlf.education.dto.VideoDtos.SceneUpsert;
 import com.ctrlf.education.dto.VideoDtos.ScriptUpdateResponse;
 import com.ctrlf.education.dto.VideoDtos.VideoCompleteCallback;
 import com.ctrlf.education.dto.VideoDtos.VideoCompleteResponse;
@@ -16,9 +21,15 @@ import com.ctrlf.education.dto.VideoDtos.VideoJobResponse;
 import com.ctrlf.education.dto.VideoDtos.VideoRetryRequest;
 import com.ctrlf.education.dto.VideoDtos.VideoRetryResponse;
 import com.ctrlf.education.dto.VideoDtos.VideoStartRequest;
+import com.ctrlf.education.dto.VideoDtos.JobItem;
+import com.ctrlf.education.dto.VideoDtos.VideoJobUpdateRequest;
 import com.ctrlf.education.entity.EducationScript;
+import com.ctrlf.education.entity.EducationScriptChapter;
+import com.ctrlf.education.entity.EducationScriptScene;
 import com.ctrlf.education.entity.VideoGenerationJob;
 import com.ctrlf.education.repository.EducationScriptRepository;
+import com.ctrlf.education.repository.EducationScriptChapterRepository;
+import com.ctrlf.education.repository.EducationScriptSceneRepository;
 import com.ctrlf.education.repository.VideoGenerationJobRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -60,6 +72,8 @@ public class VideoService {
 
     private final EducationScriptRepository scriptRepository;
     private final VideoGenerationJobRepository jobRepository;
+    private final EducationScriptChapterRepository chapterRepository;
+    private final EducationScriptSceneRepository sceneRepository;
     private final VideoAiClient videoAiClient;
 
     // ========================
@@ -74,16 +88,48 @@ public class VideoService {
      * @throws ResponseStatusException 스크립트가 존재하지 않을 경우 404
      */
     @Transactional(readOnly = true)
-    public ScriptResponse getScript(UUID scriptId) {
+    public ScriptDetailResponse getScript(UUID scriptId) {
         EducationScript script = scriptRepository.findById(scriptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
 
-        return new ScriptResponse(
+        // 챕터/씬 로드
+        List<EducationScriptChapter> chapters = chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId);
+        List<ChapterItem> chapterItems = new ArrayList<>();
+        for (EducationScriptChapter ch : chapters) {
+            List<EducationScriptScene> scenes = sceneRepository.findByChapterIdOrderBySceneIndexAsc(ch.getId());
+            List<SceneItem> sceneItems = new ArrayList<>();
+            for (EducationScriptScene sc : scenes) {
+                sceneItems.add(new SceneItem(
+                    sc.getId(),
+                    sc.getSceneIndex(),
+                    sc.getPurpose(),
+                    sc.getNarration(),
+                    sc.getCaption(),
+                    sc.getVisual(),
+                    sc.getDurationSec(),
+                    sc.getSourceChunkIndexes(),
+                    sc.getConfidenceScore()
+                ));
+            }
+            chapterItems.add(new ChapterItem(
+                ch.getId(),
+                ch.getChapterIndex(),
+                ch.getTitle(),
+                ch.getDurationSec(),
+                sceneItems
+            ));
+        }
+
+        return new ScriptDetailResponse(
             script.getId(),
             script.getEducationId(),
             script.getSourceDocId(),
-            script.getContent(),
-            script.getVersion()
+            script.getTitle(),
+            script.getTotalDurationSec(),
+            script.getVersion(),
+            script.getLlmModel(),
+            script.getRawPayload(),
+            chapterItems
         );
     }
 
@@ -103,7 +149,7 @@ public class VideoService {
                 s.getId(),
                 s.getEducationId(),
                 s.getSourceDocId(),
-                s.getContent(),
+                s.getRawPayload(),
                 s.getVersion()
             ));
         }
@@ -137,10 +183,53 @@ public class VideoService {
         EducationScript script = scriptRepository.findById(scriptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
 
-        script.setContent(request.script());
-        // 버전 증가
-        script.setVersion(script.getVersion() == null ? 2 : script.getVersion() + 1);
-        scriptRepository.save(script);
+        // 1) rawPayload 업데이트 (옵션)
+        if (request.script() != null) {
+            script.setRawPayload(request.script());
+            // 버전 증가
+            script.setVersion(script.getVersion() == null ? 2 : script.getVersion() + 1);
+            scriptRepository.save(script);
+        }
+
+        // 2) 챕터/씬 교체 (옵션)
+        if (request.chapters() != null) {
+            // 기존 씬 삭제 → 기존 챕터 삭제
+            List<EducationScriptScene> oldScenes = sceneRepository.findByScriptIdOrderByChapterIdAscSceneIndexAsc(scriptId);
+            if (!oldScenes.isEmpty()) {
+                sceneRepository.deleteAll(oldScenes);
+            }
+            List<EducationScriptChapter> oldChapters = chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId);
+            if (!oldChapters.isEmpty()) {
+                chapterRepository.deleteAll(oldChapters);
+            }
+
+            // 신규 생성
+            for (ChapterUpsert cu : request.chapters()) {
+                EducationScriptChapter ch = new EducationScriptChapter();
+                ch.setScriptId(scriptId);
+                ch.setChapterIndex(cu.index());
+                ch.setTitle(cu.title());
+                ch.setDurationSec(cu.durationSec());
+                chapterRepository.save(ch);
+
+                if (cu.scenes() != null) {
+                    for (SceneUpsert su : cu.scenes()) {
+                        EducationScriptScene sc = new EducationScriptScene();
+                        sc.setScriptId(scriptId);
+                        sc.setChapterId(ch.getId());
+                        sc.setSceneIndex(su.index());
+                        sc.setPurpose(su.purpose());
+                        sc.setNarration(su.narration());
+                        sc.setCaption(su.caption());
+                        sc.setVisual(su.visual());
+                        sc.setDurationSec(su.durationSec());
+                        sc.setSourceChunkIndexes(su.sourceChunkIndexes());
+                        sc.setConfidenceScore(su.confidenceScore());
+                        sceneRepository.save(sc);
+                    }
+                }
+            }
+        }
 
         log.info("스크립트 수정 완료. scriptId={}, newVersion={}", scriptId, script.getVersion());
         return new ScriptUpdateResponse(true, scriptId);
@@ -163,7 +252,7 @@ public class VideoService {
             });
 
         script.setSourceDocId(callback.materialId());
-        script.setContent(callback.script());
+        script.setRawPayload(callback.script());
         script.setVersion(callback.version());
         scriptRepository.save(script);
 
@@ -285,5 +374,69 @@ public class VideoService {
         AiProcessResponse response = new AiProcessResponse(true, STATUS_PROCESSING);
         log.info("[MOCK] 전처리/임베딩/스크립트 생성 요청 처리. materialId={}, status={}", materialId, response.status());
             return response;
+    }
+
+    // ========================
+    // 영상 생성 Job 관리 (목록/조회/수정/삭제)
+    // ========================
+
+    @Transactional(readOnly = true)
+    public List<JobItem> listJobs(int page, int size) {
+        Page<VideoGenerationJob> p = jobRepository.findAll(
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+        return p.map(this::toJobItem).getContent();
+    }
+
+    @Transactional(readOnly = true)
+    public JobItem getJob(UUID jobId) {
+        VideoGenerationJob job = jobRepository.findById(jobId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job을 찾을 수 없습니다: " + jobId));
+        return toJobItem(job);
+    }
+
+    @Transactional
+    public JobItem updateJob(UUID jobId, VideoJobUpdateRequest req) {
+        VideoGenerationJob job = jobRepository.findById(jobId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job을 찾을 수 없습니다: " + jobId));
+        if (req.status() != null && !req.status().isBlank()) {
+            job.setStatus(req.status());
+        }
+        if (req.failReason() != null) {
+            job.setFailReason(req.failReason());
+        }
+        if (req.videoUrl() != null) {
+            job.setGeneratedVideoUrl(req.videoUrl());
+        }
+        if (req.duration() != null) {
+            job.setDuration(req.duration());
+        }
+        job = jobRepository.save(job);
+        log.info("영상 생성 Job 업데이트. jobId={}, status={}", job.getId(), job.getStatus());
+        return toJobItem(job);
+    }
+
+    @Transactional
+    public void deleteJob(UUID jobId) {
+        if (!jobRepository.existsById(jobId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Job을 찾을 수 없습니다: " + jobId);
+        }
+        jobRepository.deleteById(jobId);
+        log.error("영상 생성 Job 삭제 완료. jobId={}", jobId);
+    }
+
+    private JobItem toJobItem(VideoGenerationJob j) {
+        return new JobItem(
+            j.getId(),
+            j.getScriptId(),
+            j.getEducationId(),
+            j.getStatus(),
+            j.getRetryCount(),
+            j.getGeneratedVideoUrl(),
+            j.getDuration(),
+            j.getCreatedAt() != null ? j.getCreatedAt().toString() : null,
+            j.getUpdatedAt() != null ? j.getUpdatedAt().toString() : null,
+            j.getFailReason()
+        );
     }
 }

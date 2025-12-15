@@ -12,6 +12,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
@@ -38,6 +40,7 @@ public class VideoGenerationJob {
     private UUID scriptId;
 
     /** 생성 템플릿 옵션(JSON) */
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "template_option", columnDefinition = "json")
     private String templateOption;
 

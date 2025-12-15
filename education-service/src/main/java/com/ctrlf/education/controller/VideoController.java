@@ -3,6 +3,7 @@ package com.ctrlf.education.controller;
 import com.ctrlf.education.dto.VideoDtos.ScriptCompleteCallback;
 import com.ctrlf.education.dto.VideoDtos.ScriptCompleteResponse;
 import com.ctrlf.education.dto.VideoDtos.ScriptResponse;
+import com.ctrlf.education.dto.VideoDtos.ScriptDetailResponse;
 import com.ctrlf.education.dto.VideoDtos.ScriptUpdateRequest;
 import com.ctrlf.education.dto.VideoDtos.ScriptUpdateResponse;
 import com.ctrlf.education.dto.VideoDtos.VideoCompleteCallback;
@@ -12,6 +13,8 @@ import com.ctrlf.education.dto.VideoDtos.VideoJobResponse;
 import com.ctrlf.education.dto.VideoDtos.VideoRetryResponse;
 import com.ctrlf.education.dto.VideoDtos.MaterialProcessStartRequest;
 import com.ctrlf.education.dto.VideoDtos.AiProcessResponse;
+import com.ctrlf.education.dto.VideoDtos.JobItem;
+import com.ctrlf.education.dto.VideoDtos.VideoJobUpdateRequest;
 import com.ctrlf.education.service.VideoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -57,15 +60,15 @@ public class VideoController {
      * @param scriptId 스크립트 ID
      * @return 스크립트 정보
      */
-    @Operation(summary = "스크립트 조회", description = "AI가 생성한 스크립트를 조회합니다.")
+    @Operation(summary = "스크립트 조회", description = "AI가 생성한 스크립트를 조회합니다. (챕터/씬 포함)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = ScriptResponse.class))),
+            content = @Content(schema = @Schema(implementation = ScriptDetailResponse.class))),
         @ApiResponse(responseCode = "404", description = "스크립트를 찾을 수 없음",
             content = @Content)
     })
     @GetMapping("/script/{scriptId}")
-    public ResponseEntity<ScriptResponse> getScript(
+    public ResponseEntity<ScriptDetailResponse> getScript(
         @Parameter(description = "스크립트 ID", required = true)
         @PathVariable UUID scriptId
     ) {
@@ -118,7 +121,7 @@ public class VideoController {
      * @param request  수정 요청
      * @return 수정 결과
      */
-    @Operation(summary = "스크립트 수정", description = "관리자가 스크립트를 수정합니다.")
+    @Operation(summary = "스크립트 수정", description = "관리자가 스크립트(rawPayload) 및 챕터/씬을 수정합니다. (챕터/씬은 전체 교체)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "수정 성공",
             content = @Content(schema = @Schema(implementation = ScriptUpdateResponse.class))),
@@ -193,6 +196,73 @@ public class VideoController {
     // 영상 생성 Job 관련 API
     // ========================
 
+    /**
+     * 영상 생성 Job 목록을 페이징으로 조회합니다.
+     */
+    @Operation(summary = "영상 생성 Job 목록 조회", description = "영상 생성 Job 목록을 페이징으로 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = JobItem.class)))
+    })
+    @GetMapping("/jobs")
+    public ResponseEntity<List<JobItem>> listJobs(
+        @RequestParam(value = "page", defaultValue = "0") int page,
+        @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(videoService.listJobs(page, size));
+    }
+
+    /**
+     * 영상 생성 Job 상세 조회.
+     */
+    @Operation(summary = "영상 생성 Job 상세 조회", description = "특정 Job의 상세 정보를 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = JobItem.class))),
+        @ApiResponse(responseCode = "404", description = "Job을 찾을 수 없음", content = @Content)
+    })
+    @GetMapping("/job/{jobId}")
+    public ResponseEntity<JobItem> getJob(
+        @Parameter(description = "Job ID", required = true)
+        @PathVariable UUID jobId
+    ) {
+        return ResponseEntity.ok(videoService.getJob(jobId));
+    }
+
+    /**
+     * 영상 생성 Job 수정.
+     */
+    @Operation(summary = "영상 생성 Job 수정", description = "Job 상태/비고 등을 수정합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "수정 성공",
+            content = @Content(schema = @Schema(implementation = JobItem.class))),
+        @ApiResponse(responseCode = "404", description = "Job을 찾을 수 없음", content = @Content)
+    })
+    @PutMapping("/job/{jobId}")
+    public ResponseEntity<JobItem> updateJob(
+        @Parameter(description = "Job ID", required = true)
+        @PathVariable UUID jobId,
+        @Valid @RequestBody VideoJobUpdateRequest request
+    ) {
+        return ResponseEntity.ok(videoService.updateJob(jobId, request));
+    }
+
+    /**
+     * 영상 생성 Job 삭제.
+     */
+    @Operation(summary = "영상 생성 Job 삭제", description = "특정 Job을 삭제합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "삭제 성공"),
+        @ApiResponse(responseCode = "404", description = "Job을 찾을 수 없음", content = @Content)
+    })
+    @DeleteMapping("/job/{jobId}")
+    public ResponseEntity<Void> deleteJob(
+        @Parameter(description = "Job ID", required = true)
+        @PathVariable UUID jobId
+    ) {
+        videoService.deleteJob(jobId);
+        return ResponseEntity.noContent().build();
+    }
     /**
      * 영상 생성 Job을 등록합니다.
      *

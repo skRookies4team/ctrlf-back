@@ -39,9 +39,9 @@ public class RagDocumentChunk {
     @Column(name = "chunk_text", columnDefinition = "text")
     private String chunkText;
 
-    /** 임베딩 벡터(pgvector) */
+    /** 임베딩 벡터(pgvector). 로컬 시드 시 null, 외부 AI가 채움 */
     @JdbcTypeCode(Types.OTHER)
-    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    @Column(name = "embedding", columnDefinition = "vector(1536)", insertable = false, updatable = true, nullable = true)
     private String embedding;
 
     /** 임베딩 생성 시각 */
