@@ -5,11 +5,10 @@ import com.ctrlf.chat.dto.request.ChatSessionUpdateRequest;
 import com.ctrlf.chat.dto.response.ChatSessionHistoryResponse;
 import com.ctrlf.chat.dto.response.ChatSessionResponse;
 import com.ctrlf.chat.service.ChatSessionService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -51,7 +50,7 @@ public class ChatSessionController {
         chatSessionService.deleteSession(sessionId);
     }
 
-    // ✅ 세션 히스토리 조회
+    // ✅ 세션 히스토리 조회 (전체 조회 유지)
     @GetMapping("/{sessionId}/history")
     public ChatSessionHistoryResponse history(@PathVariable UUID sessionId) {
         return chatSessionService.getSessionHistory(sessionId);

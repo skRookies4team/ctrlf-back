@@ -24,10 +24,6 @@ public class ChatFeedback {
     @Column(name = "session_id", columnDefinition = "uuid")
     private UUID sessionId;
 
-    /** 섹션 ID */
-    @Column(name = "section_id", columnDefinition = "uuid")
-    private UUID sectionId;
-
     /** 피드백 대상 메시지 ID */
     @Column(name = "message_id", columnDefinition = "uuid")
     private UUID messageId;
