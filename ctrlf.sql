@@ -4,14 +4,25 @@ CREATE SCHEMA "chat";
 
 CREATE SCHEMA "education";
 
-CREATE TABLE "infra"."user_profile" (
+CREATE TABLE "infra"."user" (
   "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-  "user_uuid" uuid UNIQUE,
-  "employee_id" varchar(50),
-  "department" varchar(100),
-  "position" varchar(50),
+  "keycloak_user_uuid" uuid UNIQUE,
+  "employee_no" varchar(50) UNIQUE NOT NULL,
+  "full_name" varchar(100),
   "gender" varchar(10),
   "age" int,
+  "hire_year" int,
+  "tenure_years" int,
+  "position" varchar(50),
+  "department" varchar(100),
+  "company_email" varchar(150),
+  "phone_number" varchar(50),
+  "resident_registration_number" varchar(200),
+  "salary" bigint,
+  "overtime_hours" float,
+  "performance_score" float,
+  "unused_vacation_days" int,
+  "role" varchar(50) NOT NULL,
   "created_at" timestamp,
   "updated_at" timestamp
 );
@@ -215,9 +226,39 @@ CREATE TABLE "education"."education_script" (
   "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
   "education_id" uuid,
   "source_doc_id" uuid,
+  "title" varchar(255),
+  "total_duration_sec" int,
   "version" int,
-  "content" text,
+  "llm_model" varchar(50),
+  "generation_prompt_hash" char(64),
+  "raw_payload" jsonb,
   "created_by" uuid,
+  "created_at" timestamp,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "education"."education_script_chapter" (
+  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
+  "script_id" uuid,
+  "chapter_index" int,
+  "title" varchar(200),
+  "duration_sec" int,
+  "created_at" timestamp,
+  "deleted_at" timestamp
+);
+
+CREATE TABLE "education"."education_script_scene" (
+  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
+  "script_id" uuid,
+  "chapter_id" uuid,
+  "scene_index" int,
+  "purpose" varchar(30),
+  "narration" text,
+  "caption" text,
+  "visual" text,
+  "duration_sec" int,
+  "source_chunk_indexes" int[],
+  "confidence_score" float,
   "created_at" timestamp,
   "deleted_at" timestamp
 );
@@ -291,23 +332,45 @@ CREATE TABLE "education"."quiz_leave_tracking" (
   "deleted_at" timestamp
 );
 
-COMMENT ON COLUMN "infra"."user_profile"."id" IS '프로필 PK';
+COMMENT ON COLUMN "infra"."user"."id" IS '서비스 내부 User PK';
 
-COMMENT ON COLUMN "infra"."user_profile"."user_uuid" IS 'Keycloak 사용자 UUID(sub)';
+COMMENT ON COLUMN "infra"."user"."keycloak_user_uuid" IS 'Keycloak 사용자 UUID(sub claim)';
 
-COMMENT ON COLUMN "infra"."user_profile"."employee_id" IS '사번 또는 회사 로그인 ID';
+COMMENT ON COLUMN "infra"."user"."employee_no" IS '사번 또는 회사 로그인 ID (Keycloak employeeNo)';
 
-COMMENT ON COLUMN "infra"."user_profile"."department" IS '부서명';
+COMMENT ON COLUMN "infra"."user"."full_name" IS '직원 이름';
 
-COMMENT ON COLUMN "infra"."user_profile"."position" IS '직급(사원/대리/과장 등)';
+COMMENT ON COLUMN "infra"."user"."gender" IS '성별';
 
-COMMENT ON COLUMN "infra"."user_profile"."gender" IS '선택 입력 - 성별';
+COMMENT ON COLUMN "infra"."user"."age" IS '나이';
 
-COMMENT ON COLUMN "infra"."user_profile"."age" IS '선택 입력 - 나이';
+COMMENT ON COLUMN "infra"."user"."hire_year" IS '입사년도';
 
-COMMENT ON COLUMN "infra"."user_profile"."created_at" IS '생성 시각';
+COMMENT ON COLUMN "infra"."user"."tenure_years" IS '근속 연수';
 
-COMMENT ON COLUMN "infra"."user_profile"."updated_at" IS '수정 시각';
+COMMENT ON COLUMN "infra"."user"."position" IS '직급(사원/대리/과장 등)';
+
+COMMENT ON COLUMN "infra"."user"."department" IS '부서명';
+
+COMMENT ON COLUMN "infra"."user"."company_email" IS '회사 이메일';
+
+COMMENT ON COLUMN "infra"."user"."phone_number" IS '휴대전화 번호';
+
+COMMENT ON COLUMN "infra"."user"."resident_registration_number" IS '주민등록번호(암호화 저장)';
+
+COMMENT ON COLUMN "infra"."user"."salary" IS '연봉 또는 급여(암호화 또는 비식별화 권장)';
+
+COMMENT ON COLUMN "infra"."user"."overtime_hours" IS '초과 근무 시간';
+
+COMMENT ON COLUMN "infra"."user"."performance_score" IS '업무 평가 점수';
+
+COMMENT ON COLUMN "infra"."user"."unused_vacation_days" IS '미사용 휴가 일수';
+
+COMMENT ON COLUMN "infra"."user"."role" IS '권한 (SYSTEM_ADMIN, EMPLOYEE 등 Keycloak Realm Role 매핑)';
+
+COMMENT ON COLUMN "infra"."user"."created_at" IS '생성 시각';
+
+COMMENT ON COLUMN "infra"."user"."updated_at" IS '수정 시각';
 
 COMMENT ON COLUMN "infra"."system_log"."id" IS '운영 요약 로그 PK';
 
@@ -599,19 +662,67 @@ COMMENT ON COLUMN "education"."education_video_progress"."deleted_at" IS '삭제
 
 COMMENT ON COLUMN "education"."education_script"."id" IS '스크립트 버전 PK';
 
-COMMENT ON COLUMN "education"."education_script"."education_id" IS '교육 ID';
+COMMENT ON COLUMN "education"."education_script"."education_id" IS '연결된 교육 ID';
 
-COMMENT ON COLUMN "education"."education_script"."source_doc_id" IS '원본 문서 ID';
+COMMENT ON COLUMN "education"."education_script"."source_doc_id" IS '기반이 된 원본 문서 ID';
+
+COMMENT ON COLUMN "education"."education_script"."title" IS '교육 영상 전체 제목 (LLM 생성)';
+
+COMMENT ON COLUMN "education"."education_script"."total_duration_sec" IS '전체 스크립트 기준 총 영상 길이(초)';
 
 COMMENT ON COLUMN "education"."education_script"."version" IS '스크립트 버전 번호';
 
-COMMENT ON COLUMN "education"."education_script"."content" IS '스크립트 내용';
+COMMENT ON COLUMN "education"."education_script"."llm_model" IS '스크립트 생성에 사용된 LLM 모델';
 
-COMMENT ON COLUMN "education"."education_script"."created_by" IS '스크립트 작성자 UUID';
+COMMENT ON COLUMN "education"."education_script"."generation_prompt_hash" IS '스크립트 생성 프롬프트 해시값(재현성/비교용)';
 
-COMMENT ON COLUMN "education"."education_script"."created_at" IS '작성 시각';
+COMMENT ON COLUMN "education"."education_script"."raw_payload" IS 'LLM 원본 응답 전체(JSON) – 감사/디버깅/회귀 테스트용';
+
+COMMENT ON COLUMN "education"."education_script"."created_by" IS '스크립트 생성자(UUID)';
+
+COMMENT ON COLUMN "education"."education_script"."created_at" IS '스크립트 생성 시각';
 
 COMMENT ON COLUMN "education"."education_script"."deleted_at" IS '삭제 시각';
+
+COMMENT ON COLUMN "education"."education_script_chapter"."id" IS '스크립트 챕터 PK';
+
+COMMENT ON COLUMN "education"."education_script_chapter"."script_id" IS '소속 스크립트 ID';
+
+COMMENT ON COLUMN "education"."education_script_chapter"."chapter_index" IS '챕터 순서(0부터 증가)';
+
+COMMENT ON COLUMN "education"."education_script_chapter"."title" IS '챕터 제목 (예: 괴롭힘, 직무, 성희롱)';
+
+COMMENT ON COLUMN "education"."education_script_chapter"."duration_sec" IS '해당 챕터의 총 길이(초)';
+
+COMMENT ON COLUMN "education"."education_script_chapter"."created_at" IS '챕터 생성 시각';
+
+COMMENT ON COLUMN "education"."education_script_chapter"."deleted_at" IS '삭제 시각';
+
+COMMENT ON COLUMN "education"."education_script_scene"."id" IS '스크립트 장면(Scene) PK';
+
+COMMENT ON COLUMN "education"."education_script_scene"."script_id" IS '소속 스크립트 ID';
+
+COMMENT ON COLUMN "education"."education_script_scene"."chapter_id" IS '소속 챕터 ID';
+
+COMMENT ON COLUMN "education"."education_script_scene"."scene_index" IS '챕터 내 장면 순서(scene_id)';
+
+COMMENT ON COLUMN "education"."education_script_scene"."purpose" IS '장면 목적(hook / concept / example / summary)';
+
+COMMENT ON COLUMN "education"."education_script_scene"."narration" IS 'TTS로 읽힐 내레이션 문장';
+
+COMMENT ON COLUMN "education"."education_script_scene"."caption" IS '화면 자막용 텍스트';
+
+COMMENT ON COLUMN "education"."education_script_scene"."visual" IS '시각 연출 가이드(텍스트 강조, 키워드 하이라이트 등)';
+
+COMMENT ON COLUMN "education"."education_script_scene"."duration_sec" IS '해당 장면 재생 시간(초)';
+
+COMMENT ON COLUMN "education"."education_script_scene"."source_chunk_indexes" IS '근거가 된 RAG 문서 청크 인덱스 목록';
+
+COMMENT ON COLUMN "education"."education_script_scene"."confidence_score" IS 'LLM이 판단한 장면 신뢰도(선택)';
+
+COMMENT ON COLUMN "education"."education_script_scene"."created_at" IS '장면 생성 시각';
+
+COMMENT ON COLUMN "education"."education_script_scene"."deleted_at" IS '삭제 시각';
 
 COMMENT ON COLUMN "education"."video_generation_job"."id" IS '영상 생성 작업 PK';
 
@@ -742,6 +853,12 @@ ALTER TABLE "education"."education_video_progress" ADD FOREIGN KEY ("video_id") 
 ALTER TABLE "education"."education_script" ADD FOREIGN KEY ("education_id") REFERENCES "education"."education" ("id");
 
 ALTER TABLE "education"."education_script" ADD FOREIGN KEY ("source_doc_id") REFERENCES "education"."education_source_doc" ("id");
+
+ALTER TABLE "education"."education_script_chapter" ADD FOREIGN KEY ("script_id") REFERENCES "education"."education_script" ("id");
+
+ALTER TABLE "education"."education_script_scene" ADD FOREIGN KEY ("script_id") REFERENCES "education"."education_script" ("id");
+
+ALTER TABLE "education"."education_script_scene" ADD FOREIGN KEY ("chapter_id") REFERENCES "education"."education_script_chapter" ("id");
 
 ALTER TABLE "education"."video_generation_job" ADD FOREIGN KEY ("education_id") REFERENCES "education"."education" ("id");
 

@@ -8,11 +8,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * 교육 스크립트 엔티티.
@@ -22,7 +23,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(name = "education_script", schema = "education")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
 public class EducationScript {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -37,13 +38,30 @@ public class EducationScript {
     @Column(name = "source_doc_id", columnDefinition = "uuid")
     private UUID sourceDocId;
 
+    /** 교육 영상 전체 제목 (LLM 생성) */
+    @Column(name = "title")
+    private String title;
+
+    /** 전체 스크립트 기준 총 영상 길이(초) */
+    @Column(name = "total_duration_sec")
+    private Integer totalDurationSec;
+
     /** 스크립트 버전 */
     @Column(name = "version")
     private Integer version;
 
-    /** 스크립트 본문 */
-    @Column(name = "content")
-    private String content;
+    /** 스크립트 생성에 사용된 LLM 모델 */
+    @Column(name = "llm_model")
+    private String llmModel;
+
+    /** 스크립트 생성 프롬프트 해시값(재현성/비교용) */
+    @Column(name = "generation_prompt_hash", length = 64)
+    private String generationPromptHash;
+
+    /** LLM 원본 응답 전체(JSON) – 감사/디버깅/회귀 테스트용 */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "raw_payload", columnDefinition = "jsonb")
+    private String rawPayload;
 
     /** 작성자 사용자 UUID */
     @Column(name = "created_by", columnDefinition = "uuid")
