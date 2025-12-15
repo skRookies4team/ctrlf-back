@@ -2,18 +2,16 @@ package com.ctrlf.chat.service;
 
 import com.ctrlf.chat.entity.ChatSessionFeedback;
 import com.ctrlf.chat.repository.ChatSessionFeedbackRepository;
+import java.time.Instant;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ChatSessionFeedbackServiceImpl
-    implements ChatSessionFeedbackService {
+public class ChatSessionFeedbackServiceImpl implements ChatSessionFeedbackService {
 
     private final ChatSessionFeedbackRepository chatSessionFeedbackRepository;
 
@@ -24,7 +22,6 @@ public class ChatSessionFeedbackServiceImpl
         Integer score,
         String comment
     ) {
-        // ✅ 이미 총평이 있으면 "수정", 없으면 "신규"
         ChatSessionFeedback feedback =
             chatSessionFeedbackRepository.findBySessionId(sessionId)
                 .orElseGet(ChatSessionFeedback::new);

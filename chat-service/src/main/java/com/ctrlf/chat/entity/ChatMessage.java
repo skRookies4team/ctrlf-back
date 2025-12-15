@@ -1,12 +1,11 @@
 package com.ctrlf.chat.entity;
 
 import jakarta.persistence.*;
+import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.Instant;
-import java.util.UUID;
 
 @Entity
 @Table(name = "chat_message", schema = "chat")
@@ -20,11 +19,8 @@ public class ChatMessage {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column(name = "session_id", nullable = false)
+    @Column(name = "session_id", nullable = false, columnDefinition = "uuid")
     private UUID sessionId;
-
-    @Column(name = "section_id", nullable = false)
-    private UUID sectionId;
 
     @Column(nullable = false, length = 20)
     private String role; // user / assistant
@@ -50,10 +46,9 @@ public class ChatMessage {
     }
 
     // ✅ USER 메시지
-    public static ChatMessage userMessage(UUID sessionId, UUID sectionId, String content) {
+    public static ChatMessage userMessage(UUID sessionId, String content) {
         ChatMessage m = new ChatMessage();
         m.sessionId = sessionId;
-        m.sectionId = sectionId;
         m.role = "user";
         m.content = content;
         return m;
@@ -62,7 +57,6 @@ public class ChatMessage {
     // ✅ AI 메시지
     public static ChatMessage assistantMessage(
         UUID sessionId,
-        UUID sectionId,
         String content,
         Integer tokensIn,
         Integer tokensOut,
@@ -70,7 +64,6 @@ public class ChatMessage {
     ) {
         ChatMessage m = new ChatMessage();
         m.sessionId = sessionId;
-        m.sectionId = sectionId;
         m.role = "assistant";
         m.content = content;
         m.tokensIn = tokensIn;

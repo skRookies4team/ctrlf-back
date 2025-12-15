@@ -1,10 +1,9 @@
 package com.ctrlf.chat.service;
 
 import com.ctrlf.chat.dto.request.ChatMessageSendRequest;
+import com.ctrlf.chat.dto.response.ChatMessageCursorResponse;
 import com.ctrlf.chat.dto.response.ChatMessageSendResponse;
 import com.ctrlf.chat.entity.ChatMessage;
-
-import java.util.List;
 import java.util.UUID;
 
 public interface ChatMessageService {
@@ -16,15 +15,12 @@ public interface ChatMessageService {
         String domain
     );
 
-    // ✅ 특정 섹션 메시지 조회
-    List<ChatMessage> getMessages(UUID sessionId, UUID sectionId);
+    // ✅ ✅ ✅ 세션 내 메시지 조회(커서 기반)
+    ChatMessageCursorResponse getMessagesBySession(UUID sessionId, String cursor, int size);
 
-    // ✅ ✅ ✅ 세션 전체 메시지 조회
-    List<ChatMessage> getMessagesBySession(UUID sessionId);
+    // ✅ Retry (messageId 기준)
+    ChatMessage retryMessage(UUID sessionId, UUID messageId);
 
-    // ✅ Retry
-    ChatMessage retryMessage(UUID sessionId, UUID sectionId);
-
-    // ✅ Regen
-    ChatMessage regenMessage(UUID sessionId, UUID sectionId);
+    // ✅ Regen (messageId 기준)
+    ChatMessage regenMessage(UUID sessionId, UUID messageId);
 }

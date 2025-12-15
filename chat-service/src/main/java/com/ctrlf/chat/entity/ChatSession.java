@@ -44,7 +44,6 @@ public class ChatSession {
     @Column(name = "deleted")
     private Boolean deleted;
 
-    // ✅ 자동 생성 시간 세팅
     @PrePersist
     public void prePersist() {
         this.createdAt = Instant.now();
@@ -52,18 +51,15 @@ public class ChatSession {
         this.deleted = false;
     }
 
-    // ✅ 수정 시간 자동 갱신
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = Instant.now();
     }
 
-    // ✅ 세션 제목 수정
     public void updateTitle(String title) {
         this.title = title;
     }
 
-    // ✅ Soft Delete
     public void softDelete() {
         this.deleted = true;
     }

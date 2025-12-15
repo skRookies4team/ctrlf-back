@@ -9,12 +9,11 @@ import com.ctrlf.chat.entity.ChatSession;
 import com.ctrlf.chat.exception.chat.ChatSessionNotFoundException;
 import com.ctrlf.chat.repository.ChatMessageRepository;
 import com.ctrlf.chat.repository.ChatSessionRepository;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +23,6 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
 
-    // ✅ 세션 생성
     @Override
     public ChatSessionResponse createSession(ChatSessionCreateRequest request) {
         ChatSession session = new ChatSession();
@@ -44,11 +42,9 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         );
     }
 
-    // ✅ 세션 단건 조회
     @Override
     public ChatSessionResponse getSession(UUID sessionId) {
         ChatSession session = chatSessionRepository.findActiveById(sessionId);
-
         if (session == null) {
             throw new ChatSessionNotFoundException();
         }
@@ -63,7 +59,6 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         );
     }
 
-    // ✅ 세션 목록 조회
     @Override
     public List<ChatSessionResponse> getSessionList() {
         return chatSessionRepository.findAllActive()
@@ -79,11 +74,9 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             .toList();
     }
 
-    // ✅ 세션 수정
     @Override
     public ChatSessionResponse updateSession(UUID sessionId, ChatSessionUpdateRequest request) {
         ChatSession session = chatSessionRepository.findActiveById(sessionId);
-
         if (session == null) {
             throw new ChatSessionNotFoundException();
         }
@@ -100,28 +93,23 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         );
     }
 
-    // ✅ 세션 삭제 (Soft Delete)
     @Override
     public void deleteSession(UUID sessionId) {
         ChatSession session = chatSessionRepository.findActiveById(sessionId);
-
         if (session == null) {
             throw new ChatSessionNotFoundException();
         }
-
         session.softDelete();
     }
 
-    // ✅ ✅ ✅ 세션 히스토리 조회 (🔥 완전 최종 정상 버전)
+    // ✅ 세션 히스토리(전체) 조회 유지
     @Override
     public ChatSessionHistoryResponse getSessionHistory(UUID sessionId) {
         ChatSession session = chatSessionRepository.findActiveById(sessionId);
-
         if (session == null) {
             throw new ChatSessionNotFoundException();
         }
 
-        // ✅ 여기만 바뀐 핵심 부분
         List<ChatMessage> messages =
             chatMessageRepository.findAllBySessionIdOrderByCreatedAtAsc(sessionId);
 
