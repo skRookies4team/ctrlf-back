@@ -99,6 +99,68 @@ public class KeycloakAdminClient {
         HttpEntity<Map<String, Object>> req = new HttpEntity<>(payload, headers);
         restTemplate.exchange(url, HttpMethod.PUT, req, Void.class);
     }
+
+    public Map<String, Object> getUser(String userId) {
+        String url = adminApi("/users/" + userId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(getAccessToken());
+        HttpEntity<Void> req = new HttpEntity<>(headers);
+        ResponseEntity<Map> resp = restTemplate.exchange(url, HttpMethod.GET, req, Map.class);
+        return resp.getBody();
+    }
+
+    private String userInfoEndpoint() {
+        return props.getBaseUrl() + "/realms/" + props.getRealm() + "/protocol/openid-connect/userinfo";
+    }
+
+    private String introspectEndpoint() {
+        return props.getBaseUrl() + "/realms/" + props.getRealm() + "/protocol/openid-connect/token/introspect";
+    }
+
+    /**
+     * 주어진 액세스 토큰에 해당하는 사용자 정보를 조회합니다.
+     * Authorization: Bearer {accessToken} 으로 userinfo 엔드포인트를 호출합니다.
+     */
+    public Map<String, Object> getUserInfoWithToken(String accessToken) {
+        String token = accessToken;
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("accessToken is required");
+        }
+        if (token.toLowerCase().startsWith("bearer ")) {
+            token = token.substring(7).trim();
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        HttpEntity<Void> req = new HttpEntity<>(headers);
+        ResponseEntity<Map> resp = restTemplate.exchange(userInfoEndpoint(), HttpMethod.GET, req, Map.class);
+        return resp.getBody();
+    }
+
+    /**
+     * 토큰 인트로스펙션을 수행하여 토큰의 활성 여부 및 클레임을 반환합니다.
+     * clientId/secret로 인증하여 { active, client_id, username, scope, sub, exp ... } 등을 반환합니다.
+     */
+    public Map<String, Object> introspectToken(String accessToken) {
+        String token = accessToken;
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("accessToken is required");
+        }
+        if (token.toLowerCase().startsWith("bearer ")) {
+            token = token.substring(7).trim();
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("token", token);
+        // client 인증 (confidential)
+        form.add("client_id", props.getClientId());
+        if (props.getClientSecret() != null && !props.getClientSecret().isBlank()) {
+            form.add("client_secret", props.getClientSecret());
+        }
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(form, headers);
+        Map body = restTemplate.postForObject(introspectEndpoint(), entity, Map.class);
+        return body;
+    }
 }
 
 
