@@ -1,10 +1,17 @@
 package com.ctrlf.infra.keycloak.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 public class PasswordTokenRequest {
+    @Schema(example = "user1")
     private String username;
+    @Schema(example = "11111")
     private String password;
+    @Schema(example = "infra-admin")
     private String clientId;
+    @Schema(example = "changeme")
     private String clientSecret;
+    @Schema(example = "openid profile email")
     private String scope;
 
     public String getUsername() {

@@ -70,6 +70,21 @@ public class KeycloakAdminService {
         }
         return results;
     }
+
+    public Map<String, Object> getUser(String userId) {
+        return client.getUser(userId);
+    }
+
+    public Map<String, Object> getCurrentUserInfo(String authorizationHeader) {
+        try {
+            return client.getUserInfoWithToken(authorizationHeader);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // userinfo가 401/403 등으로 거절되면 인트로스펙션으로 폴백
+            Map<String, Object> introspected = client.introspectToken(authorizationHeader);
+            // active=false면 그대로 반환(상위에서 처리 가능), true면 최소 식별 정보만 노출
+            return introspected;
+        }
+    }
 }
 
 
