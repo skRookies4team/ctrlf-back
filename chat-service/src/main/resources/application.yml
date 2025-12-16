@@ -37,3 +37,8 @@ management:
     health:
       probes:
         enabled: true
+
+
+ai:
+  gateway:
+    url: http://localhost:8000
