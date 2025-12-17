@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
+/**
+ * AI Gateway 전용 WebClient 설정
+ */
 @Configuration
 public class AiWebClientConfig {
 

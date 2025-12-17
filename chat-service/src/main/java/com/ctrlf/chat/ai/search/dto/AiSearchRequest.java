@@ -2,6 +2,9 @@ package com.ctrlf.chat.ai.search.dto;
 
 import lombok.Data;
 
+/**
+ * AI 검색 요청 DTO
+ */
 @Data
 public class AiSearchRequest {
 

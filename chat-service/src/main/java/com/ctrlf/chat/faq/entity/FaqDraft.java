@@ -6,6 +6,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * AI가 생성한 FAQ 초안(Draft) 엔티티
+ */
 @Entity
 @Table(name = "faq_drafts")
 @Getter
@@ -18,20 +21,13 @@ public class FaqDraft {
     @GeneratedValue
     private UUID id;
 
-    // AI Gateway가 반환한 draft ID
-    @Column(nullable = false, unique = true)
     private String faqDraftId;
-
-    @Column(nullable = false)
     private String domain;
-
-    @Column(nullable = false)
     private String clusterId;
 
-    @Column(nullable = false, length = 500)
     private String question;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String answerMarkdown;
 
     @Column(columnDefinition = "TEXT")
@@ -40,7 +36,6 @@ public class FaqDraft {
     private Double aiConfidence;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Status status;
 
     private UUID reviewerId;

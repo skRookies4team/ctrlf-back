@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * FAQ 화면용 UI 카테고리 엔티티
+ */
 @Entity
 @Table(name = "faq_ui_categories", schema = "chat")
 @Getter
@@ -15,48 +18,47 @@ import lombok.Setter;
 public class FaqUiCategory {
 
     @Id
-    @Column(name = "id", columnDefinition = "uuid")
-    private UUID id; // ✅ 불변(요구사항)
+    private UUID id;
 
-    @Column(name = "slug", nullable = false, unique = true, length = 50)
-    private String slug; // ✅ 고유
+    @Column(nullable = false, unique = true)
+    private String slug;
 
-    @Column(name = "display_name", nullable = false, length = 100)
     private String displayName;
-
-    @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
-
-    @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
-    @Column(name = "created_by", columnDefinition = "uuid")
     private UUID createdBy;
-
-    @Column(name = "updated_by", columnDefinition = "uuid")
     private UUID updatedBy;
 
-    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
-
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public static FaqUiCategory create(UUID id, String slug, String displayName, int sortOrder, UUID operatorId) {
+    public static FaqUiCategory create(
+        UUID id,
+        String slug,
+        String displayName,
+        int sortOrder,
+        UUID operatorId
+    ) {
         FaqUiCategory c = new FaqUiCategory();
-        c.setId(id);
-        c.setSlug(slug);
-        c.setDisplayName(displayName);
-        c.setSortOrder(sortOrder);
-        c.setIsActive(true);
-        c.setCreatedBy(operatorId);
-        c.setUpdatedBy(operatorId);
-        c.setCreatedAt(Instant.now());
-        c.setUpdatedAt(Instant.now());
+        c.id = id;
+        c.slug = slug;
+        c.displayName = displayName;
+        c.sortOrder = sortOrder;
+        c.isActive = true;
+        c.createdBy = operatorId;
+        c.updatedBy = operatorId;
+        c.createdAt = Instant.now();
+        c.updatedAt = Instant.now();
         return c;
     }
 
-    public void update(String displayName, Integer sortOrder, Boolean isActive, UUID operatorId) {
+    public void update(
+        String displayName,
+        Integer sortOrder,
+        Boolean isActive,
+        UUID operatorId
+    ) {
         if (displayName != null) this.displayName = displayName;
         if (sortOrder != null) this.sortOrder = sortOrder;
         if (isActive != null) this.isActive = isActive;

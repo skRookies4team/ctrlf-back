@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * FAQ UI 카테고리 관리용 관리자 API
+ */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/faq/ui-categories")
@@ -17,6 +20,9 @@ public class AdminFaqUiCategoryController {
 
     private final FaqUiCategoryService faqUiCategoryService;
 
+    /**
+     * UI 카테고리 생성
+     */
     @PostMapping
     public ResponseEntity<UUID> create(
         @RequestBody FaqUiCategoryCreateRequest req,
@@ -25,6 +31,9 @@ public class AdminFaqUiCategoryController {
         return ResponseEntity.ok(faqUiCategoryService.create(req, operatorId));
     }
 
+    /**
+     * UI 카테고리 수정
+     */
     @PatchMapping("/{categoryId}")
     public ResponseEntity<Void> update(
         @PathVariable UUID categoryId,
@@ -35,7 +44,9 @@ public class AdminFaqUiCategoryController {
         return ResponseEntity.ok().build();
     }
 
-    // ✅ 비활성화 전용 API
+    /**
+     * UI 카테고리 비활성화
+     */
     @PostMapping("/{categoryId}/deactivate")
     public ResponseEntity<Void> deactivate(
         @PathVariable UUID categoryId,
@@ -46,6 +57,9 @@ public class AdminFaqUiCategoryController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * 전체 UI 카테고리 조회
+     */
     @GetMapping
     public ResponseEntity<List<FaqUiCategoryResponse>> getAll() {
         return ResponseEntity.ok(faqUiCategoryService.getAllCategories());

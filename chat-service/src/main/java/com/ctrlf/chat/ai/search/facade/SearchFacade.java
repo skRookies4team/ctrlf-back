@@ -8,12 +8,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * AI 검색 결과를 동기 방식으로 제공하는 Facade
+ */
 @Service
 @RequiredArgsConstructor
 public class SearchFacade {
 
     private final AiSearchService aiSearchService;
 
+    /**
+     * 검색 결과 문서 리스트 조회
+     */
     public List<AiSearchResponse.Result> searchDocs(
         String query,
         SearchDataset dataset,

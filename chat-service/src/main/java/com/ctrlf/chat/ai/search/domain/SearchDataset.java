@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.Arrays;
 
+/**
+ * AI 검색 대상 데이터셋 정의
+ */
 @Getter
 @RequiredArgsConstructor
 public enum SearchDataset {
@@ -17,6 +20,9 @@ public enum SearchDataset {
 
     private final String value;
 
+    /**
+     * 문자열을 SearchDataset으로 변환
+     */
     public static SearchDataset from(String value) {
         return Arrays.stream(values())
             .filter(d -> d.value.equals(value))

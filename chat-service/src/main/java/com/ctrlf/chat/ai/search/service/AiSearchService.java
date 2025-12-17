@@ -10,12 +10,18 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.Map;
 
+/**
+ * AI Gateway 검색 API 호출 담당 서비스
+ */
 @Service
 @RequiredArgsConstructor
 public class AiSearchService {
 
     private final WebClient aiWebClient;
 
+    /**
+     * AI 서버에 검색 요청을 보내고 결과를 반환한다
+     */
     public Mono<AiSearchResponse> search(
         String query,
         String dataset,

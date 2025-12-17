@@ -3,10 +3,13 @@ package com.ctrlf.chat.faq.entity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 
+/**
+ * FAQ 변경 이력 관리 엔티티
+ */
 @Entity
 @Table(name = "faq_revisions", schema = "chat")
 @Getter
@@ -14,31 +17,15 @@ import lombok.NoArgsConstructor;
 public class FaqRevision {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(columnDefinition = "uuid")
+    @GeneratedValue
     private UUID id;
 
-    @Column(name = "target_type", nullable = false)
     private String targetType;
-
-    @Column(name = "target_id", nullable = false, columnDefinition = "uuid")
     private UUID targetId;
-
-    @Column(nullable = false)
     private String action;
-
-    @Column(name = "actor_id", columnDefinition = "uuid")
     private UUID actorId;
-
-    @Column
     private String reason;
-
-    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
-
-    /* ======================
-       Static Factory Method
-       ====================== */
 
     public static FaqRevision create(
         String targetType,
