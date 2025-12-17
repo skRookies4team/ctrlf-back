@@ -36,20 +36,17 @@
       "publicClient": false,
       "serviceAccountsEnabled": true,
       "secret": "changeme",
-      "directAccessGrantsEnabled": false,
-      "redirectUris": []
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [],
+      "defaultClientScopes": ["profile", "email"]
     },
     {
       "clientId": "web-app",
       "protocol": "openid-connect",
       "publicClient": true,
       "standardFlowEnabled": true,
-      "redirectUris": [
-        "http://localhost:5173/*"
-      ],
-      "webOrigins": [
-        "http://localhost:5173"
-      ],
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
       "protocolMappers": [
         {
           "name": "employeeNo",
@@ -279,9 +276,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
         "employeeNo": ["1234"],
         "fullName": ["유저 원"],
@@ -313,10 +308,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "SYSTEM_ADMIN"
-      ],
+      "realmRoles": ["EMPLOYEE", "SYSTEM_ADMIN"],
       "attributes": {
         "employeeNo": ["2222"],
         "fullName": ["시스템 관리자"],
@@ -348,10 +340,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "CONTENTS_REVIEWER"
-      ],
+      "realmRoles": ["EMPLOYEE", "CONTENTS_REVIEWER"],
       "attributes": {
         "employeeNo": ["3001"],
         "fullName": ["콘텐츠 검토자"],
@@ -383,10 +372,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "VIDEO_CREATOR"
-      ],
+      "realmRoles": ["EMPLOYEE", "VIDEO_CREATOR"],
       "attributes": {
         "employeeNo": ["4001"],
         "fullName": ["교육 영상 제작자"],

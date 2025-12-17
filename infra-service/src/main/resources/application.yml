@@ -34,7 +34,7 @@ management:
 
 keycloak:
   admin:
-    base-url: http://localhost:8080
+    base-url: http://localhost:8090
     realm: ctrlf
     client-id: infra-admin
     client-secret: changeme
@@ -45,7 +45,7 @@ app:
     title: Infra Service API
     description: Infra service endpoints for Keycloak admin operations
     security:
-      enabled: false
+      enabled: true
 
   s3:
     bucket: ctrl-s3

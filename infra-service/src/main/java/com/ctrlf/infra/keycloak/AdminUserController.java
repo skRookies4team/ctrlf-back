@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +42,76 @@ public class AdminUserController {
     public AdminUserController(KeycloakAdminService service, KeycloakAdminProperties props) {
         this.service = service;
         this.props = props;
+    }
+
+    @GetMapping("/{userId}")
+    @Operation(
+        summary = "관리 사용자 단건 조회",
+        description = "Keycloak Admin API의 /users/{id} 결과를 반환합니다.",
+        security = {}
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = Object.class))),
+        @ApiResponse(responseCode = "404", description = "사용자 없음")
+    })
+    public ResponseEntity<Map<String, Object>> getUser(
+        @Parameter(description = "Keycloak 사용자 ID", example = "c2f0a1c3-....")
+        @PathVariable String userId
+    ) {
+        Map<String, Object> user = service.getUser(userId);
+        return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/register")
+    @Operation(
+        summary = "관리 사용자 등록",
+        description = "사용자 정보를 등록(생성)합니다. 기존 POST /admin/users 와 동일 동작을 별도 엔드포인트로 제공합니다.",
+        security = {}
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공 - 생성된 사용자 ID 반환",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = Object.class)))
+    })
+    public ResponseEntity<Map<String, String>> register(@RequestBody UserRequestDto.CreateUserReq req) {
+        Map<String, Object> payload = new HashMap<>();
+        if (req.getUsername() != null) payload.put("username", req.getUsername());
+        if (req.getEmail() != null) payload.put("email", req.getEmail());
+        if (req.getFirstName() != null) payload.put("firstName", req.getFirstName());
+        if (req.getLastName() != null) payload.put("lastName", req.getLastName());
+        payload.put("enabled", req.getEnabled() != null ? req.getEnabled() : Boolean.TRUE);
+        if (req.getAttributes() != null) payload.put("attributes", req.getAttributes());
+        String userId = service.createUser(payload, req.getInitialPassword(), req.getTemporaryPassword() != null ? req.getTemporaryPassword() : false);
+        return ResponseEntity.ok(Map.of("userId", userId));
+    }
+
+    @GetMapping("/me")
+    @Operation(
+        summary = "현재 토큰 기준 사용자 정보 조회",
+        description = "요청의 Authorization 헤더(Bearer 토큰)로 Keycloak userinfo 엔드포인트를 호출하여 사용자 정보를 반환합니다.",
+        security = {}
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = Object.class))),
+        @ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰")
+    })
+    public ResponseEntity<Map<String, Object>> me(
+        @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        if (authorization == null || authorization.isBlank()) {
+            return ResponseEntity.status(401).body(Map.of("error", "missing Authorization header"));
+        }
+        Map<String, Object> info = service.getCurrentUserInfo(authorization);
+        // 인트로스펙션 응답(active=false)인 경우 401로 매핑
+        Object active = info.get("active");
+        if (active instanceof Boolean && !((Boolean) active)) {
+            return ResponseEntity.status(401).body(Map.of("error", "inactive token"));
+        }
+        return ResponseEntity.ok(info);
     }
 
     @GetMapping
@@ -193,7 +264,23 @@ public class AdminUserController {
         description = "username/password로 토큰 발급(Direct Access Grants). clientId/Secret 미지정 시 keycloak.admin 설정 사용.",
         security = {}
     )
-    public ResponseEntity<Map> passwordToken(@RequestBody PasswordTokenRequest request) {
+    public ResponseEntity<Map> passwordToken(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = PasswordTokenRequest.class),
+                examples = @ExampleObject(value = "{\n" +
+                    "  \"clientId\": \"infra-admin\",\n" +
+                    "  \"clientSecret\": \"changeme\",\n" +
+                    "  \"username\": \"user1\",\n" +
+                    "  \"password\": \"11111\",\n" +
+                    "  \"scope\": \"openid profile email\"\n" +
+                    "}")
+            )
+        )
+        @RequestBody PasswordTokenRequest request
+    ) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         String clientId = (request.getClientId() != null && !request.getClientId().isBlank())
