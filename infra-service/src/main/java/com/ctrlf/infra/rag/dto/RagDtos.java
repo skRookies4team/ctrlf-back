@@ -93,6 +93,7 @@ public final class RagDtos {
         private String domain;
         private String uploaderUuid;
         private String createdAt;
+        private String status;
     }
 
     // ---------- Update Document ----------
@@ -146,6 +147,28 @@ public final class RagDtos {
         private String status;    // REPROCESSING
         private String jobId;
         private String updatedAt;
+    }
+
+    // ---------- AI Process Proxy (JSON body for Swagger test) ----------
+    @Getter
+    @NoArgsConstructor
+    public static class AiProcessProxyRequest {
+        @Schema(name = "doc_id", example = "string")
+        private String docId;
+        @Schema(name = "file_url", example = "https://example.com/")
+        private String fileUrl;
+        @Schema(example = "string")
+        private String domain;
+        private Acl acl;
+
+        @Getter
+        @NoArgsConstructor
+        public static class Acl {
+            @Schema(example = "[\"string\"]")
+            private java.util.List<String> roles;
+            @Schema(example = "[\"string\"]")
+            private java.util.List<String> departments;
+        }
     }
 }
 
