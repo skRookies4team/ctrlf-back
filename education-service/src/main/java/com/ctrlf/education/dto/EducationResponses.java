@@ -82,16 +82,16 @@ public final class EducationResponses {
             private Boolean isMain;
             /** 대상 부서 코드 */
             private String targetDeptCode;
-            /** DRM 키(옵션) */
-            private String drmKey;
-            /** 재생 토큰(옵션) */
-            private String playbackToken;
             /** 사용자 이어보기 위치(초) */
             private Integer resumePosition;
             /** 사용자 영상 이수 여부 */
             private Boolean isCompleted;
             /** 사용자 누적 시청 시간(초) */
             private Integer totalWatchSeconds;
+            /** 진행률(%) - 서버 계산 필드 */
+            private Integer progressPercent;
+            /** 시청 상태 레이블(시청전/시청중/시청완료) */
+            private String watchStatus;
         }
     }
 
@@ -107,9 +107,13 @@ public final class EducationResponses {
         private String description;
         private String category;
         private boolean required;
-        /** 미이수/진행중/완료 */
-        private String status;
         private List<String> targetDepartments;
+        /** 사용자 기준 교육 진행률(%) */
+        private int progressPercent;
+        /** 교육 시청 상태(시청전/시청중/시청완료) */
+        private String watchStatus;
+        /** 교육에 포함된 영상 목록(사용자 진행 포함) */
+        private List<EducationVideosResponse.VideoItem> videos;
     }
 
     /**

@@ -2,17 +2,20 @@ package com.ctrlf.education.config;
 
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
-import com.ctrlf.education.entity.EducationScript;
-import com.ctrlf.education.entity.EducationScriptChapter;
-import com.ctrlf.education.entity.EducationScriptScene;
+import com.ctrlf.education.entity.EducationTopic;
 import com.ctrlf.education.repository.EducationRepository;
-import com.ctrlf.education.repository.EducationScriptChapterRepository;
-import com.ctrlf.education.repository.EducationScriptRepository;
-import com.ctrlf.education.repository.EducationScriptSceneRepository;
-import com.ctrlf.education.repository.VideoGenerationJobRepository;
+import com.ctrlf.education.video.entity.EducationScript;
+import com.ctrlf.education.video.entity.EducationScriptChapter;
+import com.ctrlf.education.video.entity.EducationScriptScene;
+import com.ctrlf.education.video.repository.EducationScriptChapterRepository;
+import com.ctrlf.education.video.repository.EducationScriptRepository;
+import com.ctrlf.education.video.repository.EducationScriptSceneRepository;
+import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
+import com.ctrlf.education.video.repository.EducationVideoRepository;
+import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,40 +40,57 @@ public class SeedDataRunner implements CommandLineRunner {
     private final VideoGenerationJobRepository jobRepository;
     private final EducationScriptChapterRepository chapterRepository;
     private final EducationScriptSceneRepository sceneRepository;
+    private final EducationVideoRepository educationVideoRepository;
+    private final EducationVideoProgressRepository educationVideoProgressRepository;
 
     public SeedDataRunner(
         EducationRepository educationRepository,
         EducationScriptRepository scriptRepository,
         VideoGenerationJobRepository jobRepository,
         EducationScriptChapterRepository chapterRepository,
-        EducationScriptSceneRepository sceneRepository
+        EducationScriptSceneRepository sceneRepository,
+        EducationVideoRepository educationVideoRepository,
+        EducationVideoProgressRepository educationVideoProgressRepository
     ) {
         this.educationRepository = educationRepository;
         this.scriptRepository = scriptRepository;
         this.jobRepository = jobRepository;
         this.chapterRepository = chapterRepository;
         this.sceneRepository = sceneRepository;
+        this.educationVideoRepository = educationVideoRepository;
+        this.educationVideoProgressRepository = educationVideoProgressRepository;
     }
 
     @Override
     @Transactional
     public void run(String... args) {
         seedScriptsAndJobs();
+        seedEducationsVideosAndProgress();
     }
 
     private void seedScriptsAndJobs() {
         // 교육 엔티티 선행 생성 (FK 충족)
         Education eduA = new Education();
         eduA.setTitle("테스트 교육 A");
-        eduA.setCategory(EducationCategory.MANDATORY);
+        eduA.setCategory(EducationTopic.JOB_DUTY);
+        eduA.setDescription("테스트 교육 A 설명");
+        eduA.setPassScore(80);
+        eduA.setPassRatio(90);
+        eduA.setDepartmentScope("[\"개발팀\",\"인사팀\"]");
         eduA.setRequire(Boolean.TRUE);
+        eduA.setEduType(EducationCategory.MANDATORY);
         educationRepository.save(eduA);
         UUID eduId1 = eduA.getId();
 
         Education eduB = new Education();
         eduB.setTitle("테스트 교육 B");
-        eduB.setCategory(EducationCategory.ETC);
+        eduB.setCategory(EducationTopic.WORKPLACE_BULLYING);
+        eduB.setDescription("테스트 교육 B 설명");
+        eduB.setPassScore(70);
+        eduB.setPassRatio(80);
+        eduB.setDepartmentScope("[\"개발팀\",\"총무팀\"]");
         eduB.setRequire(Boolean.FALSE);
+        eduB.setEduType(EducationCategory.ETC);
         educationRepository.save(eduB);
         UUID eduId2 = eduB.getId();
 
@@ -98,6 +118,53 @@ public class SeedDataRunner implements CommandLineRunner {
         sceneRepository.flush();
 
         // Job 시드는 별도 러너(@Order(2))에서 처리합니다.
+    }
+
+    /**
+     * 사용자용 API 확인을 위한 영상/진행 더미 데이터.
+     */
+    private void seedEducationsVideosAndProgress() {
+        // 이미 영상이 있으면 스킵
+        List<Education> edus = educationRepository.findAll();
+        if (edus.isEmpty()) return;
+
+        UUID demoUser = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+        for (Education edu : edus) {
+            var videos = educationVideoRepository.findByEducationId(edu.getId());
+            if (videos.isEmpty()) {
+                log.info("Seed skip: 교육에 연결된 영상이 없어 진행률 더미 생성을 건너뜁니다. eduId={}", edu.getId());
+                continue;
+            }
+            /**
+             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
+             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
+             * s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4
+             * s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4
+             * s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4
+             * s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4
+             */
+
+            // 진행률 더미: 첫 영상 30%, 두번째 100%
+            for (int i = 0; i < videos.size(); i++) {
+                var v = videos.get(i);
+                var p = educationVideoProgressRepository
+                    .findByUserUuidAndEducationIdAndVideoId(demoUser, edu.getId(), v.getId())
+                    .orElseGet(() -> com.ctrlf.education.video.entity.EducationVideoProgress.create(demoUser, edu.getId(), v.getId()));
+                if (i == 0) {
+                    p.setLastPositionSeconds(540); // 9분
+                    p.setTotalWatchSeconds(540);
+                    p.setProgress(30);
+                    p.setIsCompleted(false);
+                } else {
+                    p.setLastPositionSeconds(v.getDuration() != null ? v.getDuration() : 1200);
+                    p.setTotalWatchSeconds(p.getLastPositionSeconds());
+                    p.setProgress(100);
+                    p.setIsCompleted(true);
+                }
+                educationVideoProgressRepository.save(p);
+            }
+        }
     }
 
     private UUID insertScript(UUID eduId, UUID materialId, String content, Integer version) {

@@ -1,9 +1,10 @@
 package com.ctrlf.education.config;
 
-import com.ctrlf.education.entity.EducationScript;
-import com.ctrlf.education.entity.VideoGenerationJob;
-import com.ctrlf.education.repository.EducationScriptRepository;
-import com.ctrlf.education.repository.VideoGenerationJobRepository;
+import com.ctrlf.education.video.entity.EducationScript;
+import com.ctrlf.education.video.entity.VideoGenerationJob;
+import com.ctrlf.education.video.repository.EducationScriptRepository;
+import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
+
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
