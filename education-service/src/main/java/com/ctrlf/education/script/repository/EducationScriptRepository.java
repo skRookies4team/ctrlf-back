@@ -1,8 +1,9 @@
-package com.ctrlf.education.video.repository;
+package com.ctrlf.education.script.repository;
 
-import com.ctrlf.education.video.entity.EducationScript;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.ctrlf.education.script.entity.EducationScript;
 
 /**
  * 교육 스크립트 저장소.

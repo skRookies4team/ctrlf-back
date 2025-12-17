@@ -1,8 +1,8 @@
 package com.ctrlf.education.config;
 
-import com.ctrlf.education.video.entity.EducationScript;
+import com.ctrlf.education.script.entity.EducationScript;
+import com.ctrlf.education.script.repository.EducationScriptRepository;
 import com.ctrlf.education.video.entity.VideoGenerationJob;
-import com.ctrlf.education.video.repository.EducationScriptRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
 
 import java.util.Optional;

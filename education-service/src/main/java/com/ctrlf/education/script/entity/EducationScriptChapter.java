@@ -1,4 +1,4 @@
-package com.ctrlf.education.video.entity;
+package com.ctrlf.education.script.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

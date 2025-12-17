@@ -78,8 +78,6 @@ public final class EducationResponses {
             private Integer duration;
             /** 영상 버전 */
             private Integer version;
-            /** 메인 영상 여부 */
-            private Boolean isMain;
             /** 대상 부서 코드 */
             private String targetDeptCode;
             /** 사용자 이어보기 위치(초) */

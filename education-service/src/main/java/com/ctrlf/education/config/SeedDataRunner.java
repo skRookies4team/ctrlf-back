@@ -4,15 +4,15 @@ import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
 import com.ctrlf.education.entity.EducationTopic;
 import com.ctrlf.education.repository.EducationRepository;
-import com.ctrlf.education.video.entity.EducationScript;
-import com.ctrlf.education.video.entity.EducationScriptChapter;
-import com.ctrlf.education.video.entity.EducationScriptScene;
-import com.ctrlf.education.video.repository.EducationScriptChapterRepository;
-import com.ctrlf.education.video.repository.EducationScriptRepository;
-import com.ctrlf.education.video.repository.EducationScriptSceneRepository;
+import com.ctrlf.education.script.entity.EducationScript;
+import com.ctrlf.education.script.entity.EducationScriptChapter;
+import com.ctrlf.education.script.entity.EducationScriptScene;
+import com.ctrlf.education.script.repository.EducationScriptChapterRepository;
+import com.ctrlf.education.script.repository.EducationScriptRepository;
+import com.ctrlf.education.script.repository.EducationScriptSceneRepository;
 import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
-import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,6 @@ public class SeedDataRunner implements CommandLineRunner {
 
     private final EducationRepository educationRepository;
     private final EducationScriptRepository scriptRepository;
-    private final VideoGenerationJobRepository jobRepository;
     private final EducationScriptChapterRepository chapterRepository;
     private final EducationScriptSceneRepository sceneRepository;
     private final EducationVideoRepository educationVideoRepository;
@@ -46,7 +45,6 @@ public class SeedDataRunner implements CommandLineRunner {
     public SeedDataRunner(
         EducationRepository educationRepository,
         EducationScriptRepository scriptRepository,
-        VideoGenerationJobRepository jobRepository,
         EducationScriptChapterRepository chapterRepository,
         EducationScriptSceneRepository sceneRepository,
         EducationVideoRepository educationVideoRepository,
@@ -54,7 +52,6 @@ public class SeedDataRunner implements CommandLineRunner {
     ) {
         this.educationRepository = educationRepository;
         this.scriptRepository = scriptRepository;
-        this.jobRepository = jobRepository;
         this.chapterRepository = chapterRepository;
         this.sceneRepository = sceneRepository;
         this.educationVideoRepository = educationVideoRepository;
@@ -132,6 +129,33 @@ public class SeedDataRunner implements CommandLineRunner {
 
         for (Education edu : edus) {
             var videos = educationVideoRepository.findByEducationId(edu.getId());
+            // 영상이 없으면 더미 영상 추가
+            if (videos.isEmpty()) {
+                List<com.ctrlf.education.video.entity.EducationVideo> seeds = new ArrayList<>();
+                String[] urls = new String[] {
+                    "s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4",
+                    "s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4",
+                    "s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4",
+                    "s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4",
+                    "s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4"
+                };
+                int[] durations = new int[] { 1200, 900, 1100, 1000, 950 };
+                for (int i = 0; i < urls.length; i++) {
+                    var v = com.ctrlf.education.video.entity.EducationVideo.create(
+                        edu.getId(),
+                        urls[i],
+                        durations[i],
+                        "ALL",
+                        1,
+                        "READY"
+                    );
+                    v.setOrderIndex(i);
+                    seeds.add(v);
+                }
+                educationVideoRepository.saveAll(seeds);
+                videos = educationVideoRepository.findByEducationId(edu.getId());
+                log.info("Seed created: {} dummy videos for eduId={}", videos.size(), edu.getId());
+            }
             if (videos.isEmpty()) {
                 log.info("Seed skip: 교육에 연결된 영상이 없어 진행률 더미 생성을 건너뜁니다. eduId={}", edu.getId());
                 continue;

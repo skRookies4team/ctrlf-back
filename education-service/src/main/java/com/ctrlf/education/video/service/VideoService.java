@@ -1,35 +1,17 @@
 package com.ctrlf.education.video.service;
 
-import com.ctrlf.education.video.client.VideoAiClient;
+import com.ctrlf.education.script.repository.EducationScriptRepository;
 import com.ctrlf.education.video.dto.VideoDtos.AiProcessResponse;
 import com.ctrlf.education.video.dto.VideoDtos.AiVideoResponse;
-import com.ctrlf.education.video.dto.VideoDtos.ChapterItem;
-import com.ctrlf.education.video.dto.VideoDtos.ChapterUpsert;
 import com.ctrlf.education.video.dto.VideoDtos.JobItem;
-import com.ctrlf.education.video.dto.VideoDtos.SceneItem;
-import com.ctrlf.education.video.dto.VideoDtos.SceneUpsert;
-import com.ctrlf.education.video.dto.VideoDtos.ScriptCompleteCallback;
-import com.ctrlf.education.video.dto.VideoDtos.ScriptCompleteResponse;
-import com.ctrlf.education.video.dto.VideoDtos.ScriptDetailResponse;
-import com.ctrlf.education.video.dto.VideoDtos.ScriptResponse;
-import com.ctrlf.education.video.dto.VideoDtos.ScriptUpdateRequest;
-import com.ctrlf.education.video.dto.VideoDtos.ScriptUpdateResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteCallback;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoJobRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoJobResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoJobUpdateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoRetryResponse;
-import com.ctrlf.education.video.entity.EducationScript;
-import com.ctrlf.education.video.entity.EducationScriptChapter;
-import com.ctrlf.education.video.entity.EducationScriptScene;
 import com.ctrlf.education.video.entity.VideoGenerationJob;
-import com.ctrlf.education.video.repository.EducationScriptChapterRepository;
-import com.ctrlf.education.video.repository.EducationScriptRepository;
-import com.ctrlf.education.video.repository.EducationScriptSceneRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -48,12 +30,9 @@ import org.springframework.web.server.ResponseStatusException;
  *
  * <p>주요 기능:
  * <ul>
- *   <li>스크립트 조회/수정</li>
- *   <li>스크립트 생성 완료 콜백 처리</li>
- *   <li>영상 생성 Job 등록</li>
- *   <li>영상 생성 재시도</li>
- *   <li>영상 생성 완료 콜백 처리</li>
+ *   <li>영상 생성 Job 등록/조회/수정/삭제/재시도</li>
  *   <li>전처리/임베딩/스크립트 생성 요청 (AI 서버 호출)</li>
+   *   <li>영상 생성 완료 콜백 처리</li>
  * </ul>
  */
 @Service
@@ -65,199 +44,11 @@ public class VideoService {
     /** Job 상태 상수 */
     private static final String STATUS_QUEUED = "QUEUED";
     private static final String STATUS_PROCESSING = "PROCESSING";
-    private static final String STATUS_COMPLETED = "COMPLETED";
     private static final String STATUS_FAILED = "FAILED";
 
     private final EducationScriptRepository scriptRepository;
     private final VideoGenerationJobRepository jobRepository;
-    private final EducationScriptChapterRepository chapterRepository;
-    private final EducationScriptSceneRepository sceneRepository;
-    private final VideoAiClient videoAiClient;
-
-    // ========================
-    // 스크립트 관련 메서드
-    // ========================
-
-    /**
-     * 스크립트를 조회합니다.
-     *
-     * @param scriptId 스크립트 ID
-     * @return 스크립트 정보
-     * @throws ResponseStatusException 스크립트가 존재하지 않을 경우 404
-     */
-    @Transactional(readOnly = true)
-    public ScriptDetailResponse getScript(UUID scriptId) {
-        EducationScript script = scriptRepository.findById(scriptId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
-
-        // 챕터/씬 로드
-        List<EducationScriptChapter> chapters = chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId);
-        List<ChapterItem> chapterItems = new ArrayList<>();
-        for (EducationScriptChapter ch : chapters) {
-            List<EducationScriptScene> scenes = sceneRepository.findByChapterIdOrderBySceneIndexAsc(ch.getId());
-            List<SceneItem> sceneItems = new ArrayList<>();
-            for (EducationScriptScene sc : scenes) {
-                sceneItems.add(new SceneItem(
-                    sc.getId(),
-                    sc.getSceneIndex(),
-                    sc.getPurpose(),
-                    sc.getNarration(),
-                    sc.getCaption(),
-                    sc.getVisual(),
-                    sc.getDurationSec(),
-                    sc.getSourceChunkIndexes(),
-                    sc.getConfidenceScore()
-                ));
-            }
-            chapterItems.add(new ChapterItem(
-                ch.getId(),
-                ch.getChapterIndex(),
-                ch.getTitle(),
-                ch.getDurationSec(),
-                sceneItems
-            ));
-        }
-
-        return new ScriptDetailResponse(
-            script.getId(),
-            script.getEducationId(),
-            script.getSourceDocId(),
-            script.getTitle(),
-            script.getTotalDurationSec(),
-            script.getVersion(),
-            script.getLlmModel(),
-            script.getRawPayload(),
-            chapterItems
-        );
-    }
-
-    /**
-     * 스크립트 목록을 페이징으로 조회합니다.
-     *
-     * @param page 페이지 번호(0-base)
-     * @param size 페이지 크기
-     * @return 스크립트 응답 목록
-     */
-    @Transactional(readOnly = true)
-    public List<ScriptResponse> listScripts(int page, int size) {
-        Page<EducationScript> pageRes = scriptRepository.findAll(PageRequest.of(page, size));
-        List<ScriptResponse> list = new ArrayList<>();
-        for (EducationScript s : pageRes.getContent()) {
-            list.add(new ScriptResponse(
-                s.getId(),
-                s.getEducationId(),
-                s.getSourceDocId(),
-                s.getRawPayload(),
-                s.getVersion()
-            ));
-        }
-        return list;
-    }
-
-    /**
-     * 스크립트를 삭제합니다.
-     *
-     * @param scriptId 스크립트 ID
-     * @throws ResponseStatusException 스크립트가 존재하지 않을 경우 404
-     */
-    @Transactional
-    public void deleteScript(UUID scriptId) {
-        EducationScript script = scriptRepository.findById(scriptId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
-        scriptRepository.delete(script);
-        log.info("스크립트 삭제 완료. scriptId={}", scriptId);
-    }
-
-    /**
-     * 스크립트를 수정합니다.
-     *
-     * @param scriptId 스크립트 ID
-     * @param request  수정 요청 (스크립트 내용)
-     * @return 수정 결과
-     * @throws ResponseStatusException 스크립트가 존재하지 않을 경우 404
-     */
-    @Transactional
-    public ScriptUpdateResponse updateScript(UUID scriptId, ScriptUpdateRequest request) {
-        EducationScript script = scriptRepository.findById(scriptId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
-
-        // 1) rawPayload 업데이트 (옵션)
-        if (request.script() != null) {
-            script.setRawPayload(request.script());
-            // 버전 증가
-            script.setVersion(script.getVersion() == null ? 2 : script.getVersion() + 1);
-            scriptRepository.save(script);
-        }
-
-        // 2) 챕터/씬 교체 (옵션)
-        if (request.chapters() != null) {
-            // 기존 씬 삭제 → 기존 챕터 삭제
-            List<EducationScriptScene> oldScenes = sceneRepository.findByScriptIdOrderByChapterIdAscSceneIndexAsc(scriptId);
-            if (!oldScenes.isEmpty()) {
-                sceneRepository.deleteAll(oldScenes);
-            }
-            List<EducationScriptChapter> oldChapters = chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId);
-            if (!oldChapters.isEmpty()) {
-                chapterRepository.deleteAll(oldChapters);
-            }
-
-            // 신규 생성
-            for (ChapterUpsert cu : request.chapters()) {
-                EducationScriptChapter ch = new EducationScriptChapter();
-                ch.setScriptId(scriptId);
-                ch.setChapterIndex(cu.index());
-                ch.setTitle(cu.title());
-                ch.setDurationSec(cu.durationSec());
-                chapterRepository.save(ch);
-
-                if (cu.scenes() != null) {
-                    for (SceneUpsert su : cu.scenes()) {
-                        EducationScriptScene sc = new EducationScriptScene();
-                        sc.setScriptId(scriptId);
-                        sc.setChapterId(ch.getId());
-                        sc.setSceneIndex(su.index());
-                        sc.setPurpose(su.purpose());
-                        sc.setNarration(su.narration());
-                        sc.setCaption(su.caption());
-                        sc.setVisual(su.visual());
-                        sc.setDurationSec(su.durationSec());
-                        sc.setSourceChunkIndexes(su.sourceChunkIndexes());
-                        sc.setConfidenceScore(su.confidenceScore());
-                        sceneRepository.save(sc);
-                    }
-                }
-            }
-        }
-
-        log.info("스크립트 수정 완료. scriptId={}, newVersion={}", scriptId, script.getVersion());
-        return new ScriptUpdateResponse(true, scriptId);
-    }
-
-    /**
-     * AI 서버로부터 스크립트 생성 완료 콜백을 처리합니다.
-     *
-     * @param callback 콜백 데이터 (materialId, scriptId, script, version)
-     * @return 저장 결과
-     */
-    @Transactional
-    public ScriptCompleteResponse handleScriptComplete(ScriptCompleteCallback callback) {
-        // 기존 스크립트가 있는지 확인
-        EducationScript script = scriptRepository.findById(callback.scriptId())
-            .orElseGet(() -> {
-                EducationScript newScript = new EducationScript();
-                newScript.setId(callback.scriptId());
-                return newScript;
-            });
-
-        script.setSourceDocId(callback.materialId());
-        script.setRawPayload(callback.script());
-        script.setVersion(callback.version());
-        scriptRepository.save(script);
-
-        log.info("스크립트 생성 완료 콜백 처리. materialId={}, scriptId={}, version={}",
-            callback.materialId(), callback.scriptId(), callback.version());
-        return new ScriptCompleteResponse(true, callback.scriptId());
-    }
+    // private final VideoAiClient videoAiClient; // 현재 모의 처리로 사용하지 않음
 
     // ========================
     // 영상 생성 Job 관련 메서드

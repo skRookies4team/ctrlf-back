@@ -1,8 +1,9 @@
-package com.ctrlf.education.video.repository;
+package com.ctrlf.education.script.repository;
 
-import com.ctrlf.education.video.entity.EducationScriptScene;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.ctrlf.education.script.entity.EducationScriptScene;
 
 public interface EducationScriptSceneRepository extends JpaRepository<EducationScriptScene, UUID> {
     java.util.List<EducationScriptScene> findByChapterIdOrderBySceneIndexAsc(UUID chapterId);

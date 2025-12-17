@@ -261,7 +261,7 @@ public class AdminEducationController {
         List<Education> edus = educationRepository.findAll();
         List<EducationVideosResponse> result = new ArrayList<>();
         for (Education e : edus) {
-            List<EducationVideo> videos = educationVideoRepository.findByEducationId(e.getId());
+            List<EducationVideo> videos = educationVideoRepository.findByEducationIdOrderByOrderIndexAscCreatedAtAsc(e.getId());
             List<EducationVideosResponse.VideoItem> items = new ArrayList<>();
             for (EducationVideo v : videos) {
                 items.add(new EducationVideosResponse.VideoItem(
@@ -269,7 +269,6 @@ public class AdminEducationController {
                     v.getFileUrl(),
                     v.getDuration() != null ? v.getDuration() : 0,
                     v.getVersion() != null ? v.getVersion() : 1,
-                    v.getIsMain() != null && v.getIsMain(),
                     v.getTargetDeptCode(),
                     null, // resumePosition
                     null, // isCompleted

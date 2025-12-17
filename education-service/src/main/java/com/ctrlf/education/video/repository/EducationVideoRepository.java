@@ -17,6 +17,7 @@ public interface EducationVideoRepository extends JpaRepository<EducationVideo, 
      * 특정 교육에 속한 영상 목록 조회.
      */
     List<EducationVideo> findByEducationId(UUID educationId);
+    List<EducationVideo> findByEducationIdOrderByOrderIndexAscCreatedAtAsc(UUID educationId);
     /**
      * 특정 교육의 모든 영상을 삭제.
      */

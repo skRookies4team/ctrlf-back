@@ -49,10 +49,6 @@ public class EducationVideo {
     @Column(name = "duration")
     private Integer duration;
 
-    /** 메인 영상 여부 */
-    @Column(name = "is_main")
-    private Boolean isMain;
-
     /** 상태(예: READY/PROCESSING/FAILED/ACTIVE 등) */
     @Column(name = "status")
     private String status;
@@ -66,9 +62,35 @@ public class EducationVideo {
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
+    /** 재생/표시 순서를 위한 인덱스 (교육 내 0-base) */
+    @Column(name = "order_index")
+    private Integer orderIndex;
+
     /** 삭제(소프트딜리트) 시각 */
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    /**
+     * 시드/유틸용 생성 팩토리.
+     */
+    public static EducationVideo create(
+        UUID educationId,
+        String fileUrl,
+        Integer duration,
+        String targetDeptCode,
+        Integer version,
+        String status
+    ) {
+        EducationVideo v = new EducationVideo();
+        v.setEducationId(educationId);
+        v.setFileUrl(fileUrl);
+        v.setDuration(duration);
+        v.setTargetDeptCode(targetDeptCode);
+        v.setVersion(version);
+        v.setStatus(status);
+        v.setOrderIndex(0);
+        return v;
+    }
 }
 
 
