@@ -1,7 +1,5 @@
 package com.ctrlf.chat.service;
 
-import com.ctrlf.chat.ai.search.dto.ChatCompletionResponse;
-import com.ctrlf.chat.ai.search.facade.ChatAiFacade;
 import com.ctrlf.chat.dto.request.ChatMessageSendRequest;
 import com.ctrlf.chat.dto.response.ChatMessageCursorResponse;
 import com.ctrlf.chat.dto.response.ChatMessageSendResponse;
@@ -22,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChatMessageServiceImpl implements ChatMessageService {
 
     private final ChatMessageRepository chatMessageRepository;
-    private final ChatAiFacade chatAiFacade;
 
     @Override
     public ChatMessageSendResponse sendMessage(
@@ -30,34 +27,26 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         UUID userId,
         String domain
     ) {
-        // 1️⃣ 사용자 메시지 저장
-        ChatMessage userMessage = ChatMessage.userMessage(
-            request.sessionId(),
-            request.content()
-        );
-        chatMessageRepository.save(userMessage);
-
-        // 2️⃣ AI 서버 → FastAPI → (현재는 Dummy 응답)
-        ChatCompletionResponse aiResponse =
-            chatAiFacade.chat(
+        // 1) user 메시지 저장
+        ChatMessage userMessage =
+            ChatMessage.userMessage(
                 request.sessionId(),
-                userId,
-                domain,
                 request.content()
             );
+        chatMessageRepository.save(userMessage);
 
-        // 3️⃣ AI 메시지 저장
-        ChatMessage assistantMessage = ChatMessage.assistantMessage(
-            request.sessionId(),
-            aiResponse.getAnswer(),
-            null,   // promptTokens (아직 없음)
-            null,   // completionTokens (아직 없음)
-            aiResponse.getMeta() != null
-                ? aiResponse.getMeta().getUsed_model()
-                : "unknown"
-        );
+        // 2) assistant placeholder 생성 (content는 비워둠)
+        ChatMessage assistantMessage =
+            ChatMessage.assistantMessage(
+                request.sessionId(),
+                "",
+                null,
+                null,
+                null
+            );
         chatMessageRepository.save(assistantMessage);
 
+        // 3) 프론트는 messageId로 SSE 연결해서 토큰을 받는다
         return new ChatMessageSendResponse(
             assistantMessage.getId(),
             assistantMessage.getRole(),
@@ -65,8 +54,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             assistantMessage.getCreatedAt()
         );
     }
-
-    // ===== 이하 기존 코드 그대로 =====
 
     @Override
     @Transactional(readOnly = true)
@@ -123,12 +110,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     public ChatMessage retryMessage(UUID sessionId, UUID messageId) {
-        throw new UnsupportedOperationException("Retry는 다음 단계에서 구현");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ChatMessage regenMessage(UUID sessionId, UUID messageId) {
-        throw new UnsupportedOperationException("Regen은 다음 단계에서 구현");
+        throw new UnsupportedOperationException();
     }
 
     private record ParsedCursor(
@@ -145,7 +132,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
         }
 
-        static String encode(Instant createdAt, UUID id) {
+        static String encode(
+            Instant createdAt,
+            UUID id
+        ) {
             return createdAt.toEpochMilli() + "_" + id;
         }
     }

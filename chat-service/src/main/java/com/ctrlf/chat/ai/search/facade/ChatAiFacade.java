@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 
 @Service
 @RequiredArgsConstructor
@@ -27,17 +28,12 @@ public class ChatAiFacade {
             new ChatCompletionRequest(
                 sessionId,
                 userId,
-                "EMPLOYEE",   // TODO: JWT role 연동
-                domain,       // department
+                "EMPLOYEE",
+                domain,
                 domain,
                 "WEB",
-                List.of(
-                    new Message("user", userMessage)
-                )
+                List.of(new Message("user", userMessage))
             );
-
-        log.info("[CHAT → AI] session={}, user={}, domain={}",
-            sessionId, userId, domain);
 
         ChatCompletionResponse response = aiWebClient.post()
             .uri("/ai/chat/messages")
@@ -46,8 +42,17 @@ public class ChatAiFacade {
             .bodyToMono(ChatCompletionResponse.class)
             .block();
 
-        log.info("[CHAT ← AI] {}", response.getAnswer());
-
         return response;
+    }
+
+    // ✅ 스트리밍 호출
+    public Flux<String> streamChat(ChatCompletionRequest request) {
+        log.info("[CHAT → AI/STREAM] start");
+
+        return aiWebClient.post()
+            .uri("/ai/chat/stream")
+            .bodyValue(request)
+            .retrieve()
+            .bodyToFlux(String.class);
     }
 }

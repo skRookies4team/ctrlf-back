@@ -19,7 +19,6 @@ public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
 
-    // ✅ 메시지 전송 (섹션 삭제 반영)
     @PostMapping("/messages")
     public ResponseEntity<ChatMessageSendResponse> sendMessage(
         @RequestBody ChatMessageSendRequest request,
@@ -33,8 +32,6 @@ public class ChatMessageController {
         );
     }
 
-    // ✅ ✅ ✅ 세션 내 메시지 조회: 커서 기반(키셋) 페이징
-    // GET /chat/sessions/{sessionId}/messages?cursor=...&size=20
     @GetMapping("/sessions/{sessionId}/messages")
     public ResponseEntity<ChatMessageCursorResponse> getMessagesBySession(
         @PathVariable UUID sessionId,
@@ -46,7 +43,6 @@ public class ChatMessageController {
         );
     }
 
-    // ✅ Retry (섹션 삭제 반영: messageId 기준)
     @PostMapping("/sessions/{sessionId}/messages/{messageId}/retry")
     public ResponseEntity<ChatMessage> retryMessage(
         @PathVariable UUID sessionId,
@@ -57,7 +53,6 @@ public class ChatMessageController {
         );
     }
 
-    // ✅ Regen (재생성) (섹션 삭제 반영: messageId 기준)
     @PostMapping("/sessions/{sessionId}/messages/{messageId}/regen")
     public ResponseEntity<ChatMessage> regenMessage(
         @PathVariable UUID sessionId,

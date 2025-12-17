@@ -5,12 +5,10 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "chat_message", schema = "chat")
 @Getter
-@Setter
 @NoArgsConstructor
 public class ChatMessage {
 
@@ -23,7 +21,7 @@ public class ChatMessage {
     private UUID sessionId;
 
     @Column(nullable = false, length = 20)
-    private String role; // user / assistant
+    private String role;
 
     @Column(nullable = false, columnDefinition = "text")
     private String content;
@@ -41,11 +39,11 @@ public class ChatMessage {
     private Instant createdAt;
 
     @PrePersist
-    public void onCreate() {
+    void onCreate() {
         this.createdAt = Instant.now();
     }
 
-    // ✅ USER 메시지
+    // user 메시지 생성
     public static ChatMessage userMessage(UUID sessionId, String content) {
         ChatMessage m = new ChatMessage();
         m.sessionId = sessionId;
@@ -54,7 +52,7 @@ public class ChatMessage {
         return m;
     }
 
-    // ✅ AI 메시지
+    // assistant 메시지 생성 (초기 content는 빈 문자열이어도 됨)
     public static ChatMessage assistantMessage(
         UUID sessionId,
         String content,
@@ -70,5 +68,10 @@ public class ChatMessage {
         m.tokensOut = tokensOut;
         m.llmModel = llmModel;
         return m;
+    }
+
+    // ✅ 스트리밍 완료 후 최종 답변 업데이트용
+    public void updateContent(String content) {
+        this.content = content;
     }
 }
