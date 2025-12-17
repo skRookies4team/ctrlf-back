@@ -3,7 +3,8 @@ package com.ctrlf.infra.rag.service;
 import static com.ctrlf.infra.rag.dto.RagDtos.*;
 
 import com.ctrlf.infra.rag.entity.RagDocument;
-import com.ctrlf.infra.rag.ai.RagAiClient;
+import com.ctrlf.infra.rag.entity.RagDocument.RagStatus;
+import com.ctrlf.infra.rag.client.RagAiClient;
 import com.ctrlf.infra.rag.repository.RagDocumentChunkRepository;
 import com.ctrlf.infra.rag.repository.RagFailChunkRepository;
 import com.ctrlf.infra.rag.repository.RagDocumentRepository;
@@ -50,11 +51,12 @@ public class RagDocumentService {
         d.setUploaderUuid(req.getUploaderUuid());
         d.setSourceUrl(req.getFileUrl());
         d.setCreatedAt(Instant.now());
+        d.setStatus(RagStatus.QUEUED);
         d = documentRepository.save(d);
 
         // 업로드 직후 AI 서버에 처리 요청 (베스트Effort)
         try {
-            ragAiClient.process(d.getId(), d.getTitle(), d.getDomain(), d.getSourceUrl(), Instant.now());
+            ragAiClient.process(d.getId().toString(), d.getSourceUrl(), d.getDomain(), null);
         } catch (Exception e) {
             // 실패해도 업로드 API는 성공으로 처리. 로그만 남김
             // 운영에서는 재시도 큐에 적재하는 것을 권장
@@ -91,7 +93,7 @@ public class RagDocumentService {
         String now = Instant.now().toString();
         // 변경사항이 있으면 AI 서버 재처리 요청 (베스트Effort)
         try {
-            ragAiClient.process(d.getId(), d.getTitle(), d.getDomain(), d.getSourceUrl(), Instant.now());
+            ragAiClient.process(d.getId().toString(), d.getSourceUrl(), d.getDomain(), null);
         } catch (Exception e) {
             // 로그만
         }
@@ -134,11 +136,10 @@ public class RagDocumentService {
         String jobId = "unknown";
         String status = "REPROCESSING";
         try {
-            RagAiClient.AiResponse aiResp =
-                ragAiClient.process(d.getId(), d.getTitle(), d.getDomain(), d.getSourceUrl(), Instant.now());
-            accepted = aiResp.isAccepted();
-            jobId = aiResp.getJobId();
-            status = aiResp.getStatus() == null ? status : aiResp.getStatus();
+            RagAiClient.RagProcessResult res =
+                ragAiClient.process(d.getId().toString(), d.getSourceUrl(), d.getDomain(), null);
+            accepted = res.getSuccess() == null ? true : res.getSuccess();
+            // jobId/status는 알 수 없으므로 기본값 유지
         } catch (Exception e) {
             accepted = false;
         }
@@ -198,7 +199,8 @@ public class RagDocumentService {
                 d.getTitle(),
                 d.getDomain(),
                 d.getUploaderUuid(),
-                d.getCreatedAt() != null ? d.getCreatedAt().toString() : null
+                d.getCreatedAt() != null ? d.getCreatedAt().toString() : null,
+                d.getStatus() != null ? d.getStatus().name() : null
             ));
         }
         return list;
