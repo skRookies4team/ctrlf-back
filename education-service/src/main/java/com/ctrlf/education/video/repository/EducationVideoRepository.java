@@ -2,6 +2,7 @@ package com.ctrlf.education.video.repository;
 
 import com.ctrlf.education.video.entity.EducationVideo;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -18,6 +19,11 @@ public interface EducationVideoRepository extends JpaRepository<EducationVideo, 
      */
     List<EducationVideo> findByEducationId(UUID educationId);
     List<EducationVideo> findByEducationIdOrderByOrderIndexAscCreatedAtAsc(UUID educationId);
+
+    /**
+     * 생성 Job ID로 영상 조회.
+     */
+    Optional<EducationVideo> findByGenerationJobId(UUID generationJobId);
     /**
      * 특정 교육의 모든 영상을 삭제.
      */

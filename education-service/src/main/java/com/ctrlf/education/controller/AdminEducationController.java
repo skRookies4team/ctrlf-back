@@ -77,8 +77,7 @@ public class AdminEducationController {
                             "  \"category\": \"MANDATORY\",\n" +
                             "  \"passScore\": 80,\n" +
                             "  \"passRatio\": 90,\n" +
-                            "  \"require\": true,\n" +
-                            "  \"departmentScope\": [\"개발팀\",\"인사팀\"]\n" +
+                            "  \"require\": true\n" +
                             "}"
                 )
             )
@@ -157,8 +156,7 @@ public class AdminEducationController {
                             "  \"category\": \"MANDATORY\",\n" +
                             "  \"passScore\": 85,\n" +
                             "  \"passRatio\": 95,\n" +
-                            "  \"require\": true,\n" +
-                            "  \"departmentScope\": [\"개발팀\",\"인사팀\",\"총무팀\"]\n" +
+                            "  \"require\": true\n" +
                             "}"
                 )
             )
@@ -228,7 +226,7 @@ public class AdminEducationController {
      */
     @GetMapping("/edus/with-videos")
     @Operation(
-        summary = "전체 교육 + 영상 목록 조회(ADMIN)",
+        summary = "전체 교육 + 영상 목록 조회",
         description = "모든 교육을 조회하고 각 교육에 포함된 영상 목록을 함께 반환합니다(사용자 진행 정보 제외).",
         responses = {
             @ApiResponse(
@@ -266,10 +264,12 @@ public class AdminEducationController {
             for (EducationVideo v : videos) {
                 items.add(new EducationVideosResponse.VideoItem(
                     v.getId(),
+                    v.getTitle(),
                     v.getFileUrl(),
                     v.getDuration() != null ? v.getDuration() : 0,
                     v.getVersion() != null ? v.getVersion() : 1,
                     v.getTargetDeptCode(),
+                    v.getDepartmentScope(),
                     null, // resumePosition
                     null, // isCompleted
                     null, // totalWatchSeconds

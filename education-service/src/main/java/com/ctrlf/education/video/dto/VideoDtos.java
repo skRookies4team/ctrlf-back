@@ -27,7 +27,11 @@ public final class VideoDtos {
 
         @Schema(description = "최종 스크립트 ID", example = "550e8400-e29b-41d4-a716-446655440001")
         @NotNull(message = "scriptId는 필수입니다")
-        UUID scriptId
+        UUID scriptId,
+
+        @Schema(description = "영상 컨텐츠 ID", example = "550e8400-e29b-41d4-a716-446655440002")
+        @NotNull(message = "videoId는 필수입니다")
+        UUID videoId
     ) {}
 
     /**
@@ -208,23 +212,89 @@ public final class VideoDtos {
     public record VideoMetaItem(
         @Schema(description = "영상 ID") UUID id,
         @Schema(description = "교육 ID") UUID educationId,
+        @Schema(description = "영상 제목") String title,
         @Schema(description = "생성 Job ID") UUID generationJobId,
         @Schema(description = "파일 URL") String fileUrl,
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
         @Schema(description = "상태") String status,
         @Schema(description = "대상 부서 코드") String targetDeptCode,
+        @Schema(description = "수강 가능 부서(JSON)") String departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex,
         @Schema(description = "생성시각 ISO8601") String createdAt
     ) {}
 
     @Schema(description = "영상 메타 수정 요청 (부분 업데이트)")
     public record VideoMetaUpdateRequest(
+        @Schema(description = "영상 제목") String title,
         @Schema(description = "파일 URL") String fileUrl,
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
         @Schema(description = "상태") String status,
         @Schema(description = "대상 부서 코드") String targetDeptCode,
+        @Schema(description = "수강 가능 부서(JSON)") String departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex
+    ) {}
+
+    // ========================
+    // 영상 컨텐츠 관리 DTOs (ADMIN)
+    // ========================
+
+    @Schema(description = "영상 컨텐츠 생성 요청")
+    public record VideoCreateRequest(
+        @Schema(description = "교육 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+        @NotNull(message = "educationId는 필수입니다")
+        UUID educationId,
+
+        @Schema(description = "영상 제목", example = "2024년 성희롱 예방 교육")
+        @NotBlank(message = "title은 필수입니다")
+        String title,
+
+        @Schema(description = "수강 가능 부서(JSON)", example = "[\"HR\", \"IT\"]")
+        String departmentScope
+    ) {}
+
+    @Schema(description = "영상 컨텐츠 생성 응답")
+    public record VideoCreateResponse(
+        @Schema(description = "생성된 영상 ID") UUID videoId,
+        @Schema(description = "상태") String status
+    ) {}
+
+    @Schema(description = "영상 상태 변경 응답")
+    public record VideoStatusResponse(
+        @Schema(description = "영상 ID") UUID videoId,
+        @Schema(description = "이전 상태") String previousStatus,
+        @Schema(description = "현재 상태") String currentStatus,
+        @Schema(description = "변경 시각") String updatedAt
+    ) {}
+
+    @Schema(description = "검토 반려 요청")
+    public record VideoRejectRequest(
+        @Schema(description = "반려 사유", example = "스크립트 내용 수정 필요")
+        String reason
+    ) {}
+
+    // ========================
+    // 영상 상태 Enum (어드민 테스트용)
+    // ========================
+
+    @Schema(description = "영상 상태")
+    public enum VideoStatus {
+        DRAFT,                      // 초기 생성
+        SCRIPT_GENERATING,          // 스크립트 생성 중
+        SCRIPT_READY,               // 스크립트 생성 완료
+        SCRIPT_REVIEW_REQUESTED,    // 1차 검토 요청 (스크립트)
+        SCRIPT_APPROVED,            // 1차 승인 (영상 생성 가능)
+        PROCESSING,                 // 영상 생성 중
+        READY,                      // 영상 생성 완료
+        FINAL_REVIEW_REQUESTED,     // 2차 검토 요청 (영상)
+        PUBLISHED                   // 최종 승인/게시 (유저 노출)
+    }
+
+    @Schema(description = "영상 상태 강제 변경 요청 (어드민 테스트용)")
+    public record VideoStatusChangeRequest(
+        @Schema(description = "변경할 상태", example = "READY")
+        @NotNull(message = "status는 필수입니다")
+        VideoStatus status
     ) {}
 }

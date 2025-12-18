@@ -3,13 +3,16 @@ package com.ctrlf.education.script.controller;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptCompleteCallback;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptCompleteResponse;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptDetailResponse;
+import com.ctrlf.education.script.dto.EducationScriptDto.ScriptGenerateRequest;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptResponse;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptUpdateRequest;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptUpdateResponse;
 import com.ctrlf.education.script.service.ScriptService;
+import com.ctrlf.education.script.service.ScriptService.ScriptGenerationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -97,7 +100,45 @@ public class EducationScriptController {
 
   @Operation(
       summary = "스크립트 생성 완료 콜백",
-      description = "AI 서버가 전처리 & 스크립트 생성 완료 후 백엔드로 결과를 전달합니다. (내부 API)")
+      description = "AI 서버가 전처리 & 스크립트 생성 완료 후 백엔드로 결과를 전달합니다. (내부 API)",
+      requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+          required = true,
+          content = @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = ScriptCompleteCallback.class),
+              examples = @ExampleObject(
+                  name = "스크립트 JSON 예시",
+                  value = """
+                      {
+                        "videoId": "550e8400-e29b-41d4-a716-446655440003",
+                        "script": {
+                          "title": "직장내괴롭힘 교육 영상",
+                          "total_duration_sec": 720,
+                          "chapters": [
+                            {
+                              "title": "괴롭힘",
+                              "duration_sec": 180,
+                              "scenes": [
+                                {
+                                  "scene_id": 1,
+                                  "purpose": "hook",
+                                  "visual": "자료 원문 문장(텍스트) 강조",
+                                  "narration": "직장 내 괴롭힘이란...",
+                                  "caption": "직장 내 괴롭힘이란...",
+                                  "duration_sec": 15,
+                                  "source_chunks": [1, 2, 3]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "version": 1
+                      }
+                      """
+              )
+          )
+      )
+  )
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
@@ -109,5 +150,35 @@ public class EducationScriptController {
   public ResponseEntity<ScriptCompleteResponse> handleScriptComplete(
       @Valid @RequestBody ScriptCompleteCallback callback) {
     return ResponseEntity.ok(scriptService.handleScriptComplete(callback));
+  }
+
+  /**
+   * 임베딩 완료된 자료를 기반으로 스크립트를 자동 생성합니다.
+   * (전처리/임베딩은 infra-service의 POST /rag/documents/upload에서 이미 완료됨)
+   *
+   * @param materialId 자료 ID (= RagDocument.id)
+   * @param request eduId, videoId, fileUrl
+   * @return AI 서버 수신/상태 응답
+   */
+  @Operation(
+      summary = "스크립트 자동생성 요청",
+      description = "임베딩 완료된 자료(materialId)를 기반으로 교육 스크립트를 자동 생성합니다. " +
+          "영상 컨텐츠(videoId)에 자료(materialId)가 연결됩니다.")
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "요청 전송 성공",
+        content = @Content(schema = @Schema(implementation = ScriptGenerationResponse.class))),
+    @ApiResponse(responseCode = "400", description = "잘못된 요청", content = @Content),
+    @ApiResponse(responseCode = "404", description = "영상 컨텐츠를 찾을 수 없음", content = @Content),
+    @ApiResponse(responseCode = "500", description = "AI 서버 요청 실패", content = @Content)
+  })
+  @PostMapping("/generate/{materialId}")
+  public ResponseEntity<ScriptGenerationResponse> generateScript(
+      @Parameter(description = "자료 ID (= RagDocument.id)", required = true)
+      @PathVariable UUID materialId,
+      @Valid @RequestBody ScriptGenerateRequest request) {
+    return ResponseEntity.ok(
+        scriptService.requestScriptGeneration(materialId, request.eduId(), request.videoId(), request.fileUrl()));
   }
 }

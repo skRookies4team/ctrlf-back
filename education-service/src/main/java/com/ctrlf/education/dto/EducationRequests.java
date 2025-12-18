@@ -2,7 +2,6 @@ package com.ctrlf.education.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.util.List;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -40,8 +39,6 @@ public final class EducationRequests {
         private Integer passScore;
         // 통과 기준 비율 (옵션, %)
         private Integer passRatio;
-        // 대상 부서 코드 목록
-        private List<String> departmentScope;
     }
 
     /**
@@ -65,8 +62,6 @@ public final class EducationRequests {
         private Integer passScore;
         // 통과 기준 비율(%)
         private Integer passRatio;
-        // 교육 대상 부서 코드 목록
-        private List<String> departmentScope;
     }
 
     /**

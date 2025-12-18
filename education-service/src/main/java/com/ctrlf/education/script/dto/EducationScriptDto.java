@@ -102,15 +102,12 @@ public final class EducationScriptDto {
 
   @Schema(description = "스크립트 생성 완료 콜백 요청 (AI 서버 → 백엔드)")
   public record ScriptCompleteCallback(
-      @Schema(description = "자료 ID", example = "550e8400-e29b-41d4-a716-446655440000")
-      @NotNull(message = "materialId는 필수입니다")
-      UUID materialId,
-      @Schema(description = "생성된 스크립트 ID", example = "550e8400-e29b-41d4-a716-446655440001")
-      @NotNull(message = "scriptId는 필수입니다")
-      UUID scriptId,
-      @Schema(description = "LLM이 자동 생성한 스크립트", example = "생성된 교육 스크립트...")
-      @NotBlank(message = "script는 필수입니다")
-      String script,
+      @Schema(description = "영상 컨텐츠 ID", example = "550e8400-e29b-41d4-a716-446655440003")
+      @NotNull(message = "videoId는 필수입니다")
+      UUID videoId,
+      @Schema(description = "LLM이 자동 생성한 스크립트 (JSON 객체)")
+      @NotNull(message = "script는 필수입니다")
+      Object script,
       @Schema(description = "스크립트 버전 번호", example = "1")
       @NotNull(message = "version은 필수입니다")
       Integer version) {}
@@ -120,4 +117,20 @@ public final class EducationScriptDto {
       @Schema(description = "저장 성공 여부", example = "true") boolean saved,
       @Schema(description = "스크립트 ID", example = "550e8400-e29b-41d4-a716-446655440001")
       UUID scriptId) {}
+
+  // ========================
+  // 스크립트 자동생성 요청
+  // ========================
+
+  @Schema(description = "스크립트 자동생성 요청")
+  public record ScriptGenerateRequest(
+      @Schema(description = "교육 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+      @NotNull(message = "eduId는 필수입니다")
+      UUID eduId,
+      @Schema(description = "영상 컨텐츠 ID", example = "550e8400-e29b-41d4-a716-446655440003")
+      @NotNull(message = "videoId는 필수입니다")
+      UUID videoId,
+      @Schema(description = "S3 파일 URL", example = "s3://bucket/docs/material.pdf")
+      @NotBlank(message = "fileUrl은 필수입니다")
+      String fileUrl) {}
 }

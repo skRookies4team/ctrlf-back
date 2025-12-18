@@ -15,8 +15,8 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * 교육 영상 엔티티.
- * 생성 작업 결과로 만들어진 영상의 메타데이터를 보관합니다.
+ * 교육 영상(컨텐츠) 엔티티.
+ * 교육 컨텐츠의 메타데이터와 생성된 영상 정보를 보관합니다.
  */
 @Entity
 @Table(name = "education_video", schema = "education")
@@ -33,9 +33,21 @@ public class EducationVideo {
     @Column(name = "education_id", columnDefinition = "uuid")
     private UUID educationId;
 
+    /** 영상 제목 */
+    @Column(name = "title")
+    private String title;
+
     /** 생성 작업(Job) ID */
     @Column(name = "generation_job_id", columnDefinition = "uuid")
     private UUID generationJobId;
+
+    /** 연결된 스크립트 ID */
+    @Column(name = "script_id", columnDefinition = "uuid")
+    private UUID scriptId;
+
+    /** 연결된 자료(RagDocument) ID */
+    @Column(name = "material_id", columnDefinition = "uuid")
+    private UUID materialId;
 
     /** 영상 파일 URL */
     @Column(name = "file_url")
@@ -70,11 +82,16 @@ public class EducationVideo {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    /** 수강 가능한 부서 목록(JSON) */
+    @Column(name = "department_scope", columnDefinition = "text")
+    private String departmentScope;
+
     /**
      * 시드/유틸용 생성 팩토리.
      */
     public static EducationVideo create(
         UUID educationId,
+        String title,
         String fileUrl,
         Integer duration,
         String targetDeptCode,
@@ -83,11 +100,26 @@ public class EducationVideo {
     ) {
         EducationVideo v = new EducationVideo();
         v.setEducationId(educationId);
+        v.setTitle(title);
         v.setFileUrl(fileUrl);
         v.setDuration(duration);
         v.setTargetDeptCode(targetDeptCode);
         v.setVersion(version);
         v.setStatus(status);
+        v.setOrderIndex(0);
+        return v;
+    }
+
+    /**
+     * DRAFT 상태의 새 교육 컨텐츠 생성.
+     * 영상 생성 전 초기 상태로 생성합니다.
+     */
+    public static EducationVideo createDraft(UUID educationId, String title) {
+        EducationVideo v = new EducationVideo();
+        v.setEducationId(educationId);
+        v.setTitle(title);
+        v.setStatus("DRAFT");
+        v.setVersion(1);
         v.setOrderIndex(0);
         return v;
     }

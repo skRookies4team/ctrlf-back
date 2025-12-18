@@ -80,7 +80,6 @@ public class EducationController {
                                 "  \"description\": \"산업안전 수칙\",\n" +
                                 "  \"category\": \"MANDATORY\",\n" +
                                 "  \"required\": true,\n" +
-                                "  \"targetDepartments\": [\"개발팀\",\"인사팀\"],\n" +
                                 "  \"progressPercent\": 60,\n" +
                                 "  \"watchStatus\": \"시청중\",\n" +
                                 "  \"videos\": [\n" +
@@ -89,8 +88,8 @@ public class EducationController {
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"isMain\": true,\n" +
                                 "      \"targetDeptCode\": \"DEV\",\n" +
+                                "      \"departmentScope\": \"[\\\"개발팀\\\",\\\"인사팀\\\"]\",\n" +
                                 "      \"resumePosition\": 600,\n" +
                                 "      \"isCompleted\": false,\n" +
                                 "      \"totalWatchSeconds\": 600,\n" +
@@ -175,7 +174,8 @@ public class EducationController {
         @AuthenticationPrincipal Jwt jwt
     ) {
         Optional<UUID> userUuid = SecurityUtils.extractUserUuid(jwt);
-        return ResponseEntity.ok(educationService.getEducationVideos(id, userUuid));
+        List<String> userDepartments = SecurityUtils.extractDepartments(jwt);
+        return ResponseEntity.ok(educationService.getEducationVideos(id, userUuid, userDepartments));
     }
 
     /**

@@ -75,6 +75,10 @@ public class EducationScript {
     /** 삭제(소프트딜리트) 시각 */
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    /** 수강 가능한 부서 목록(JSON) */
+    @Column(name = "department_scope", columnDefinition = "text")
+    private String departmentScope;
 }
 
 

@@ -72,6 +72,8 @@ public final class EducationResponses {
         public static class VideoItem {
             /** 영상 ID */
             private UUID id;
+            /** 영상 제목 */
+            private String title;
             /** 영상 파일 URL */
             private String fileUrl;
             /** 영상 길이(초) */
@@ -80,6 +82,8 @@ public final class EducationResponses {
             private Integer version;
             /** 대상 부서 코드 */
             private String targetDeptCode;
+            /** 수강 가능한 부서 목록(JSON) */
+            private String departmentScope;
             /** 사용자 이어보기 위치(초) */
             private Integer resumePosition;
             /** 사용자 영상 이수 여부 */
@@ -95,7 +99,7 @@ public final class EducationResponses {
 
     /**
      * 교육 목록 조회 응답(확장).
-     * 카테고리/필수 여부/이수 상태/제목/설명/대상 부서를 제공합니다.
+     * 카테고리/필수 여부/이수 상태/제목/설명을 제공합니다.
      */
     @Getter
     @AllArgsConstructor
@@ -105,7 +109,6 @@ public final class EducationResponses {
         private String description;
         private String category;
         private boolean required;
-        private List<String> targetDepartments;
         /** 사용자 기준 교육 진행률(%) */
         private int progressPercent;
         /** 교육 시청 상태(시청전/시청중/시청완료) */

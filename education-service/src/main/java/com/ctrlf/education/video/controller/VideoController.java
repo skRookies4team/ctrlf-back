@@ -1,8 +1,6 @@
 package com.ctrlf.education.video.controller;
 
-import com.ctrlf.education.video.dto.VideoDtos.AiProcessResponse;
 import com.ctrlf.education.video.dto.VideoDtos.JobItem;
-import com.ctrlf.education.video.dto.VideoDtos.MaterialProcessStartRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteCallback;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoJobRequest;
@@ -46,37 +44,6 @@ public class VideoController {
     private final VideoService videoService;
 
     // 스크립트 관련 API는 EducationScriptController로 분리됨
-
-    // ========================
-    // 전처리/임베딩/스크립트 생성 요청
-    // ========================
-
-    /**
-     * 자료에 대해 전처리 + 임베딩 + 스크립트 생성을 시작합니다.
-     *
-     * @param materialId 자료 ID
-     * @param request eduId, fileUrl
-     * @return AI 서버 수신/상태 응답
-     */
-    @Operation(summary = "전처리/임베딩/스크립트 생성 요청",
-        description = "S3에 업로드된 자료(fileUrl)를 기반으로 전처리/임베딩/스크립트 생성을 시작합니다.")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "요청 전송 성공",
-            content = @Content(schema = @Schema(implementation = AiProcessResponse.class))),
-        @ApiResponse(responseCode = "400", description = "잘못된 요청",
-            content = @Content),
-        @ApiResponse(responseCode = "500", description = "AI 서버 요청 실패",
-            content = @Content)
-    })
-    @PostMapping("/material/{materialId}/process")
-    public ResponseEntity<AiProcessResponse> processMaterial(
-        @Parameter(description = "자료 ID", required = true)
-        @PathVariable UUID materialId,
-        @Valid @RequestBody MaterialProcessStartRequest request
-    ) {
-        AiProcessResponse res = videoService.requestMaterialProcess(materialId, request.eduId(), request.fileUrl());
-        return ResponseEntity.ok(res);
-    }
 
     // ========================
     // 영상 생성 Job 관련 API

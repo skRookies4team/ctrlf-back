@@ -15,7 +15,7 @@ import com.ctrlf.education.video.entity.EducationVideo;
 import com.ctrlf.education.video.entity.EducationVideoProgress;
 import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -58,20 +58,12 @@ public class EducationService {
     @Transactional
     public MutationResponse<UUID> createEducation(CreateEducationRequest req) {
         validateCreate(req);
-        String departmentScopeJson = null;
-        if (req.getDepartmentScope() != null) {
-            try {
-                departmentScopeJson = objectMapper.writeValueAsString(req.getDepartmentScope());
-            } catch (JsonProcessingException ignored) {
-            }
-        }
         Education e = new Education();
         e.setTitle(req.getTitle());
         // 주제 카테고리 enum 저장
         e.setCategory(parseTopic(req.getCategory()));
         // edu_type은 enum으로 저장
         e.setEduType(parseEduType(req.getEduType() != null ? req.getEduType() : req.getCategory()));
-        e.setDepartmentScope(departmentScopeJson);
         e.setDescription(req.getDescription());
         e.setPassScore(req.getPassScore());
         e.setPassRatio(req.getPassRatio());
@@ -135,16 +127,7 @@ public class EducationService {
             String description = (String) r[2];
             String cat = (String) r[3];
             Boolean required = (Boolean) r[4];
-            String deptScopeJson = (String) r[5];
-            Boolean hasProgress = (Boolean) r[7];
-            List<String> targetDepts = new ArrayList<>();
-            if (deptScopeJson != null && !deptScopeJson.isBlank()) {
-                try {
-                    // 대상 부서 스코프(JSON 배열) 역직렬화
-                    targetDepts = objectMapper.readValue(deptScopeJson, objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
-                } catch (Exception ignored) {
-                }
-            }
+            Boolean hasProgress = (Boolean) r[6];
             // 교육별 영상/진행 정보 결합
             List<EducationVideo> vids = educationVideoRepository.findByEducationId(eduId);
             List<EducationResponses.EducationVideosResponse.VideoItem> videoItems = new ArrayList<>();
@@ -184,10 +167,12 @@ public class EducationService {
                 sumPct += pctV != null ? pctV : 0;
                 videoItems.add(new EducationResponses.EducationVideosResponse.VideoItem(
                     v.getId(),
+                    v.getTitle(),
                     v.getFileUrl(),
                     durationSec,
                     v.getVersion() != null ? v.getVersion() : 1,
                     v.getTargetDeptCode(),
+                    v.getDepartmentScope(),
                     resume,
                     completedV,
                     total,
@@ -212,7 +197,6 @@ public class EducationService {
                 description,
                 cat,
                 required != null && required,
-                targetDepts,
                 eduProgress,
                 watchStatus,
                 videoItems
@@ -266,12 +250,6 @@ public class EducationService {
         if (req.getRequire() != null) e.setRequire(req.getRequire());
         if (req.getPassScore() != null) e.setPassScore(req.getPassScore());
         if (req.getPassRatio() != null) e.setPassRatio(req.getPassRatio());
-        if (req.getDepartmentScope() != null) {
-            try {
-                e.setDepartmentScope(objectMapper.writeValueAsString(req.getDepartmentScope()));
-            } catch (JsonProcessingException ignored) {
-            }
-        }
         educationRepository.saveAndFlush(e);
         return e.getUpdatedAt();
     }
@@ -303,12 +281,14 @@ public class EducationService {
     
     /**
      * 교육 영상 목록 조회. 사용자 UUID가 있으면 각 영상의 진행률 정보를 포함합니다.
+     * 사용자 부서 목록이 있으면 해당 부서에 속하는 영상만 필터링합니다.
      *
      * @param id 교육 ID
      * @param userUuid 사용자 UUID(옵션)
+     * @param userDepartments 사용자 부서 목록(옵션)
      * @return 영상 목록 응답
      */
-    public EducationVideosResponse getEducationVideos(UUID id, Optional<UUID> userUuid) {
+    public EducationVideosResponse getEducationVideos(UUID id, Optional<UUID> userUuid, List<String> userDepartments) {
         Education e = educationRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
         // 해당 교육에 속한 영상 목록 조회
@@ -318,6 +298,10 @@ public class EducationService {
         // 영상 시청 완료 기준 비율(education.pass_ratio, 기본 100)
         Integer passRatio = e.getPassRatio() != null ? e.getPassRatio() : 100;
         for (EducationVideo v : videos) {
+            // 사용자 부서 필터링: departmentScope가 설정된 경우 사용자 부서와 매칭 확인
+            if (!isVideoAccessibleByDepartment(v, userDepartments)) {
+                continue; // 부서 권한이 없으면 스킵
+            }
             // 사용자별 이어보기 위치/누적 시청시간/완료 여부 기본값
             Integer resume = 0;
             Integer total = 0;
@@ -352,10 +336,12 @@ public class EducationService {
             // 단일 영상 항목 구성
             items.add(new EducationVideosResponse.VideoItem(
                 v.getId(),
+                v.getTitle(),
                 v.getFileUrl(),
                 durationSec,
                 v.getVersion() != null ? v.getVersion() : 1,
                 v.getTargetDeptCode(),
+                v.getDepartmentScope(),
                 resume,
                 completed,
                 total,
@@ -369,6 +355,40 @@ public class EducationService {
             .title(e.getTitle())
             .videos(items)
             .build();
+    }
+
+    /**
+     * 영상이 사용자 부서에서 접근 가능한지 확인합니다.
+     * - departmentScope가 null이거나 비어있으면 모든 부서에서 접근 가능
+     * - departmentScope에 사용자 부서 중 하나라도 포함되면 접근 가능
+     */
+    private boolean isVideoAccessibleByDepartment(EducationVideo video, List<String> userDepartments) {
+        String deptScope = video.getDepartmentScope();
+        // departmentScope가 없으면 모든 부서 접근 가능
+        if (deptScope == null || deptScope.isBlank()) {
+            return true;
+        }
+        // 사용자 부서가 없으면 접근 불가
+        if (userDepartments == null || userDepartments.isEmpty()) {
+            return false;
+        }
+        // departmentScope JSON 파싱
+        try {
+            List<String> allowedDepts = objectMapper.readValue(deptScope, new TypeReference<List<String>>() {});
+            if (allowedDepts == null || allowedDepts.isEmpty()) {
+                return true; // 빈 리스트면 모든 부서 접근 가능
+            }
+            // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
+            for (String userDept : userDepartments) {
+                if (allowedDepts.contains(userDept)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            // 파싱 실패 시 접근 허용 (관대하게 처리)
+            return true;
+        }
     }
 
     /**
