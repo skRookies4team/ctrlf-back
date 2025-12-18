@@ -21,7 +21,7 @@ public final class PresignDtos {
      */
     @Getter
     @NoArgsConstructor
-    public static class UploadRequest {
+    public static class S3UploadRequest {
         @NotBlank
         @Schema(example = "test.png")
         private String filename;

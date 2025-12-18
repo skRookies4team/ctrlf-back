@@ -3,7 +3,6 @@ package com.ctrlf.infra.rag.service;
 import static com.ctrlf.infra.rag.dto.RagDtos.*;
 
 import com.ctrlf.infra.rag.entity.RagDocument;
-import com.ctrlf.infra.rag.entity.RagDocument.RagStatus;
 import com.ctrlf.infra.rag.client.RagAiClient;
 import com.ctrlf.infra.rag.repository.RagDocumentChunkRepository;
 import com.ctrlf.infra.rag.repository.RagFailChunkRepository;
@@ -50,13 +49,16 @@ public class RagDocumentService {
         d.setDomain(req.getDomain());
         d.setUploaderUuid(req.getUploaderUuid());
         d.setSourceUrl(req.getFileUrl());
+        d.setStatus("QUEUED");
         d.setCreatedAt(Instant.now());
-        d.setStatus(RagStatus.QUEUED);
         d = documentRepository.save(d);
 
         // 업로드 직후 AI 서버에 처리 요청 (베스트Effort)
         try {
-            ragAiClient.process(d.getId().toString(), d.getSourceUrl(), d.getDomain(), null);
+            ragAiClient.process(d.getId(), d.getTitle(), d.getDomain(), d.getSourceUrl(), Instant.now());
+            // AI 서버 요청 성공 시 상태를 PROCESSING으로 변경
+            d.setStatus("PROCESSING");
+            documentRepository.save(d);
         } catch (Exception e) {
             // 실패해도 업로드 API는 성공으로 처리. 로그만 남김
             // 운영에서는 재시도 큐에 적재하는 것을 권장
@@ -64,7 +66,7 @@ public class RagDocumentService {
 
         return new UploadResponse(
             d.getId().toString(),
-            "QUEUED",
+            d.getStatus(),
             d.getCreatedAt().toString()
         );
     }
@@ -93,7 +95,7 @@ public class RagDocumentService {
         String now = Instant.now().toString();
         // 변경사항이 있으면 AI 서버 재처리 요청 (베스트Effort)
         try {
-            ragAiClient.process(d.getId().toString(), d.getSourceUrl(), d.getDomain(), null);
+            ragAiClient.process(d.getId(), d.getTitle(), d.getDomain(), d.getSourceUrl(), Instant.now());
         } catch (Exception e) {
             // 로그만
         }
@@ -136,10 +138,11 @@ public class RagDocumentService {
         String jobId = "unknown";
         String status = "REPROCESSING";
         try {
-            RagAiClient.RagProcessResult res =
-                ragAiClient.process(d.getId().toString(), d.getSourceUrl(), d.getDomain(), null);
-            accepted = res.getSuccess() == null ? true : res.getSuccess();
-            // jobId/status는 알 수 없으므로 기본값 유지
+            RagAiClient.AiResponse aiResp =
+                ragAiClient.process(d.getId(), d.getTitle(), d.getDomain(), d.getSourceUrl(), Instant.now());
+            accepted = aiResp.isAccepted();
+            jobId = aiResp.getJobId();
+            status = aiResp.getStatus() == null ? status : aiResp.getStatus();
         } catch (Exception e) {
             accepted = false;
         }
@@ -199,11 +202,26 @@ public class RagDocumentService {
                 d.getTitle(),
                 d.getDomain(),
                 d.getUploaderUuid(),
-                d.getCreatedAt() != null ? d.getCreatedAt().toString() : null,
-                d.getStatus() != null ? d.getStatus().name() : null
+                d.getCreatedAt() != null ? d.getCreatedAt().toString() : null
             ));
         }
         return list;
+    }
+
+    /**
+     * 문서의 임베딩 처리 상태를 조회합니다.
+     */
+    public DocumentStatusResponse getStatus(String documentId) {
+        UUID id = parseUuid(documentId);
+        RagDocument d = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found"));
+        
+        return new DocumentStatusResponse(
+            d.getId().toString(),
+            d.getStatus() != null ? d.getStatus() : "QUEUED",
+            d.getCreatedAt() != null ? d.getCreatedAt().toString() : null,
+            d.getProcessedAt() != null ? d.getProcessedAt().toString() : null
+        );
     }
 
     private static UUID parseUuid(String s) {

@@ -1,180 +1,145 @@
 package com.ctrlf.infra.rag.client;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.HashMap;
+import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
 
 /**
  * AI 서버(RAG 파이프라인) 호출 클라이언트.
  *
+ * 기능
+ * - 문서 처리(텍스트 추출/청킹/임베딩) 요청을 AI 서버로 전달합니다.
+ *
+ * 엔드포인트
  * - POST {baseUrl}/ai/rag/process
- * - 문서 인덱싱(다운로드/추출/청킹/임베딩/색인)을 요청합니다.
+ *
+ * 인증/보안
+ * - 내부 호출 토큰을 사용하는 경우, X-Internal-Token 헤더를 추가합니다(옵션).
+ *
+ * 실패 처리 정책
+ * - 2xx가 아닌 응답: RuntimeException을 던집니다(상위에서 예외 처리).
+ * - 2xx이지만 응답 바디 파싱 실패: 경고 로그 후 기본 Ack(accepted=true, jobId=unknown, status=QUEUED)으로 대체합니다.
+ *
+ * 구성
+ * - app.rag.ai.base-url: 기본 http://localhost:8000
+ * - app.rag.ai.token: 내부 토큰(옵션)
+ * - app.rag.ai.timeout-seconds: HTTP 타임아웃(초), 기본 10초
  */
 @Component
 public class RagAiClient {
+    /** HTTP 통신 클라이언트 */
     private static final Logger log = LoggerFactory.getLogger(RagAiClient.class);
 
-    private final RestClient restClient;
+    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    /** AI 서버 베이스 URL(예: http://localhost:8000) */
+    private final String baseUrl;
+    /** 내부 인증 토큰(X-Internal-Token 헤더) */
     private final String internalToken;
+    /** 요청 타임아웃 */
     private final Duration timeout;
 
+    /**
+     * 구성값을 주입받아 클라이언트를 초기화합니다.
+     *
+     * @param baseUrl AI 서버 베이스 URL (예: http://localhost:8000)
+     * @param internalToken 내부 호출 토큰(옵션, 없으면 헤더 생략)
+     * @param timeoutSeconds HTTP 타임아웃(초)
+     */
     public RagAiClient(
         @Value("${app.rag.ai.base-url:http://localhost:8000}") String baseUrl,
         @Value("${app.rag.ai.token:}") String internalToken,
-        @Value("${app.rag.ai.timeout-seconds:60}") long timeoutSeconds
+        @Value("${app.rag.ai.timeout-seconds:10}") long timeoutSeconds
     ) {
-        String normalized = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        // HTTP/1.1 강제: JDK HttpClient 사용
-        HttpClient jdk = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .build();
-        this.restClient = RestClient.builder()
-            .baseUrl(normalized)
-            .requestFactory(new JdkClientHttpRequestFactory(jdk))
-            .build();
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.internalToken = internalToken == null ? "" : internalToken;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
+        this.httpClient = HttpClient.newBuilder().connectTimeout(this.timeout).build();
         this.objectMapper = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
-    private static String mask(String s) {
-        if (s == null || s.isEmpty()) return "";
-        if (s.length() <= 8) return "****";
-        return s.substring(0, 4) + "****" + s.substring(s.length() - 4);
-    }
-
-    private static String truncate(String s, int max) {
-        if (s == null) return null;
-        return s.length() <= max ? s : s.substring(0, max) + "...(truncated)";
+    /**
+     * 문서 처리 요청을 AI 서버로 전송합니다.
+     *
+     * 요청 바디
+     * - documentId: 문서 UUID 문자열
+     * - title: 문서 제목
+     * - domain: 문서 도메인
+     * - fileUrl: 원본 파일 URL(S3 등)
+     * - requestedAt: ISO-8601 문자열(요청 시각)
+     *
+     * 성공/실패 규칙
+     * - 2xx: 응답 바디를 AiResponse로 파싱(파싱 실패 시 기본 Ack로 대체)
+     * - !2xx: RuntimeException 발생
+     *
+     * @return AiResponse(accepted / jobId / status)
+     * @throws Exception 네트워크/IO 오류 등
+     */
+    public AiResponse process(UUID documentId, String title, String domain, String fileUrl, Instant requestedAt) throws Exception {
+        String url = this.baseUrl + "/ai/rag/process";
+        Map<String, Object> body = Map.of(
+            "documentId", documentId.toString(),
+            "title", title,
+            "domain", domain,
+            "fileUrl", fileUrl,
+            "requestedAt", requestedAt.toString()
+        );
+        byte[] json = objectMapper.writeValueAsBytes(body);
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .timeout(this.timeout)
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofByteArray(json));
+        if (!internalToken.isBlank()) {
+            builder.header("X-Internal-Token", internalToken);
+        }
+        HttpRequest request = builder.build();
+        HttpResponse<byte[]> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        int code = resp.statusCode();
+        if (code >= 200 && code < 300) {
+            try {
+                return objectMapper.readValue(resp.body(), AiResponse.class);
+            } catch (Exception parseEx) {
+                log.warn("AI process response parse failed. code={} body={}", code, new String(resp.body()));
+                // 응답 파싱 실패 시 기본 ack로 대체
+                return new AiResponse(true, "unknown", "QUEUED");
+            }
+        }
+        log.warn("AI process call failed. code={} body={}", code, new String(resp.body()));
+        throw new RuntimeException("AI process call failed with status " + code);
     }
 
     /**
-     * 문서 인덱싱 요청.
-     * body:
-     * {
-     *   "doc_id": "...",
-     *   "file_url": "https://.../file.pdf",
-     *   "domain": "POLICY",
-     *   "acl": { "roles": [...], "departments": [...] }
-     * }
+     * AI 서버의 Ack 응답 모델.
+     * - accepted: 요청 수락 여부
+     * - jobId: 서버 측 작업 식별자
+     * - status: 초기 상태(예: QUEUED)
      */
-    public RagProcessResult process(String docId, String fileUrl, String domain, RagAcl acl) throws Exception {
-        String path = "/ai/rag/process";
-        Map<String, Object> body = new HashMap<>();
-        body.put("doc_id", docId);
-        body.put("file_url", fileUrl);
-        body.put("domain", domain);
-        if (acl != null) {
-            Map<String, Object> aclMap = new HashMap<>();
-            if (acl.getRoles() != null && !acl.getRoles().isEmpty()) {
-                aclMap.put("roles", acl.getRoles());
-            }
-            if (acl.getDepartments() != null && !acl.getDepartments().isEmpty()) {
-                aclMap.put("departments", acl.getDepartments());
-            }
-            if (!aclMap.isEmpty()) {
-                body.put("acl", aclMap);
-            }
-        }
-        String jsonString = objectMapper.writeValueAsString(body);
-        log.info("AI POST {} (timeout={}s)", path, this.timeout.toSeconds());
-        if (log.isDebugEnabled()) {
-            log.debug("AI request headers: Content-Type=application/json; X-Internal-Token={}", mask(internalToken));
-            log.debug("AI request payload: {}", truncate(jsonString, 2000));
-        }
-        try {
-            RagProcessResult result = restClient.post()
-                .uri(path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .headers(h -> {
-                    if (!internalToken.isEmpty()) {
-                        h.set("X-Internal-Token", internalToken);
-                    }
-                })
-                .body(body)
-                .retrieve()
-                .body(RagProcessResult.class);
-            if (result == null) {
-                RagProcessResult r = new RagProcessResult();
-                r.setDocId(docId);
-                r.setSuccess(Boolean.FALSE);
-                r.setMessage("Empty response from AI");
-                return r;
-            }
-            return result;
-        } catch (RestClientResponseException ex) {
-            String payload = ex.getResponseBodyAsString();
-            log.warn("AI process call failed. code={} body={}", ex.getRawStatusCode(), truncate(payload, 2000));
-            // 422 + body missing hint → wrap and retry once
-            if (ex.getRawStatusCode() == 422 && payload != null && payload.contains("\"loc\":[\"body\"]")) {
-                log.info("AI 422 received with body-missing hint. Retrying with wrapped body...");
-                Map<String, Object> wrapped = new HashMap<>();
-                wrapped.put("body", body);
-                try {
-                    return restClient.post()
-                        .uri(path)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .headers(h -> {
-                            if (!internalToken.isEmpty()) {
-                                h.set("X-Internal-Token", internalToken);
-                            }
-                        })
-                        .body(wrapped)
-                        .retrieve()
-                        .body(RagProcessResult.class);
-                } catch (RestClientResponseException ex2) {
-                    throw new RuntimeException("AI process call retry failed: " + ex2.getRawStatusCode() + " body=" + ex2.getResponseBodyAsString());
-                }
-            }
-            throw new RuntimeException("AI process call failed with status " + ex.getRawStatusCode() + " body=" + payload);
-        }
-    }
+    public static class AiResponse {
+        private boolean accepted;
+        private String jobId;
+        private String status;
 
-    // (오버로드 및 AiResponse 제거: 서비스가 신규 process 시그니처를 직접 사용)
-
-    /** AI 서버 응답 모델 (doc_id, success, message) */
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class RagProcessResult {
-        @JsonProperty("doc_id")
-        private String docId;
-        private Boolean success;
-        private String message;
-        public RagProcessResult() {}
-        public String getDocId() { return docId; }
-        public void setDocId(String docId) { this.docId = docId; }
-        public Boolean getSuccess() { return success; }
-        public void setSuccess(Boolean success) { this.success = success; }
-        public String getMessage() { return message; }
-        public void setMessage(String message) { this.message = message; }
-    }
-
-    /** 접근 제어(옵션) */
-    public static class RagAcl {
-        private java.util.List<String> roles;
-        private java.util.List<String> departments;
-        public RagAcl() {}
-        public RagAcl(java.util.List<String> roles, java.util.List<String> departments) {
-            this.roles = roles; this.departments = departments;
+        public AiResponse() {}
+        public AiResponse(boolean accepted, String jobId, String status) {
+            this.accepted = accepted;
+            this.jobId = jobId;
+            this.status = status;
         }
-        public java.util.List<String> getRoles() { return roles; }
-        public void setRoles(java.util.List<String> roles) { this.roles = roles; }
-        public java.util.List<String> getDepartments() { return departments; }
-        public void setDepartments(java.util.List<String> departments) { this.departments = departments; }
+        public boolean isAccepted() { return accepted; }
+        public String getJobId() { return jobId; }
+        public String getStatus() { return status; }
     }
 }
 
