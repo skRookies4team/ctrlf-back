@@ -1,5 +1,7 @@
 package com.ctrlf.chat.service;
 
+import com.ctrlf.chat.ai.search.client.ChatAiClient;
+import com.ctrlf.chat.ai.search.dto.ChatAiResponse;
 import com.ctrlf.chat.dto.request.ChatMessageSendRequest;
 import com.ctrlf.chat.dto.response.ChatMessageCursorResponse;
 import com.ctrlf.chat.dto.response.ChatMessageSendResponse;
@@ -11,15 +13,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ChatMessageServiceImpl implements ChatMessageService {
 
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatAiClient chatAiClient;
 
     @Override
     public ChatMessageSendResponse sendMessage(
@@ -27,7 +32,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         UUID userId,
         String domain
     ) {
-        // 1) user 메시지 저장
+        // 1️⃣ USER 메시지 저장
         ChatMessage userMessage =
             ChatMessage.userMessage(
                 request.sessionId(),
@@ -35,18 +40,52 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
         chatMessageRepository.save(userMessage);
 
-        // 2) assistant placeholder 생성 (content는 비워둠)
+        // 2️⃣ AI Gateway 호출
+        ChatAiResponse aiResponse;
+        try {
+            aiResponse =
+                chatAiClient.ask(
+                    request.sessionId(),
+                    userId,
+                    "EMPLOYEE",   // TODO: JWT에서 추출
+                    null,         // department
+                    domain,
+                    "WEB",
+                    request.content()
+                );
+        } catch (Exception e) {
+            log.error("[AI] call failed", e);
+
+            ChatMessage fallbackMessage =
+                ChatMessage.assistantMessage(
+                    request.sessionId(),
+                    "현재 AI 응답을 제공할 수 없습니다.",
+                    null,
+                    null,
+                    null
+                );
+            chatMessageRepository.save(fallbackMessage);
+
+            return new ChatMessageSendResponse(
+                fallbackMessage.getId(),
+                fallbackMessage.getRole(),
+                fallbackMessage.getContent(),
+                fallbackMessage.getCreatedAt()
+            );
+        }
+
+        // 3️⃣ ASSISTANT 메시지 저장
         ChatMessage assistantMessage =
             ChatMessage.assistantMessage(
                 request.sessionId(),
-                "",
-                null,
-                null,
-                null
+                aiResponse.getAnswer(),
+                aiResponse.getPromptTokens(),
+                aiResponse.getCompletionTokens(),
+                aiResponse.getModel()
             );
         chatMessageRepository.save(assistantMessage);
 
-        // 3) 프론트는 messageId로 SSE 연결해서 토큰을 받는다
+        // 4️⃣ 응답 반환
         return new ChatMessageSendResponse(
             assistantMessage.getId(),
             assistantMessage.getRole(),
@@ -54,6 +93,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             assistantMessage.getCreatedAt()
         );
     }
+
+    // ===============================
+    // Cursor Pagination (변경 없음)
+    // ===============================
 
     @Override
     @Transactional(readOnly = true)
@@ -110,14 +153,17 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     public ChatMessage retryMessage(UUID sessionId, UUID messageId) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("retryMessage not implemented");
     }
 
     @Override
     public ChatMessage regenMessage(UUID sessionId, UUID messageId) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("regenMessage not implemented");
     }
 
+    /* ===============================
+       Cursor Helper
+       =============================== */
     private record ParsedCursor(
         Instant createdAt,
         UUID id
