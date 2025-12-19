@@ -32,6 +32,14 @@ public class ChatSession {
     @Column(name = "domain")
     private String domain;
 
+    /** 세션 요약 (AI 생성) */
+    @Column(name = "summary", columnDefinition = "text")
+    private String summary;
+
+    /** 세션 의도 분류 */
+    @Column(name = "intent", length = 50)
+    private String intent;
+
     /** 세션 생성 시각 */
     @Column(name = "created_at")
     private Instant createdAt;
