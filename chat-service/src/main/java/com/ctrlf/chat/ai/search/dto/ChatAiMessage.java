@@ -1,5 +1,6 @@
 package com.ctrlf.chat.ai.search.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,6 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatAiMessage {
-    private String role;     // "user" | "assistant"
+
+    @JsonProperty("role")
+    private String role;
+
+    @JsonProperty("content")
     private String content;
 }
