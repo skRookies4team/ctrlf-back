@@ -18,7 +18,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * 교육 메타 정보 엔티티.
- * 카테고리/필수 여부/통과 기준 및 부서 범위 등 기본 속성을 보관합니다.
+ * 카테고리/필수 여부/통과 기준 등 기본 속성을 보관합니다.
  */
 @Entity
 @Table(name = "education", schema = "education")
@@ -35,14 +35,15 @@ public class Education {
     @Column(name = "title")
     private String title;
 
-    /** 카테고리(예: MANDATORY, JOB, ETC) */
+    /** 카테고리(예: 직무/성희롱 예방/개인 정보 보호/직장 내 괴롭힘/장애인 인식 개선) */
     @Enumerated(EnumType.STRING)
     @Column(name = "category")
-    private EducationCategory category;
+    private EducationTopic category;
 
-    /** 대상 부서 범위(JSON 문자열; 부서 코드 배열을 직렬화) */
-    @Column(name = "department_scope")
-    private String departmentScope;
+    /** 유형(예: MANDATORY, JOB, ETC) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "edu_type")
+    private EducationCategory eduType;
 
     @Column(name = "description")
     private String description;

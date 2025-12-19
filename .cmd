@@ -12,7 +12,8 @@ AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun
 AWS_PROFILE=sk_4th_team04 ./gradlew :chat-service:bootRun
 AWS_PROFILE=sk_4th_team04 ./gradlew :api-gateway:bootRun
 
-./gradlew clean build :infra-service:bootRun
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=local,local-seed ./gradlew --no-configuration-cache :education-service:bootRun
+AWS_PROFILE=sk_4th_team04 ./gradlew clean build :infra-service:bootRun
  
 # DB (Docker Compose)
 

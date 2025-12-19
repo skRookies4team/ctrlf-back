@@ -4,43 +4,63 @@
 
 ## 구성
 
-- chat-service: 9001
-- education-service: 9002
-- infra-service: 9003
-- quiz-service: 9004
-- Postgres: 5432 (호스트)
-- Keycloak: 8080 (호스트)
+| 서비스            | 포트 | 설명           |
+| ----------------- | ---- | -------------- |
+| chat-service      | 9001 | 챗봇 서비스    |
+| education-service | 9002 | 교육 서비스    |
+| infra-service     | 9003 | 인프라 서비스  |
+| quiz-service      | 9004 | 퀴즈 서비스    |
+| api-gateway       | 8080 | API 게이트웨이 |
+| Postgres          | 5432 | 데이터베이스   |
+| Keycloak          | 8090 | 인증 서버      |
 
 ## 사전 준비물
 
 - Java 17
 - Docker / Docker Compose v2
 - Gradle Wrapper(동봉): `./gradlew`
+- AWS CLI (S3 연동 시 필요)
 
 ## 빠른 시작
 
-1. 인프라(Docker) 기동
+### 1. 인프라(Docker) 기동
 
 ```bash
 # 루트(ctrlf-back)에서 실행
 docker compose up -d
 
+# 상태 확인
+docker compose ps
+
+# 로그 확인
+docker compose logs -f postgres
 ```
 
 - Postgres: 사용자/비밀번호/DB = `postgres` / `postgres` / `db`
-- Keycloak: `http://localhost:8080`
+- Keycloak: `http://localhost:8090`
   - 관리자 계정: `admin` / `admin`
   - 처음 기동 시 `keycloak-realms/`의 realm이 자동 import됩니다(`--import-realm`).
 
-2. 애플리케이션 실행(개별 서비스)
+### 2. 애플리케이션 실행(개별 서비스)
 
 ```bash
 # 각 서비스는 별도 터미널에서 실행 권장
-./gradlew :chat-service:bootRun
-./gradlew :education-service:bootRun
-./gradlew :infra-service:bootRun
-./gradlew :chat-service:bootRun
-./gradlew :api-gateway:bootRun
+# AWS_PROFILE 설정이 필요한 경우 (S3 연동 등)
+AWS_PROFILE=sk_4th_team04 ./gradlew :chat-service:bootRun
+AWS_PROFILE=sk_4th_team04 ./gradlew :education-service:bootRun
+AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun
+AWS_PROFILE=sk_4th_team04 ./gradlew :quiz-service:bootRun
+AWS_PROFILE=sk_4th_team04 ./gradlew :api-gateway:bootRun
+```
+
+### 3. 시드 데이터 포함 실행
+
+```bash
+# education-service (교육 시드 데이터 포함)
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=local,local-seed ./gradlew --no-configuration-cache :education-service:bootRun
+
+# infra-service (인프라 시드 데이터 포함)
+AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun --args='--spring.profiles.active=local,local-seed'
 ```
 
 - DB 연결 정보는 각 서비스의 `application.yml`에 정의되어 있습니다(호스트 기준 `localhost:5432`).
@@ -50,46 +70,112 @@ docker compose up -d
   - infra: `infra` 스키마
   - quiz: `quiz` 스키마
 
-3. API 문서(Swagger/OpenAPI)
+### 4. API 문서(Swagger/OpenAPI)
 
-```text
-Chat       : http://localhost:9001/swagger-ui.html  (OpenAPI: http://localhost:9001/v3/api-docs)
-Education  : http://localhost:9002/swagger-ui.html  (OpenAPI: http://localhost:9002/v3/api-docs)
-Infra      : http://localhost:9003/swagger-ui.html  (OpenAPI: http://localhost:9003/v3/api-docs)
-Quiz       : http://localhost:9004/swagger-ui.html  (OpenAPI: http://localhost:9004/v3/api-docs)
-```
+| 서비스    | Swagger UI                            | OpenAPI                           |
+| --------- | ------------------------------------- | --------------------------------- |
+| Chat      | http://localhost:9001/swagger-ui.html | http://localhost:9001/v3/api-docs |
+| Education | http://localhost:9002/swagger-ui.html | http://localhost:9002/v3/api-docs |
+| Infra     | http://localhost:9003/swagger-ui.html | http://localhost:9003/v3/api-docs |
+| Quiz      | http://localhost:9004/swagger-ui.html | http://localhost:9004/v3/api-docs |
 
 - springdoc 2.x 사용 중이며, 일부 환경에서는 `/swagger-ui/index.html` 경로를 사용하기도 합니다.
 - 공통 OpenAPI 설정(`libs/common-utils`)에서 보안 스키마(JWT Bearer) 사용을 켜고 끌 수 있습니다(`app.api.security.enabled`).
 
-## Keycloak 연동(Infra 참고)
+## Keycloak 연동
 
-- 기본 설정(예시):
-  - Base URL: `http://localhost:8080`
-  - Realm: `ctrlf`
-  - Client: `infra-admin`
-  - Secret: `changeme`
+### 기본 설정
+
+| 항목     | 값                      |
+| -------- | ----------------------- |
+| Base URL | `http://localhost:8090` |
+| Realm    | `ctrlf`                 |
+| Client   | `infra-admin`           |
+| Secret   | `changeme`              |
+
 - 값은 `infra-service/src/main/resources/application.yml`에서 변경할 수 있습니다.
+
+### 테스트 계정
+
+| 계정      | 비밀번호 | 역할              | 용도             |
+| --------- | -------- | ----------------- | ---------------- |
+| user1     | 11111    | EMPLOYEE          | 일반 직원        |
+| admin1    | 22222    | SYSTEM_ADMIN      | 시스템 관리자    |
+| reviewer1 | 33333    | CONTENTS_REVIEWER | 콘텐츠 검토자    |
+| creator1  | 44444    | VIDEO_CREATOR     | 교육 영상 제작자 |
+
+### 토큰 발급 (curl)
+
+```bash
+curl -s -X POST 'http://localhost:8090/realms/ctrlf/protocol/openid-connect/token' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=password' \
+  -d 'client_id=infra-admin' \
+  -d 'client_secret=changeme' \
+  -d 'username=creator1' \
+  -d 'password=44444' | jq -r '.access_token'
+```
 
 ## 빌드/테스트/포맷
 
 - 포매터: Eclipse(Java) 4칸 들여쓰기, 불필요 import 제거, import 정렬.
 - VS Code용 워크스페이스 설정은 `.vscode/settings.json`을 참고하세요.
 
-## 문제 해결(Troubleshooting)
+## 문제 해결 (Troubleshooting)
 
-- 포트 충돌: 5432/8080/9001~9004 사용 중인 프로세스가 없는지 확인.
-- DB 연결 실패: `docker compose ps`로 Postgres 상태 확인, healthcheck 통과 여부 확인.
-- 마이그레이션 오류: Flyway `validate` 오류는 스키마 불일치일 수 있습니다. 초기화가 필요하면 데이터베이스를 비우거나 볼륨 삭제 후 재기동하세요.
-- Keycloak realm 미적용: Keycloak 로그에 `--import-realm` 수행 여부 확인. 필요 시 컨테이너 재기동.
+| 문제                  | 해결 방법                                                                  |
+| --------------------- | -------------------------------------------------------------------------- |
+| 포트 충돌             | 5432/8090/9001~9004 사용 중인 프로세스가 없는지 확인                       |
+| DB 연결 실패          | `docker compose ps`로 Postgres 상태 확인, healthcheck 통과 여부 확인       |
+| 마이그레이션 오류     | Flyway `validate` 오류는 스키마 불일치. 초기화 필요 시 볼륨 삭제 후 재기동 |
+| Keycloak realm 미적용 | Keycloak 로그에 `--import-realm` 수행 여부 확인. 필요 시 컨테이너 재기동   |
+| AWS 자격 증명 오류    | `AWS_PROFILE` 환경변수 설정 확인 또는 `~/.aws/credentials` 파일 확인       |
 
-## 기타
+## DB 접속 및 관리
 
-- 초기 스키마/데이터: `postgres-init/`의 스크립트가 최초 기동 시 자동 적용됩니다.
-- DB 접속(로컬 컨테이너 내부):
+### DB 접속
 
 ```bash
 docker exec -it platform-postgres psql -U postgres -d db
+```
+
+### 스키마 확인 명령어 (psql 내부)
+
+```sql
+\dn                           -- 스키마 목록
+\dt education.*               -- education 스키마 테이블
+\dt infra.*                   -- infra 스키마 테이블
+\dt chat.*                    -- chat 스키마 테이블
+\dt quiz.*                    -- quiz 스키마 테이블
+
+SET search_path=education;    -- 기본 스키마 변경
+\dt                           -- 현재 스키마의 테이블 목록
+```
+
+### 초기 데이터
+
+- 초기 스키마/데이터: `postgres-init/`의 스크립트가 최초 기동 시 자동 적용됩니다.
+
+## Keycloak 재시작
+
+Keycloak에 문제가 발생한 경우 아래 순서로 재시작합니다.
+
+```bash
+# 1) Keycloak 관련 컨테이너 정지
+docker compose stop keycloak keycloak-db
+
+# 2) 서비스 컨테이너 삭제 (이미지/볼륨은 유지)
+docker compose rm -f keycloak keycloak-db
+
+# 3) 볼륨 삭제 (완전 초기화 필요 시)
+docker volume rm ctrlf-back_kc-db-data
+
+# 4) DB -> Keycloak 순으로 재기동
+docker compose up -d keycloak-db
+docker compose up -d keycloak
+
+# 5) 기동 로그 확인
+docker logs -f platform-keycloak
 ```
 
 ## Git 브랜치 전략

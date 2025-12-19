@@ -2,8 +2,6 @@ package com.ctrlf.infra.rag.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -20,10 +18,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class RagDocument {
-
-    public enum RagStatus {
-        QUEUED, PROCESSING, SUCCEEDED, FAILED, REPROCESSING
-    }
 
     /** RAG 문서 PK */
     @Id
@@ -47,13 +41,16 @@ public class RagDocument {
     @Column(name = "source_url", length = 255)
     private String sourceUrl;
 
+    /** 처리 상태 (QUEUED, PROCESSING, COMPLETED, FAILED) */
+    @Column(name = "status", length = 20)
+    private String status;
+
     /** 등록 시각 */
     @Column(name = "created_at")
     private Instant createdAt;
 
-    /** 처리 상태(QUEUED/PROCESSING/SUCCEEDED/FAILED/REPROCESSING) */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 32)
-    private RagStatus status;
+    /** 처리 완료 시각 */
+    @Column(name = "processed_at")
+    private Instant processedAt;
 }
 

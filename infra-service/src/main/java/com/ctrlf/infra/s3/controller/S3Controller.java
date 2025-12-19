@@ -39,7 +39,7 @@ public class S3Controller {
 
     @PostMapping("/upload")
     @Operation(summary = "Presigned Upload URL 발급")
-    public ResponseEntity<UploadResponse> presignUpload(@Valid @RequestBody UploadRequest req) {
+    public ResponseEntity<UploadResponse> presignUpload(@Valid @RequestBody S3UploadRequest req) {
         // 업로드용 사인드 URL 생성
         String type = req.getType().trim().toLowerCase(Locale.ROOT);
         URL putUrl = presignService.presignUpload(type, req.getFilename(), req.getContentType());

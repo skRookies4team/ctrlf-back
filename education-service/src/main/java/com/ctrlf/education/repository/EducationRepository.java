@@ -19,7 +19,7 @@ public interface EducationRepository extends JpaRepository<Education, UUID> {
 
     /**
      * 교육 목록(간략+추가 정보) 조회 V2.
-     * - title, description, category, require, department_scope, is_completed, updated_at 포함
+     * - title, description, category, require, is_completed, updated_at 포함
      * - sort: UPDATED(기본) 또는 TITLE
      */
     @Query(
@@ -30,7 +30,6 @@ public interface EducationRepository extends JpaRepository<Education, UUID> {
               e.description,
               e.category,
               e.require AS required,
-              e.department_scope,
               CASE 
                 WHEN :userUuid IS NOT NULL THEN COALESCE(
                   (SELECT ep.is_completed 

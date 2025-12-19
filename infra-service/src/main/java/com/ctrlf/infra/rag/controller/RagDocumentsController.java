@@ -127,5 +127,21 @@ public class RagDocumentsController {
     ) {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ragDocumentService.reprocess(id, req));
     }
+
+    @GetMapping("/{id}/status")
+    @Operation(
+        summary = "RAG 문서 처리 상태 조회",
+        description = "문서의 임베딩 처리 상태를 조회합니다. (QUEUED, PROCESSING, COMPLETED, FAILED)"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "상태 조회 성공",
+            content = @Content(schema = @Schema(implementation = DocumentStatusResponse.class))),
+        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음")
+    })
+    public ResponseEntity<DocumentStatusResponse> getStatus(
+        @Parameter(description = "문서 ID") @PathVariable("id") String id
+    ) {
+        return ResponseEntity.ok(ragDocumentService.getStatus(id));
+    }
 }
 

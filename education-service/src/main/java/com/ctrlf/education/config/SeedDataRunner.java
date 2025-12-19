@@ -2,17 +2,21 @@ package com.ctrlf.education.config;
 
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
-import com.ctrlf.education.entity.EducationScript;
-import com.ctrlf.education.entity.EducationScriptChapter;
-import com.ctrlf.education.entity.EducationScriptScene;
+import com.ctrlf.education.entity.EducationTopic;
 import com.ctrlf.education.repository.EducationRepository;
-import com.ctrlf.education.repository.EducationScriptChapterRepository;
-import com.ctrlf.education.repository.EducationScriptRepository;
-import com.ctrlf.education.repository.EducationScriptSceneRepository;
-import com.ctrlf.education.repository.VideoGenerationJobRepository;
+import com.ctrlf.education.script.entity.EducationScript;
+import com.ctrlf.education.script.entity.EducationScriptChapter;
+import com.ctrlf.education.script.entity.EducationScriptScene;
+import com.ctrlf.education.script.repository.EducationScriptChapterRepository;
+import com.ctrlf.education.script.repository.EducationScriptRepository;
+import com.ctrlf.education.script.repository.EducationScriptSceneRepository;
+import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
+import com.ctrlf.education.video.repository.EducationVideoRepository;
+import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
+
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,64 +38,162 @@ public class SeedDataRunner implements CommandLineRunner {
 
     private final EducationRepository educationRepository;
     private final EducationScriptRepository scriptRepository;
-    private final VideoGenerationJobRepository jobRepository;
     private final EducationScriptChapterRepository chapterRepository;
     private final EducationScriptSceneRepository sceneRepository;
+    private final EducationVideoRepository educationVideoRepository;
+    private final EducationVideoProgressRepository educationVideoProgressRepository;
+    private final VideoGenerationJobRepository videoGenerationJobRepository;
 
     public SeedDataRunner(
         EducationRepository educationRepository,
         EducationScriptRepository scriptRepository,
-        VideoGenerationJobRepository jobRepository,
         EducationScriptChapterRepository chapterRepository,
-        EducationScriptSceneRepository sceneRepository
+        EducationScriptSceneRepository sceneRepository,
+        EducationVideoRepository educationVideoRepository,
+        EducationVideoProgressRepository educationVideoProgressRepository,
+        VideoGenerationJobRepository videoGenerationJobRepository
     ) {
         this.educationRepository = educationRepository;
         this.scriptRepository = scriptRepository;
-        this.jobRepository = jobRepository;
         this.chapterRepository = chapterRepository;
         this.sceneRepository = sceneRepository;
+        this.educationVideoRepository = educationVideoRepository;
+        this.educationVideoProgressRepository = educationVideoProgressRepository;
+        this.videoGenerationJobRepository = videoGenerationJobRepository;
     }
 
     @Override
     @Transactional
     public void run(String... args) {
+        clearAllEducationData();
         seedScriptsAndJobs();
+        seedEducationsVideosAndProgress();
+    }
+
+    /**
+     * 기존 교육 관련 데이터를 모두 삭제합니다.
+     * FK 관계로 인해 자식 테이블부터 삭제합니다.
+     */
+    private void clearAllEducationData() {
+        log.info("기존 교육 데이터 삭제 시작...");
+        
+        // 1. 영상 진행률 삭제
+        educationVideoProgressRepository.deleteAll();
+        log.info("교육 영상 진행률 삭제 완료");
+        
+        // 2. 영상 삭제
+        educationVideoRepository.deleteAll();
+        log.info("교육 영상 삭제 완료");
+        
+        // 3. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
+        videoGenerationJobRepository.deleteAll();
+        log.info("영상 생성 작업 삭제 완료");
+        
+        // 4. 스크립트 씬 삭제
+        sceneRepository.deleteAll();
+        log.info("스크립트 씬 삭제 완료");
+        
+        // 5. 스크립트 챕터 삭제
+        chapterRepository.deleteAll();
+        log.info("스크립트 챕터 삭제 완료");
+        
+        // 6. 스크립트 삭제
+        scriptRepository.deleteAll();
+        log.info("스크립트 삭제 완료");
+        
+        // 7. 교육 삭제
+        educationRepository.deleteAll();
+        log.info("교육 삭제 완료");
+        
+        log.info("기존 교육 데이터 삭제 완료!");
     }
 
     private void seedScriptsAndJobs() {
-        // 교육 엔티티 선행 생성 (FK 충족)
-        Education eduA = new Education();
-        eduA.setTitle("테스트 교육 A");
-        eduA.setCategory(EducationCategory.MANDATORY);
-        eduA.setRequire(Boolean.TRUE);
-        educationRepository.save(eduA);
-        UUID eduId1 = eduA.getId();
+        // 5가지 교육 카테고리별 시드 데이터 생성
+        List<Education> educations = new ArrayList<>();
 
-        Education eduB = new Education();
-        eduB.setTitle("테스트 교육 B");
-        eduB.setCategory(EducationCategory.ETC);
-        eduB.setRequire(Boolean.FALSE);
-        educationRepository.save(eduB);
-        UUID eduId2 = eduB.getId();
+        // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB
+        Education edu1 = new Education();
+        edu1.setTitle("직무 역량 강화 교육");
+        edu1.setCategory(EducationTopic.JOB_DUTY);
+        edu1.setDescription("업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.");
+        edu1.setPassScore(80);
+        edu1.setPassRatio(90);
+        edu1.setRequire(Boolean.TRUE);
+        edu1.setEduType(EducationCategory.JOB);
+        educations.add(edu1);
 
-        // 고정 자료 UUID (테스트 호출 용이)
-        UUID materialId1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440002");
+        // 2. 성희롱 예방 교육 (SEXUAL_HARASSMENT_PREVENTION) - edu_type: MANDATORY
+        Education edu2 = new Education();
+        edu2.setTitle("성희롱 예방 교육");
+        edu2.setCategory(EducationTopic.SEXUAL_HARASSMENT_PREVENTION);
+        edu2.setDescription("직장 내 성희롱 예방 및 대응 방법에 대한 법정 필수 교육입니다.");
+        edu2.setPassScore(80);
+        edu2.setPassRatio(90);
+        edu2.setRequire(Boolean.TRUE);
+        edu2.setEduType(EducationCategory.MANDATORY);
+        educations.add(edu2);
 
-        UUID scriptId1 = insertScript(eduId1, materialId1,
-            "샘플 스크립트 내용입니다. 첫 번째 버전.", 1);
+        // 3. 개인정보 보호 교육 (PERSONAL_INFO_PROTECTION) - edu_type: MANDATORY
+        Education edu3 = new Education();
+        edu3.setTitle("개인정보 보호 교육");
+        edu3.setCategory(EducationTopic.PERSONAL_INFO_PROTECTION);
+        edu3.setDescription("개인정보 보호법에 따른 개인정보 취급 및 보호에 관한 법정 필수 교육입니다.");
+        edu3.setPassScore(80);
+        edu3.setPassRatio(90);
+        edu3.setRequire(Boolean.TRUE);
+        edu3.setEduType(EducationCategory.MANDATORY);
+        educations.add(edu3);
 
-        // 두 번째 샘플
-        UUID materialId2 = UUID.fromString("660e8400-e29b-41d4-a716-446655440002");
+        // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
+        Education edu4 = new Education();
+        edu4.setTitle("직장 내 괴롭힘 예방 교육");
+        edu4.setCategory(EducationTopic.WORKPLACE_BULLYING);
+        edu4.setDescription("직장 내 괴롭힘 예방 및 대응 방법에 대한 법정 필수 교육입니다.");
+        edu4.setPassScore(80);
+        edu4.setPassRatio(90);
+        edu4.setRequire(Boolean.TRUE);
+        edu4.setEduType(EducationCategory.MANDATORY);
+        educations.add(edu4);
 
-        UUID scriptId2 = insertScript(eduId2, materialId2,
-            "두 번째 샘플 스크립트입니다.", 1);
+        // 5. 장애인 인식 개선 교육 (DISABILITY_AWARENESS) - edu_type: MANDATORY
+        Education edu5 = new Education();
+        edu5.setTitle("장애인 인식 개선 교육");
+        edu5.setCategory(EducationTopic.DISABILITY_AWARENESS);
+        edu5.setDescription("장애인에 대한 인식 개선 및 편견 해소를 위한 법정 필수 교육입니다.");
+        edu5.setPassScore(80);
+        edu5.setPassRatio(90);
+        edu5.setRequire(Boolean.TRUE);
+        edu5.setEduType(EducationCategory.MANDATORY);
+        educations.add(edu5);
+
+        // 모든 교육 저장
+        educationRepository.saveAll(educations);
+        log.info("Seed created: {} 개의 교육 시드 데이터 생성 완료", educations.size());
+
+        // 각 교육에 대해 스크립트 생성
+        List<UUID> scriptIds = new ArrayList<>();
+        String[] scriptTitles = {
+            "직무 역량 강화 교육 영상",
+            "성희롱 예방 교육 영상",
+            "개인정보 보호 교육 영상",
+            "직장 내 괴롭힘 예방 교육 영상",
+            "장애인 인식 개선 교육 영상"
+        };
+
+        for (int i = 0; i < educations.size(); i++) {
+            UUID scriptId = insertScript(educations.get(i).getId(), null,
+                scriptTitles[i] + " 스크립트 내용입니다.", 1, scriptTitles[i]);
+            scriptIds.add(scriptId);
+        }
 
         // 스크립트 INSERT를 먼저 DB에 반영
         scriptRepository.flush();
 
-        // 그 다음 챕터/씬 시드
-        seedChaptersAndScenes(scriptId1);
-        seedChaptersAndScenes(scriptId2);
+        // 각 스크립트에 대해 챕터/씬 시드
+        for (UUID scriptId : scriptIds) {
+            seedChaptersAndScenes(scriptId);
+        }
 
         // 챕터/씬 반영
         chapterRepository.flush();
@@ -100,12 +202,94 @@ public class SeedDataRunner implements CommandLineRunner {
         // Job 시드는 별도 러너(@Order(2))에서 처리합니다.
     }
 
-    private UUID insertScript(UUID eduId, UUID materialId, String content, Integer version) {
+    /**
+     * 사용자용 API 확인을 위한 영상/진행 더미 데이터.
+     */
+    private void seedEducationsVideosAndProgress() {
+        // 이미 영상이 있으면 스킵
+        List<Education> edus = educationRepository.findAll();
+        if (edus.isEmpty()) return;
+
+        UUID demoUser = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+        for (Education edu : edus) {
+            var videos = educationVideoRepository.findByEducationId(edu.getId());
+            // 영상이 없으면 더미 영상 추가
+            if (videos.isEmpty()) {
+                List<com.ctrlf.education.video.entity.EducationVideo> seeds = new ArrayList<>();
+                String[] urls = new String[] {
+                    "s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4",
+                    "s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4",
+                    "s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4",
+                    "s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4",
+                    "s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4"
+                };
+                String[] titles = new String[] {
+                    edu.getTitle() + " - 기본편",
+                    edu.getTitle() + " - 심화편",
+                    edu.getTitle() + " - 사례편",
+                    edu.getTitle() + " - 실무편",
+                    edu.getTitle() + " - 종합편"
+                };
+                int[] durations = new int[] { 1200, 900, 1100, 1000, 950 };
+                for (int i = 0; i < urls.length; i++) {
+                    var v = com.ctrlf.education.video.entity.EducationVideo.create(
+                        edu.getId(),
+                        titles[i],
+                        urls[i],
+                        durations[i],
+                        "ALL",
+                        1,
+                        "ACTIVE"
+                    );
+                    v.setOrderIndex(i);
+                    seeds.add(v);
+                }
+                educationVideoRepository.saveAll(seeds);
+                videos = educationVideoRepository.findByEducationId(edu.getId());
+                log.info("Seed created: {} dummy videos for eduId={}", videos.size(), edu.getId());
+            }
+            if (videos.isEmpty()) {
+                log.info("Seed skip: 교육에 연결된 영상이 없어 진행률 더미 생성을 건너뜁니다. eduId={}", edu.getId());
+                continue;
+            }
+            /**
+             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
+             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
+             * s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4
+             * s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4
+             * s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4
+             * s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4
+             */
+
+            // 진행률 더미: 첫 영상 30%, 두번째 100%
+            for (int i = 0; i < videos.size(); i++) {
+                var v = videos.get(i);
+                var p = educationVideoProgressRepository
+                    .findByUserUuidAndEducationIdAndVideoId(demoUser, edu.getId(), v.getId())
+                    .orElseGet(() -> com.ctrlf.education.video.entity.EducationVideoProgress.create(demoUser, edu.getId(), v.getId()));
+                if (i == 0) {
+                    p.setLastPositionSeconds(540); // 9분
+                    p.setTotalWatchSeconds(540);
+                    p.setProgress(30);
+                    p.setIsCompleted(false);
+                } else {
+                    p.setLastPositionSeconds(v.getDuration() != null ? v.getDuration() : 1200);
+                    p.setTotalWatchSeconds(p.getLastPositionSeconds());
+                    p.setProgress(100);
+                    p.setIsCompleted(true);
+                }
+                educationVideoProgressRepository.save(p);
+            }
+        }
+    }
+
+    private UUID insertScript(UUID eduId, UUID materialId, String content, Integer version, String title) {
         EducationScript s = new EducationScript();
         s.setEducationId(eduId);
         // FK 충돌 방지: 소스 문서 시더가 없으므로 null로 둡니다.
-        s.setSourceDocId(null);
-        s.setTitle("직장내괴롭힘교육 교육 영상");
+        s.setSourceDocId(materialId);
+        s.setTitle(title);
         s.setTotalDurationSec(720);
         // 변경된 스키마에 맞춰 raw_payload(JSONB)에 저장
         // content가 JSON이 아닐 수 있으므로 간단히 JSON 문자열로 포장
@@ -115,7 +299,7 @@ public class SeedDataRunner implements CommandLineRunner {
         s.setRawPayload(payload);
         s.setVersion(version);
         scriptRepository.save(s);
-        log.info("Seed created: EducationScript scriptId={}, eduId={}, materialId={}", s.getId(), eduId, materialId);
+        log.info("Seed created: EducationScript scriptId={}, eduId={}, title={}", s.getId(), eduId, title);
         return s.getId();
     }
 
