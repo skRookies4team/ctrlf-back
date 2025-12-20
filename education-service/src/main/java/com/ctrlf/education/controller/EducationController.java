@@ -63,7 +63,7 @@ public class EducationController {
      */
     @GetMapping("/edus/me")
     @Operation(
-        summary = "사용자 자신 교육 및 영상 목록 조회",
+        summary = "사용자 자신 교육 및 영상 목록 조회 (프론트 -> 백엔드)",
         description = "로그인 사용자 기준 교육 목록과 각 교육의 영상 목록/진행 정보를 반환합니다.",
         responses = {
             @ApiResponse(
@@ -119,8 +119,6 @@ public class EducationController {
     }
 
 
-    // 어드민 관리 엔드포인트는 AdminEducationController로 분리됨
-
     /**
      * 교육 영상 목록 및 사용자별 진행 정보 조회.
      *
@@ -130,7 +128,7 @@ public class EducationController {
      */
     @GetMapping("/edu/{id}/videos")
     @Operation(
-        summary = "교육 영상 목록 조회",
+        summary = "교육 영상 목록 조회 (프론트 -> 백엔드)",
         description = "교육에 포함된 영상 목록과 사용자별 진행 정보를 조회합니다.",
         responses = {
             @ApiResponse(
@@ -189,7 +187,7 @@ public class EducationController {
      */
     @PostMapping("/edu/{educationId}/video/{videoId}/progress")
     @Operation(
-        summary = "영상 시청 진행률 업데이트",
+        summary = "영상 시청 진행률 업데이트 (프론트 -> 백엔드)",
         description = "특정 교육의 특정 영상에 대한 사용자 시청 진행 정보를 업데이트합니다.",
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
@@ -252,7 +250,7 @@ public class EducationController {
      */
     @PostMapping("/edu/{id}/complete")
     @Operation(
-        summary = "교육 이수 처리",
+        summary = "교육 이수 처리 (프론트 -> 백엔드)",
         description = "모든 영상 이수 여부를 확인하여 교육 이수 처리를 수행합니다.",
         responses = {
             @ApiResponse(

@@ -40,7 +40,7 @@ public class EducationScriptController {
 
   private final ScriptService scriptService;
 
-  @Operation(summary = "스크립트 조회", description = "AI가 생성한 스크립트를 조회합니다. (챕터/씬 포함)")
+  @Operation(summary = "스크립트 조회 (* 개발용)", description = "AI가 생성한 스크립트를 조회합니다. (챕터/씬 포함)")
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
@@ -54,7 +54,7 @@ public class EducationScriptController {
     return ResponseEntity.ok(scriptService.getScript(scriptId));
   }
 
-  @Operation(summary = "스크립트 목록 조회", description = "스크립트 목록을 페이징으로 조회합니다.")
+  @Operation(summary = "스크립트 목록 조회 (프론트 -> 백엔드)", description = "스크립트 목록을 페이징으로 조회합니다.")
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
@@ -68,7 +68,7 @@ public class EducationScriptController {
     return ResponseEntity.ok(scriptService.listScripts(page, size));
   }
 
-  @Operation(summary = "스크립트 삭제", description = "스크립트를 삭제합니다.")
+  @Operation(summary = "스크립트 삭제 (프론트 -> 백엔드)", description = "스크립트를 삭제합니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "삭제 성공"),
     @ApiResponse(responseCode = "404", description = "스크립트를 찾을 수 없음", content = @Content)
@@ -81,7 +81,7 @@ public class EducationScriptController {
   }
 
   @Operation(
-      summary = "스크립트 수정",
+      summary = "스크립트 수정 (프론트 -> 백엔드)",
       description = "관리자가 스크립트(rawPayload) 및 챕터/씬을 수정합니다. (챕터/씬은 전체 교체)")
   @ApiResponses({
     @ApiResponse(
@@ -99,7 +99,7 @@ public class EducationScriptController {
   }
 
   @Operation(
-      summary = "스크립트 생성 완료 콜백",
+      summary = "스크립트 생성 완료 콜백 (AI -> 백엔드)",
       description = "AI 서버가 전처리 & 스크립트 생성 완료 후 백엔드로 결과를 전달합니다. (내부 API)",
       requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
           required = true,
@@ -156,14 +156,14 @@ public class EducationScriptController {
    * 임베딩 완료된 자료를 기반으로 스크립트를 자동 생성합니다.
    * (전처리/임베딩은 infra-service의 POST /rag/documents/upload에서 이미 완료됨)
    *
-   * @param materialId 자료 ID (= RagDocument.id)
-   * @param request eduId, videoId, fileUrl
+   * @param documentId 자료 ID (= RagDocument.id)
+   * @param request eduId, videoId
    * @return AI 서버 수신/상태 응답
    */
   @Operation(
-      summary = "스크립트 자동생성 요청",
-      description = "임베딩 완료된 자료(materialId)를 기반으로 교육 스크립트를 자동 생성합니다. " +
-          "영상 컨텐츠(videoId)에 자료(materialId)가 연결됩니다.")
+      summary = "스크립트 자동생성 요청 (프론트 -> 백엔드)",
+      description = "임베딩 완료된 자료(documentId)를 기반으로 교육 스크립트를 자동 생성합니다. " +
+          "영상 컨텐츠(videoId)에 자료(documentId)가 연결됩니다.")
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
@@ -173,12 +173,12 @@ public class EducationScriptController {
     @ApiResponse(responseCode = "404", description = "영상 컨텐츠를 찾을 수 없음", content = @Content),
     @ApiResponse(responseCode = "500", description = "AI 서버 요청 실패", content = @Content)
   })
-  @PostMapping("/generate/{materialId}")
+  @PostMapping("/generate/{documentId}")
   public ResponseEntity<ScriptGenerationResponse> generateScript(
       @Parameter(description = "자료 ID (= RagDocument.id)", required = true)
-      @PathVariable UUID materialId,
+      @PathVariable UUID documentId,
       @Valid @RequestBody ScriptGenerateRequest request) {
     return ResponseEntity.ok(
-        scriptService.requestScriptGeneration(materialId, request.eduId(), request.videoId(), request.fileUrl()));
+        scriptService.requestScriptGeneration(documentId, request.eduId(), request.videoId()));
   }
 }

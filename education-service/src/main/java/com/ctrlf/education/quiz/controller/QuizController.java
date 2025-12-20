@@ -29,7 +29,7 @@ public class QuizController {
     private final QuizService quizService;
 
     @GetMapping("/{eduId}/start")
-    @Operation(summary = "퀴즈 시작(문항 생성/복원)")
+    @Operation(summary = "퀴즈 시작(문항 생성/복원) (프론트 -> 백엔드)")
     public ResponseEntity<StartResponse> start(
         @PathVariable("eduId") UUID educationId,
         @AuthenticationPrincipal Jwt jwt
@@ -40,7 +40,7 @@ public class QuizController {
     }
 
     @PostMapping("/attempt/{attemptId}/submit")
-    @Operation(summary = "퀴즈 제출/채점")
+    @Operation(summary = "퀴즈 제출/채점 (프론트 -> 백엔드)")
     public ResponseEntity<SubmitResponse> submit(
         @PathVariable("attemptId") UUID attemptId,
         @AuthenticationPrincipal Jwt jwt,
@@ -52,7 +52,7 @@ public class QuizController {
     }
 
     @GetMapping("/attempt/{attemptId}/result")
-    @Operation(summary = "퀴즈 결과 조회")
+    @Operation(summary = "퀴즈 결과 조회 (프론트 -> 백엔드)")
     public ResponseEntity<ResultResponse> result(
         @PathVariable("attemptId") UUID attemptId,
         @AuthenticationPrincipal Jwt jwt
@@ -63,7 +63,7 @@ public class QuizController {
     }
 
     @GetMapping("/{attemptId}/wrongs")
-    @Operation(summary = "오답노트 목록 조회")
+    @Operation(summary = "오답노트 목록 조회 (프론트 -> 백엔드)")
     public ResponseEntity<List<WrongNoteItem>> wrongs(
         @PathVariable("attemptId") UUID attemptId,
         @AuthenticationPrincipal Jwt jwt
@@ -74,7 +74,7 @@ public class QuizController {
     }
 
     @PostMapping("/attempt/{attemptId}/leave")
-    @Operation(summary = "퀴즈 이탈 기록")
+    @Operation(summary = "퀴즈 이탈 기록 (프론트 -> 백엔드)")
     public ResponseEntity<LeaveResponse> leave(
         @PathVariable("attemptId") UUID attemptId,
         @AuthenticationPrincipal Jwt jwt,
@@ -86,7 +86,7 @@ public class QuizController {
     }
 
     @PostMapping("/attempt/{attemptId}/save")
-    @Operation(summary = "응답 임시 저장", description = "FS-QUIZ-PLAY-03: 진행 중인 답안 임시 저장 (페이지 새로고침/이탈 시 복구용)")
+    @Operation(summary = "응답 임시 저장 (프론트 -> 백엔드)", description = "FS-QUIZ-PLAY-03: 진행 중인 답안 임시 저장 (페이지 새로고침/이탈 시 복구용)")
     public ResponseEntity<SaveResponse> save(
         @PathVariable("attemptId") UUID attemptId,
         @AuthenticationPrincipal Jwt jwt,
@@ -98,7 +98,7 @@ public class QuizController {
     }
 
     @GetMapping("/attempt/{attemptId}/timer")
-    @Operation(summary = "타이머 정보 조회", description = "FS-QUIZ-PLAY-02: 시간 제한, 남은 시간, 시작 시각 조회")
+    @Operation(summary = "타이머 정보 조회 (프론트 -> 백엔드)", description = "FS-QUIZ-PLAY-02: 시간 제한, 남은 시간, 시작 시각 조회")
     public ResponseEntity<TimerResponse> getTimer(
         @PathVariable("attemptId") UUID attemptId,
         @AuthenticationPrincipal Jwt jwt
@@ -109,7 +109,7 @@ public class QuizController {
     }
 
     @GetMapping("/available-educations")
-    @Operation(summary = "풀 수 있는 퀴즈 목록 조회 (이수 완료한 교육 기준)", description = "FS-QUIZ-START-01: 이수 완료한 교육만 리스트에 노출")
+    @Operation(summary = "풀 수 있는 퀴즈 목록 조회 (이수 완료한 교육 기준) (프론트 -> 백엔드)", description = "FS-QUIZ-START-01: 이수 완료한 교육만 리스트에 노출")
     public ResponseEntity<List<AvailableEducationItem>> getAvailableEducations(
         @AuthenticationPrincipal Jwt jwt
     ) {
@@ -119,7 +119,7 @@ public class QuizController {
     }
 
     @GetMapping("/my-attempts")
-    @Operation(summary = "내가 풀었던 퀴즈 응시 내역 조회", description = "FS-MYPAGE-03: 응시한 퀴즈 목록, 점수, 통과 여부, 교육별 최고 점수")
+    @Operation(summary = "내가 풀었던 퀴즈 응시 내역 조회 (프론트 -> 백엔드)", description = "FS-MYPAGE-03: 응시한 퀴즈 목록, 점수, 통과 여부, 교육별 최고 점수")
     public ResponseEntity<List<MyAttemptItem>> getMyAttempts(
         @AuthenticationPrincipal Jwt jwt
     ) {

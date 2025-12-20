@@ -52,7 +52,7 @@ public class VideoController {
     /**
      * 영상 생성 Job 목록을 페이징으로 조회합니다.
      */
-    @Operation(summary = "영상 생성 Job 목록 조회", description = "영상 생성 Job 목록을 페이징으로 조회합니다.")
+    @Operation(summary = "영상 생성 Job 목록 조회 (* 개발용)", description = "영상 생성 Job 목록을 페이징으로 조회합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = JobItem.class)))
@@ -68,7 +68,7 @@ public class VideoController {
     /**
      * 영상 생성 Job 상세 조회.
      */
-    @Operation(summary = "영상 생성 Job 상세 조회", description = "특정 Job의 상세 정보를 조회합니다.")
+    @Operation(summary = "영상 생성 Job 상세 조회 (프론트 -> 백엔드)", description = "특정 Job의 상세 정보를 조회합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = JobItem.class))),
@@ -85,7 +85,7 @@ public class VideoController {
     /**
      * 영상 생성 Job 수정.
      */
-    @Operation(summary = "영상 생성 Job 수정", description = "Job 상태/비고 등을 수정합니다.")
+    @Operation(summary = "영상 생성 Job 수정 (* 개발용)", description = "Job 상태/비고 등을 수정합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "수정 성공",
             content = @Content(schema = @Schema(implementation = JobItem.class))),
@@ -103,7 +103,7 @@ public class VideoController {
     /**
      * 영상 생성 Job 삭제.
      */
-    @Operation(summary = "영상 생성 Job 삭제", description = "특정 Job을 삭제합니다.")
+    @Operation(summary = "영상 생성 Job 삭제 (* 개발용)", description = "특정 Job을 삭제합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "삭제 성공"),
         @ApiResponse(responseCode = "404", description = "Job을 찾을 수 없음", content = @Content)
@@ -122,7 +122,7 @@ public class VideoController {
      * @param request 영상 생성 요청
      * @return Job 등록 결과
      */
-    @Operation(summary = "영상 생성 요청", 
+    @Operation(summary = "영상 생성 요청 (프론트 -> 백엔드)", 
         description = "최종 확정된 스크립트를 기반으로 영상 생성 Job을 등록합니다. (권한: ROLE_ADMIN)")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Job 생성 성공",
@@ -150,7 +150,7 @@ public class VideoController {
      * @param jobId 재시도할 Job ID
      * @return 재시도 결과
      */
-    @Operation(summary = "영상 생성 재시도", 
+    @Operation(summary = "영상 생성 재시도 (프론트 -> 백엔드)", 
         description = "이전 영상 생성 Job이 FAILED 상태일 때 재시도합니다. (권한: ROLE_ADMIN)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "재시도 성공",
@@ -184,7 +184,7 @@ public class VideoController {
      * @param callback 콜백 데이터
      * @return 저장 결과
      */
-    @Operation(summary = "영상 생성 완료 콜백", 
+    @Operation(summary = "영상 생성 완료 콜백 (AI -> 백엔드)", 
         description = "AI 서버가 영상 생성 완료 후 백엔드로 결과를 전달합니다. (내부 API)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "콜백 처리 성공",

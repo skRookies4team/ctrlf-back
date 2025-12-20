@@ -63,7 +63,7 @@ public class AdminEducationController {
 
     @PostMapping("/edu")
     @Operation(
-        summary = "교육 생성(개발용)",
+        summary = "교육 생성(* 개발용)",
         description = "교육을 생성합니다.",
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
@@ -109,7 +109,7 @@ public class AdminEducationController {
 
     @GetMapping("/edu/{id}")
     @Operation(
-        summary = "교육 상세 조회(개발용)",
+        summary = "교육 상세 조회(* 개발용)",
         description = "교육 기본 정보와 차시 정보를 조회합니다.",
         responses = {
             @ApiResponse(
@@ -142,7 +142,7 @@ public class AdminEducationController {
 
     @PutMapping("/edu/{id}")
     @Operation(
-        summary = "교육 수정(개발용)",
+        summary = "교육 수정(* 개발용)",
         description = "교육 정보를 부분 업데이트합니다.",
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
@@ -195,7 +195,7 @@ public class AdminEducationController {
 
     @DeleteMapping("/edu/{id}")
     @Operation(
-        summary = "교육 삭제(개발용)",
+        summary = "교육 삭제(* 개발용)",
         description = "교육을 삭제합니다.",
         responses = {
             @ApiResponse(
@@ -226,7 +226,7 @@ public class AdminEducationController {
      */
     @GetMapping("/edus/with-videos")
     @Operation(
-        summary = "전체 교육 + 영상 목록 조회",
+        summary = "전체 교육 + 영상 목록 조회 (프론트 -> 백)",
         description = "모든 교육을 조회하고 각 교육에 포함된 영상 목록을 함께 반환합니다(사용자 진행 정보 제외).",
         responses = {
             @ApiResponse(

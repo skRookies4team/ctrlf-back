@@ -10,6 +10,7 @@ import com.ctrlf.education.script.entity.EducationScriptScene;
 import com.ctrlf.education.script.repository.EducationScriptChapterRepository;
 import com.ctrlf.education.script.repository.EducationScriptRepository;
 import com.ctrlf.education.script.repository.EducationScriptSceneRepository;
+import com.ctrlf.education.repository.EducationProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
@@ -42,6 +43,7 @@ public class SeedDataRunner implements CommandLineRunner {
     private final EducationScriptSceneRepository sceneRepository;
     private final EducationVideoRepository educationVideoRepository;
     private final EducationVideoProgressRepository educationVideoProgressRepository;
+    private final EducationProgressRepository educationProgressRepository;
     private final VideoGenerationJobRepository videoGenerationJobRepository;
 
     public SeedDataRunner(
@@ -51,6 +53,7 @@ public class SeedDataRunner implements CommandLineRunner {
         EducationScriptSceneRepository sceneRepository,
         EducationVideoRepository educationVideoRepository,
         EducationVideoProgressRepository educationVideoProgressRepository,
+        EducationProgressRepository educationProgressRepository,
         VideoGenerationJobRepository videoGenerationJobRepository
     ) {
         this.educationRepository = educationRepository;
@@ -59,6 +62,7 @@ public class SeedDataRunner implements CommandLineRunner {
         this.sceneRepository = sceneRepository;
         this.educationVideoRepository = educationVideoRepository;
         this.educationVideoProgressRepository = educationVideoProgressRepository;
+        this.educationProgressRepository = educationProgressRepository;
         this.videoGenerationJobRepository = videoGenerationJobRepository;
     }
 
@@ -77,31 +81,35 @@ public class SeedDataRunner implements CommandLineRunner {
     private void clearAllEducationData() {
         log.info("기존 교육 데이터 삭제 시작...");
         
-        // 1. 영상 진행률 삭제
+        // 1. 교육 진행 현황 삭제 (education_id FK 참조)
+        educationProgressRepository.deleteAll();
+        log.info("교육 진행 현황 삭제 완료");
+        
+        // 2. 영상 진행률 삭제
         educationVideoProgressRepository.deleteAll();
         log.info("교육 영상 진행률 삭제 완료");
         
-        // 2. 영상 삭제
+        // 3. 영상 삭제
         educationVideoRepository.deleteAll();
         log.info("교육 영상 삭제 완료");
         
-        // 3. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
+        // 4. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
         videoGenerationJobRepository.deleteAll();
         log.info("영상 생성 작업 삭제 완료");
         
-        // 4. 스크립트 씬 삭제
+        // 5. 스크립트 씬 삭제
         sceneRepository.deleteAll();
         log.info("스크립트 씬 삭제 완료");
         
-        // 5. 스크립트 챕터 삭제
+        // 6. 스크립트 챕터 삭제
         chapterRepository.deleteAll();
         log.info("스크립트 챕터 삭제 완료");
         
-        // 6. 스크립트 삭제
+        // 7. 스크립트 삭제
         scriptRepository.deleteAll();
         log.info("스크립트 삭제 완료");
         
-        // 7. 교육 삭제
+        // 8. 교육 삭제
         educationRepository.deleteAll();
         log.info("교육 삭제 완료");
         

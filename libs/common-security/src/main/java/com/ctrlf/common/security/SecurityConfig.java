@@ -21,24 +21,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, Environment env) throws Exception {
         http.csrf(csrf -> csrf.disable());
         http.cors(Customizer.withDefaults());
+        // API Gateway에서 이미 인증을 검증하므로, 모든 요청을 허용
         http.authorizeHttpRequests(auth -> auth
-            .requestMatchers(
-                "/v3/api-docs/**",
-                "/swagger-ui.html",
-                "/swagger-ui/**",
-                "/actuator/**",
-                "/swagger-resources/**"
-            ).permitAll()
             .anyRequest().permitAll()
         );
         http.httpBasic(b -> b.disable());
         http.formLogin(f -> f.disable());
 
-        String issuer = env.getProperty("spring.security.oauth2.resourceserver.jwt.issuer-uri");
-        String jwk = env.getProperty("spring.security.oauth2.resourceserver.jwt.jwk-set-uri");
-        if ((issuer != null && !issuer.isBlank()) || (jwk != null && !jwk.isBlank())) {
-            http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
-        }
+        // OAuth2 Resource Server는 비활성화 (API Gateway에서 이미 검증)
+        // 필요시 특정 서비스에서만 활성화하려면 해당 서비스의 SecurityConfig를 오버라이드
+        // String issuer = env.getProperty("spring.security.oauth2.resourceserver.jwt.issuer-uri");
+        // String jwk = env.getProperty("spring.security.oauth2.resourceserver.jwt.jwk-set-uri");
+        // if ((issuer != null && !issuer.isBlank()) || (jwk != null && !jwk.isBlank())) {
+        //     http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
+        // }
         return http.build();
     }
 
