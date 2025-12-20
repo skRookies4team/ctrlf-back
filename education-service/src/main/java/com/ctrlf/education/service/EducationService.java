@@ -10,7 +10,9 @@ import com.ctrlf.education.dto.EducationResponses.EducationVideosResponse;
 import com.ctrlf.education.dto.EducationResponses.VideoProgressResponse;
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
+import com.ctrlf.education.entity.EducationProgress;
 import com.ctrlf.education.repository.EducationRepository;
+import com.ctrlf.education.repository.EducationProgressRepository;
 import com.ctrlf.education.video.entity.EducationVideo;
 import com.ctrlf.education.video.entity.EducationVideoProgress;
 import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
@@ -47,6 +49,7 @@ public class EducationService {
     private final EducationRepository educationRepository;
     private final EducationVideoRepository educationVideoRepository;
     private final EducationVideoProgressRepository educationVideoProgressRepository;
+    private final EducationProgressRepository educationProgressRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -476,8 +479,26 @@ public class EducationService {
         // 모두 영상 시청이 완료되었는지 확인
         boolean ok = !all.isEmpty() && all.stream().allMatch(p -> p.getIsCompleted() != null && p.getIsCompleted());
         if (ok) {
+            // EducationProgress 조회 또는 생성
+            EducationProgress progress = educationProgressRepository
+                .findByUserUuidAndEducationId(userUuid, educationId)
+                .orElseGet(() -> {
+                    EducationProgress newProgress = new EducationProgress();
+                    newProgress.setUserUuid(userUuid);
+                    newProgress.setEducationId(educationId);
+                    newProgress.setProgress(100);
+                    return newProgress;
+                });
+            
+            // 이수 완료 처리
+            Instant completedAt = Instant.now();
+            progress.setIsCompleted(true);
+            progress.setCompletedAt(completedAt);
+            progress.setProgress(100);
+            educationProgressRepository.save(progress);
+            
             result.put("status", "COMPLETED");
-            result.put("completedAt", Instant.now().toString());
+            result.put("completedAt", completedAt.toString());
         } else {
             result.put("status", "FAILED");
             result.put("message", "영상 이수 조건 미충족");

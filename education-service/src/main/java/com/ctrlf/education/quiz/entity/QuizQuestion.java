@@ -52,6 +52,10 @@ public class QuizQuestion {
     @Column(name = "user_selected_option_idx")
     private Integer userSelectedOptionIdx;
 
+    /** 문항 순서(0-based) */
+    @Column(name = "question_order")
+    private Integer questionOrder;
+
     /** 삭제(소프트딜리트) 시각 */
     @Column(name = "deleted_at")
     private Instant deletedAt;

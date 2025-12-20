@@ -24,6 +24,7 @@ public final class QuizResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class QuestionItem {
         private UUID questionId;
+        private Integer order; // 문항 순서 (0-based)
         private String question;
         private List<String> choices;
         private Integer answerIndex; // null until submitted
@@ -71,6 +72,58 @@ public final class QuizResponse {
         private boolean recorded;
         private int leaveCount;
         private Instant lastLeaveAt;
+    }
+
+    // ---------- Timer (GET /quiz/attempt/{attemptId}/timer) ----------
+    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class TimerResponse {
+        private Integer timeLimit; // 시간 제한(초), null이면 제한 없음
+        private Instant startedAt; // 시작 시각
+        private Instant expiresAt; // 만료 시각 (startedAt + timeLimit), null이면 제한 없음
+        private Long remainingSeconds; // 남은 시간(초), null이면 제한 없음 또는 이미 만료
+        private Boolean isExpired; // 만료 여부
+    }
+
+    // ---------- Save (POST /quiz/attempt/{attemptId}/save) ----------
+    @Getter
+    @AllArgsConstructor
+    public static class SaveResponse {
+        private boolean saved; // 저장 성공 여부
+        private int savedCount; // 저장된 답안 개수
+        private Instant savedAt; // 저장 시각
+    }
+
+    // ---------- Available Educations (GET /quiz/available-educations) ----------
+    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class AvailableEducationItem {
+        private UUID educationId;
+        private String title;
+        private String category;
+        private String eduType;
+        private Integer attemptCount; // 기존 응시 횟수
+        private Integer maxAttempts; // 최대 응시 횟수 (null이면 무제한)
+        private Boolean hasAttempted; // 이미 응시한 퀴즈인지 여부 (true: 풀었음, false: 아직 안 풀었음)
+        private Integer bestScore; // 최고 점수 (응시한 경우에만, null이면 미응시)
+        private Boolean passed; // 통과 여부 (응시한 경우에만, null이면 미응시)
+    }
+
+    // ---------- My Attempts (GET /quiz/my-attempts) ----------
+    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class MyAttemptItem {
+        private UUID attemptId;
+        private UUID educationId;
+        private String educationTitle;
+        private Integer score;
+        private Boolean passed;
+        private Integer attemptNo;
+        private Instant submittedAt;
+        private Boolean isBestScore; // 교육별 최고 점수 여부
     }
 }
 

@@ -1,14 +1,16 @@
 package com.ctrlf.education.script.repository;
 
+import com.ctrlf.education.script.entity.EducationScript;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import com.ctrlf.education.script.entity.EducationScript;
 
 /**
  * 교육 스크립트 저장소.
  */
 public interface EducationScriptRepository extends JpaRepository<EducationScript, UUID> {
+    /** 교육 ID로 스크립트 목록 조회 (삭제되지 않은 것만) */
+    List<EducationScript> findByEducationIdAndDeletedAtIsNullOrderByVersionDesc(UUID educationId);
 }
 
 

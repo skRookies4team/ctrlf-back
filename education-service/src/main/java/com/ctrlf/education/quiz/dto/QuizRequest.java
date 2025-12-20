@@ -35,6 +35,16 @@ public final class QuizRequest {
         private Instant timestamp;
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, example = "window_blur")
         private String reason;
+        @Schema(description = "이탈 시간(초). 프론트에서 이탈 시작 시각과 복귀 시각의 차이를 계산하여 전송", example = "30")
+        private Integer leaveSeconds;
+    }
+
+    // ---------- Save (POST /quiz/attempt/{attemptId}/save) ----------
+    @Getter
+    @NoArgsConstructor
+    public static class SaveRequest {
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "임시 저장할 답안 목록")
+        private List<AnswerItem> answers;
     }
 }
 

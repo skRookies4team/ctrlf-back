@@ -21,6 +21,11 @@ spring:
     validate-on-migrate: false
     out-of-order: true
     create-schemas: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8090/realms/ctrlf
 
 management:
   endpoints:
@@ -33,9 +38,13 @@ management:
       probes:
         enabled: true
 
-# AI 서버 설정 (영상 생성)
+# AI 서버 설정
 app:
   video:
+    ai:
+      base-url: http://localhost:8000
+      token: "" # 내부 호출 토큰 (필요시 설정)
+  quiz:
     ai:
       base-url: http://localhost:8000
       token: "" # 내부 호출 토큰 (필요시 설정)
