@@ -160,5 +160,16 @@ public final class RagDtos {
         private String createdAt;
         private String processedAt; // null if not processed yet
     }
+
+    // ---------- Document Text ----------
+    /**
+     * 문서 원문 텍스트 조회 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DocumentTextResponse {
+        private String documentId;
+        private String text;        // 추출된 원문 텍스트
+    }
 }
 

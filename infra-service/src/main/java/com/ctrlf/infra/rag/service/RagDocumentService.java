@@ -7,13 +7,22 @@ import com.ctrlf.infra.rag.client.RagAiClient;
 import com.ctrlf.infra.rag.repository.RagDocumentChunkRepository;
 import com.ctrlf.infra.rag.repository.RagFailChunkRepository;
 import com.ctrlf.infra.rag.repository.RagDocumentRepository;
+import com.ctrlf.infra.s3.service.S3Service;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,11 +41,13 @@ import org.springframework.web.server.ResponseStatusException;
  * 날짜 문자열 파싱 및 기본 검증을 수행합니다.
  */
 public class RagDocumentService {
+    private static final Logger log = LoggerFactory.getLogger(RagDocumentService.class);
 
     private final RagDocumentRepository documentRepository;
     private final RagDocumentChunkRepository chunkRepository;
     private final RagFailChunkRepository failChunkRepository;
     private final RagAiClient ragAiClient;
+    private final S3Service s3Service;
 
     /**
      * 문서 업로드 메타를 저장하고 초기 상태를 반환합니다.
@@ -222,6 +233,72 @@ public class RagDocumentService {
             d.getCreatedAt() != null ? d.getCreatedAt().toString() : null,
             d.getProcessedAt() != null ? d.getProcessedAt().toString() : null
         );
+    }
+
+    /**
+     * 문서의 원문 텍스트를 조회합니다.
+     * S3에서 파일을 다운로드하여 텍스트를 추출합니다.
+     * 
+     * <p>참고: 현재는 텍스트 파일(.txt)만 지원합니다.
+     * PDF 등 다른 형식은 추후 확장 필요.
+     */
+    public DocumentTextResponse getText(String documentId) {
+        UUID id = parseUuid(documentId);
+        RagDocument doc = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found"));
+        
+        if (doc.getSourceUrl() == null || doc.getSourceUrl().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "source URL not found");
+        }
+
+        try {
+            // S3 Presigned URL 생성
+            URL downloadUrl = s3Service.presignDownload(doc.getSourceUrl());
+            
+            // 파일 다운로드 및 텍스트 추출
+            String text = extractTextFromUrl(downloadUrl, doc.getSourceUrl());
+            
+            return new DocumentTextResponse(doc.getId().toString(), text);
+            
+        } catch (Exception e) {
+            log.error("텍스트 추출 실패. documentId={}, sourceUrl={}, error={}", 
+                documentId, doc.getSourceUrl(), e.getMessage(), e);
+            throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "텍스트 추출 실패: " + e.getMessage());
+        }
+    }
+
+    /**
+     * URL에서 텍스트를 추출합니다.
+     * 
+     * <p>현재는 텍스트 파일만 지원합니다.
+     * PDF 등 다른 형식은 추후 확장 필요 (Apache Tika, PDFBox 등 사용).
+     */
+    private String extractTextFromUrl(URL url, String sourceUrl) throws Exception {
+        // 파일 확장자 확인
+        String lowerUrl = sourceUrl.toLowerCase();
+        
+        if (lowerUrl.endsWith(".txt") || lowerUrl.endsWith(".text")) {
+            // 텍스트 파일: 직접 읽기
+            try (InputStream is = url.openStream();
+                 BufferedReader reader = new BufferedReader(
+                     new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                return reader.lines().collect(Collectors.joining("\n"));
+            }
+        } else if (lowerUrl.endsWith(".pdf")) {
+            // PDF 파일: TODO - PDF 추출 라이브러리 필요 (Apache PDFBox 등)
+            throw new UnsupportedOperationException(
+                "PDF 텍스트 추출은 아직 지원되지 않습니다. 텍스트 파일(.txt)만 지원됩니다.");
+        } else {
+            // 기타: 텍스트로 시도
+            log.warn("알 수 없는 파일 형식. 텍스트로 시도합니다. sourceUrl={}", sourceUrl);
+            try (InputStream is = url.openStream();
+                 BufferedReader reader = new BufferedReader(
+                     new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                return reader.lines().collect(Collectors.joining("\n"));
+            }
+        }
     }
 
     private static UUID parseUuid(String s) {

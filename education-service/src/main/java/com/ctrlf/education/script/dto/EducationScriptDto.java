@@ -129,8 +129,6 @@ public final class EducationScriptDto {
       UUID eduId,
       @Schema(description = "영상 컨텐츠 ID", example = "550e8400-e29b-41d4-a716-446655440003")
       @NotNull(message = "videoId는 필수입니다")
-      UUID videoId,
-      @Schema(description = "S3 파일 URL", example = "s3://bucket/docs/material.pdf")
-      @NotBlank(message = "fileUrl은 필수입니다")
-      String fileUrl) {}
+      UUID videoId
+  ){}
 }
