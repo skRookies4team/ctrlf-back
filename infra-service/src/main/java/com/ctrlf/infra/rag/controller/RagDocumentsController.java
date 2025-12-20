@@ -143,5 +143,22 @@ public class RagDocumentsController {
     ) {
         return ResponseEntity.ok(ragDocumentService.getStatus(id));
     }
+
+    @GetMapping("/{id}/text")
+    @Operation(
+        summary = "RAG 문서 원문 텍스트 조회",
+        description = "문서의 원문 텍스트를 조회합니다. S3에서 파일을 다운로드하여 텍스트를 추출합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "텍스트 조회 성공",
+            content = @Content(schema = @Schema(implementation = DocumentTextResponse.class))),
+        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음"),
+        @ApiResponse(responseCode = "500", description = "텍스트 추출 실패")
+    })
+    public ResponseEntity<DocumentTextResponse> getText(
+        @Parameter(description = "문서 ID") @PathVariable("id") String id
+    ) {
+        return ResponseEntity.ok(ragDocumentService.getText(id));
+    }
 }
 
