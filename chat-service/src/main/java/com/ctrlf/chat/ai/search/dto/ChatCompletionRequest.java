@@ -9,10 +9,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
 public class ChatCompletionRequest {
 
     // ⚠️ FastAPI ChatRequest에 맞춰 snake_case 유지
+    @JsonProperty("request_id")
+    private String request_id;  // 스트리밍 전용: 중복 방지 / 재시도용 고유 키 (선택)
+    
     @JsonProperty("session_id")
     private UUID session_id;
     
@@ -33,6 +35,47 @@ public class ChatCompletionRequest {
     
     @JsonProperty("messages")
     private List<Message> messages;
+
+    // 일반 채팅용 생성자 (request_id 없음)
+    public ChatCompletionRequest(
+        UUID session_id,
+        UUID user_id,
+        String user_role,
+        String department,
+        String domain,
+        String channel,
+        List<Message> messages
+    ) {
+        this.request_id = null;
+        this.session_id = session_id;
+        this.user_id = user_id;
+        this.user_role = user_role;
+        this.department = department;
+        this.domain = domain;
+        this.channel = channel;
+        this.messages = messages;
+    }
+
+    // 스트리밍용 생성자 (request_id 포함)
+    public ChatCompletionRequest(
+        String request_id,
+        UUID session_id,
+        UUID user_id,
+        String user_role,
+        String department,
+        String domain,
+        String channel,
+        List<Message> messages
+    ) {
+        this.request_id = request_id;
+        this.session_id = session_id;
+        this.user_id = user_id;
+        this.user_role = user_role;
+        this.department = department;
+        this.domain = domain;
+        this.channel = channel;
+        this.messages = messages;
+    }
 
     @Getter
     @NoArgsConstructor

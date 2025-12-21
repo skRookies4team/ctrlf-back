@@ -1,1 +1,558 @@
+# FAQ Service API 명세서
 
+## 개요
+
+FAQ Service는 FAQ(자주 묻는 질문) 관리 및 조회 기능을 제공하는 서비스입니다.
+
+- **Base URL**: `http://localhost:9001`
+- **인증**: Bearer Token (JWT)
+
+---
+
+## 1. FAQ 관리 APIs (관리자)
+
+### 1.1 FAQ 생성
+
+새로운 FAQ를 생성합니다.
+
+**Endpoint**: `POST /chat/faq`
+
+**Request Body**:
+```json
+{
+  "question": "비밀번호를 잊어버렸어요",
+  "answer": "비밀번호 재설정 페이지에서 이메일을 입력하시면 재설정 링크를 보내드립니다.",
+  "domain": "SECURITY",
+  "priority": 1
+}
+```
+
+**Response** (200 OK):
+```json
+"239d0429-b517-4897-beb0-bd1f699999da"
+```
+
+**필드 설명**:
+- `question`: 질문 내용 (최대 500자, 필수)
+- `answer`: 답변 내용 (최대 5000자, 필수)
+- `domain`: 도메인 (예: SECURITY, POLICY, EDUCATION 등, 필수)
+- `priority`: 우선순위 (1~5, 작을수록 상위 노출, 필수)
+
+---
+
+### 1.2 FAQ 수정
+
+기존 FAQ를 수정합니다.
+
+**Endpoint**: `PATCH /chat/faq/{faqId}`
+
+**Path Parameters**:
+- `faqId` (UUID): 수정할 FAQ ID
+
+**Request Body**:
+```json
+{
+  "question": "비밀번호를 잊어버렸어요 (수정)",
+  "answer": "비밀번호 재설정 페이지에서 이메일을 입력하시면 재설정 링크를 보내드립니다. (수정)",
+  "domain": "SECURITY",
+  "isActive": true,
+  "priority": 2
+}
+```
+
+**Response** (200 OK): No Content
+
+**필드 설명**:
+- 모든 필드는 선택적입니다. null인 필드는 수정하지 않습니다.
+- `isActive`: 활성 여부 (true: 노출, false: 비노출)
+
+---
+
+### 1.3 FAQ 삭제 (Soft Delete)
+
+FAQ를 삭제합니다. 실제로는 `isActive = false`로 설정하는 소프트 삭제입니다.
+
+**Endpoint**: `DELETE /chat/faq/{faqId}`
+
+**Path Parameters**:
+- `faqId` (UUID): 삭제할 FAQ ID
+
+**Response** (200 OK): No Content
+
+---
+
+### 1.4 FAQ 목록 조회
+
+모든 FAQ 목록을 조회합니다.
+
+**Endpoint**: `GET /chat/faq`
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "239d0429-b517-4897-beb0-bd1f699999da",
+    "question": "비밀번호를 잊어버렸어요",
+    "answer": "비밀번호 재설정 페이지에서 이메일을 입력하시면 재설정 링크를 보내드립니다.",
+    "domain": "SECURITY",
+    "isActive": true,
+    "priority": 1,
+    "createdAt": "2025-12-19T23:00:00Z",
+    "updatedAt": "2025-12-19T23:00:00Z"
+  }
+]
+```
+
+---
+
+## 2. FAQ 조회 APIs (사용자)
+
+### 2.1 FAQ 홈 조회
+
+홈 화면용 FAQ를 조회합니다. 도메인별로 1개씩 반환됩니다.
+
+**Endpoint**: `GET /faq/home`
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "239d0429-b517-4897-beb0-bd1f699999da",
+    "domain": "SECURITY",
+    "question": "비밀번호를 잊어버렸어요",
+    "answer": "비밀번호 재설정 페이지에서 이메일을 입력하시면 재설정 링크를 보내드립니다.",
+    "publishedAt": "2025-12-19T23:00:00Z"
+  },
+  {
+    "id": "350d0429-b517-4897-beb0-bd1f699999db",
+    "domain": "POLICY",
+    "question": "휴가 신청은 어떻게 하나요?",
+    "answer": "인사 시스템에서 휴가 신청 메뉴를 통해 신청하실 수 있습니다.",
+    "publishedAt": "2025-12-19T23:00:00Z"
+  }
+]
+```
+
+---
+
+### 2.2 도메인별 FAQ 조회 (Query Parameter)
+
+특정 도메인의 FAQ TOP 10을 조회합니다.
+
+**Endpoint**: `GET /faq?domain={domain}`
+
+**Query Parameters**:
+- `domain` (String, 필수): 도메인 (예: SECURITY, POLICY, EDUCATION 등)
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "239d0429-b517-4897-beb0-bd1f699999da",
+    "domain": "SECURITY",
+    "question": "비밀번호를 잊어버렸어요",
+    "answer": "비밀번호 재설정 페이지에서 이메일을 입력하시면 재설정 링크를 보내드립니다.",
+    "publishedAt": "2025-12-19T23:00:00Z"
+  }
+]
+```
+
+---
+
+### 2.3 도메인별 FAQ 조회 (Path Variable)
+
+특정 도메인의 FAQ TOP 10을 조회합니다. (대시보드용)
+
+**Endpoint**: `GET /faq/dashboard/{domain}`
+
+**Path Parameters**:
+- `domain` (String): 도메인 (예: SECURITY, POLICY, EDUCATION 등)
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "239d0429-b517-4897-beb0-bd1f699999da",
+    "domain": "SECURITY",
+    "question": "비밀번호를 잊어버렸어요",
+    "answer": "비밀번호 재설정 페이지에서 이메일을 입력하시면 재설정 링크를 보내드립니다.",
+    "publishedAt": "2025-12-19T23:00:00Z"
+  }
+]
+```
+
+---
+
+## 3. FAQ 후보 관리 APIs (관리자)
+
+### 3.1 FAQ 후보 생성
+
+FAQ 후보를 생성합니다. FAQ 후보는 사용자가 자주 묻는 질문을 수집/집계하기 위한 엔티티입니다.
+
+**Endpoint**: `POST /admin/faq/candidates`
+
+**Request Body**:
+```json
+{
+  "question": "비밀번호를 잊어버렸어요",
+  "domain": "SECURITY"
+}
+```
+
+**Response** (200 OK):
+```json
+"239d0429-b517-4897-beb0-bd1f699999da"
+```
+
+**필드 설명**:
+- `question`: 후보 질문 (최대 500자, 필수)
+- `domain`: 도메인 (최대 50자, 필수)
+
+---
+
+### 3.2 FAQ 후보 목록 조회
+
+FAQ 후보 목록을 조회합니다.
+
+**Endpoint**: `GET /admin/faq/candidates`
+
+**Query Parameters**:
+- `domain` (String, 선택): 도메인 필터
+- `status` (String, 선택): 상태 필터 (NEW, ELIGIBLE, EXCLUDED)
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "239d0429-b517-4897-beb0-bd1f699999da",
+    "canonicalQuestion": "비밀번호를 잊어버렸어요",
+    "domain": "SECURITY",
+    "questionCount7d": 15,
+    "questionCount30d": 45,
+    "avgIntentConfidence": 0.95,
+    "piiDetected": false,
+    "scoreCandidate": 8.5,
+    "status": "ELIGIBLE",
+    "lastAskedAt": "2025-12-19T23:00:00Z",
+    "createdAt": "2025-12-19T20:00:00Z"
+  }
+]
+```
+
+**상태 설명**:
+- `NEW`: 새로 생성된 후보
+- `ELIGIBLE`: FAQ 초안 생성 가능한 후보
+- `EXCLUDED`: 제외된 후보
+
+---
+
+### 3.3 FAQ 후보에서 Draft 생성
+
+FAQ 후보를 기반으로 AI를 사용하여 FAQ 초안을 생성합니다.
+
+**Endpoint**: `POST /admin/faq/candidates/{candidateId}/generate`
+
+**Path Parameters**:
+- `candidateId` (UUID): FAQ 후보 ID
+
+**Response** (200 OK):
+```json
+{
+  "draftId": "350d0429-b517-4897-beb0-bd1f699999db"
+}
+```
+
+**참고**: 
+- RAG 검색 결과를 포함하여 AI 서비스에 요청을 보냅니다.
+- AI 서비스가 FAQ 초안을 생성하고 반환합니다.
+
+---
+
+## 4. FAQ Draft 관리 APIs (관리자)
+
+### 4.1 FAQ Draft 목록 조회
+
+FAQ 초안 목록을 조회합니다.
+
+**Endpoint**: `GET /admin/faq/drafts`
+
+**Query Parameters**:
+- `domain` (String, 선택): 도메인 필터
+- `status` (String, 선택): 상태 필터 (DRAFT, REVIEW_REQUESTED, APPROVED, REJECTED, PUBLISHED)
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "350d0429-b517-4897-beb0-bd1f699999db",
+    "domain": "SECURITY",
+    "question": "비밀번호를 잊어버렸어요",
+    "summary": "비밀번호 재설정 방법에 대한 FAQ 초안",
+    "status": "REVIEW_REQUESTED",
+    "createdAt": "2025-12-19T22:00:00"
+  }
+]
+```
+
+**상태 설명**:
+- `DRAFT`: 초안 상태
+- `REVIEW_REQUESTED`: 검토 요청됨
+- `APPROVED`: 승인됨
+- `REJECTED`: 반려됨
+- `PUBLISHED`: 게시됨
+
+---
+
+### 4.2 FAQ Draft 승인
+
+FAQ 초안을 승인하여 새로운 FAQ를 생성합니다.
+
+**Endpoint**: `POST /admin/faq/drafts/{draftId}/approve`
+
+**Path Parameters**:
+- `draftId` (UUID): FAQ 초안 ID
+
+**Query Parameters**:
+- `reviewerId` (UUID, 필수): 승인자 ID
+- `question` (String, 필수): 승인할 질문 내용
+- `answer` (String, 필수): 승인할 답변 내용
+
+**Response** (200 OK): No Content
+
+**참고**: 
+- Draft를 승인하면 새로운 FAQ가 생성되고 Draft 상태가 `PUBLISHED`로 변경됩니다.
+
+---
+
+### 4.3 FAQ Draft 반려
+
+FAQ 초안을 반려합니다.
+
+**Endpoint**: `POST /admin/faq/drafts/{draftId}/reject`
+
+**Path Parameters**:
+- `draftId` (UUID): FAQ 초안 ID
+
+**Query Parameters**:
+- `reviewerId` (UUID, 필수): 반려자 ID
+- `reason` (String, 필수): 반려 사유
+
+**Response** (200 OK): No Content
+
+**참고**: 
+- Draft 상태가 `REJECTED`로 변경됩니다.
+
+---
+
+## 5. FAQ 통합 관리 APIs (관리자)
+
+### 5.1 FAQ 후보에서 Draft 생성 (통합)
+
+FAQ 후보를 기반으로 AI를 사용하여 FAQ 초안을 생성합니다. (AdminFaqController)
+
+**Endpoint**: `POST /admin/faqs/candidates/{candidateId}/generate`
+
+**Path Parameters**:
+- `candidateId` (UUID): FAQ 후보 ID
+
+**Response** (200 OK):
+```json
+"350d0429-b517-4897-beb0-bd1f699999db"
+```
+
+**참고**: 
+- `AdminFaqCandidateController`의 `/admin/faq/candidates/{candidateId}/generate`와 동일한 기능입니다.
+
+---
+
+### 5.2 FAQ Draft 승인 (통합)
+
+FAQ 초안을 승인하여 새로운 FAQ를 생성합니다. (AdminFaqController)
+
+**Endpoint**: `POST /admin/faqs/drafts/{draftId}/approve`
+
+**Path Parameters**:
+- `draftId` (UUID): FAQ 초안 ID
+
+**Query Parameters**:
+- `reviewerId` (UUID, 필수): 승인자 ID
+- `question` (String, 필수): 승인할 질문 내용
+- `answer` (String, 필수): 승인할 답변 내용
+
+**Response** (200 OK): No Content
+
+**참고**: 
+- `AdminFaqDraftController`의 `/admin/faq/drafts/{draftId}/approve`와 동일한 기능입니다.
+
+---
+
+### 5.3 FAQ Draft 반려 (통합)
+
+FAQ 초안을 반려합니다. (AdminFaqController)
+
+**Endpoint**: `POST /admin/faqs/drafts/{draftId}/reject`
+
+**Path Parameters**:
+- `draftId` (UUID): FAQ 초안 ID
+
+**Query Parameters**:
+- `reviewerId` (UUID, 필수): 반려자 ID
+- `reason` (String, 필수): 반려 사유
+
+**Response** (200 OK): No Content
+
+**참고**: 
+- `AdminFaqDraftController`의 `/admin/faq/drafts/{draftId}/reject`와 동일한 기능입니다.
+
+---
+
+## 6. FAQ UI 카테고리 관리 APIs (관리자)
+
+### 6.1 UI 카테고리 생성
+
+FAQ UI 카테고리를 생성합니다.
+
+**Endpoint**: `POST /admin/faq/ui-categories?operatorId={operatorId}`
+
+**Query Parameters**:
+- `operatorId` (UUID, 필수): 운영자 ID
+
+**Request Body**:
+```json
+{
+  "slug": "security",
+  "displayName": "보안",
+  "sortOrder": 1
+}
+```
+
+**Response** (200 OK):
+```json
+"239d0429-b517-4897-beb0-bd1f699999da"
+```
+
+**필드 설명**:
+- `slug`: URL 슬러그 (예: "security")
+- `displayName`: 표시 이름 (예: "보안")
+- `sortOrder`: 정렬 순서 (작을수록 상위)
+
+---
+
+### 6.2 UI 카테고리 수정
+
+FAQ UI 카테고리를 수정합니다.
+
+**Endpoint**: `PATCH /admin/faq/ui-categories/{categoryId}?operatorId={operatorId}`
+
+**Path Parameters**:
+- `categoryId` (UUID): 카테고리 ID
+
+**Query Parameters**:
+- `operatorId` (UUID, 필수): 운영자 ID
+
+**Request Body**:
+```json
+{
+  "slug": "security-updated",
+  "displayName": "보안 (수정)",
+  "sortOrder": 2
+}
+```
+
+**Response** (200 OK): No Content
+
+---
+
+### 6.3 UI 카테고리 비활성화
+
+FAQ UI 카테고리를 비활성화합니다.
+
+**Endpoint**: `POST /admin/faq/ui-categories/{categoryId}/deactivate?operatorId={operatorId}&reason={reason}`
+
+**Path Parameters**:
+- `categoryId` (UUID): 카테고리 ID
+
+**Query Parameters**:
+- `operatorId` (UUID, 필수): 운영자 ID
+- `reason` (String, 선택): 비활성화 사유
+
+**Response** (200 OK): No Content
+
+---
+
+### 6.4 UI 카테고리 목록 조회
+
+모든 UI 카테고리 목록을 조회합니다.
+
+**Endpoint**: `GET /admin/faq/ui-categories`
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "239d0429-b517-4897-beb0-bd1f699999da",
+    "slug": "security",
+    "displayName": "보안",
+    "sortOrder": 1,
+    "isActive": true,
+    "createdAt": "2025-12-19T23:00:00Z",
+    "updatedAt": "2025-12-19T23:00:00Z"
+  }
+]
+```
+
+---
+
+## 7. FAQ Seed 관리 APIs (관리자)
+
+### 7.1 Seed CSV 업로드
+
+FAQ 초기 데이터를 CSV 파일로 업로드합니다.
+
+**Endpoint**: `POST /admin/faq/seed/upload?operatorId={operatorId}`
+
+**Query Parameters**:
+- `operatorId` (UUID, 필수): 운영자 ID
+
+**Request Body** (multipart/form-data):
+- `file` (File, 필수): CSV 파일
+
+**Response** (200 OK): No Content
+
+**참고**: 
+- CSV 파일 형식은 서비스 구현에 따라 다를 수 있습니다.
+
+---
+
+## 에러 응답
+
+### 공통 에러 형식
+
+```json
+{
+  "error": "ERROR_TYPE",
+  "message": "에러 메시지",
+  "timestamp": "2025-12-19T23:00:00Z",
+  "status": 400
+}
+```
+
+### 주요 HTTP 상태 코드
+
+- `200 OK`: 성공
+- `400 Bad Request`: 잘못된 요청
+- `401 Unauthorized`: 인증 실패
+- `404 Not Found`: 리소스를 찾을 수 없음
+- `422 Unprocessable Entity`: 요청은 이해했지만 처리할 수 없음
+- `500 Internal Server Error`: 서버 오류
+
+---
+
+## 참고사항
+
+- 모든 UUID는 표준 UUID 형식입니다.
+- 모든 날짜/시간은 ISO 8601 형식 (UTC)입니다.
+- 인증이 필요한 API는 `Authorization: Bearer {token}` 헤더를 포함해야 합니다.
+- FAQ 후보는 사용자 질문을 분석하여 자동으로 생성될 수 있습니다.
+- FAQ Draft는 AI 서비스를 통해 자동 생성되며, 관리자가 검토 후 승인/반려할 수 있습니다.
+- FAQ는 승인된 Draft를 기반으로 생성됩니다.
