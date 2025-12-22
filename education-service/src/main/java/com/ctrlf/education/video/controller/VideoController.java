@@ -6,6 +6,7 @@ import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoJobRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoJobResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoJobUpdateRequest;
+import com.ctrlf.education.video.dto.VideoDtos.VideoMetaItem;
 import com.ctrlf.education.video.dto.VideoDtos.VideoRetryResponse;
 import com.ctrlf.education.video.service.VideoService;
 
@@ -201,5 +202,24 @@ public class VideoController {
         @Valid @RequestBody VideoCompleteCallback callback
     ) {
         return ResponseEntity.ok(videoService.handleVideoComplete(jobId, callback));
+    }
+
+    // ========================
+    // 영상 메타 조회 API
+    // ========================
+
+    /**
+     * 영상 상세 조회.
+     */
+    @Operation(summary = "영상 상세 조회 (프론트 -> 백엔드)", description = "영상 메타 정보를 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = VideoMetaItem.class))),
+        @ApiResponse(responseCode = "404", description = "영상을 찾을 수 없음", content = @Content)
+    })
+    @GetMapping("/{videoId}")
+    public ResponseEntity<VideoMetaItem> getVideo(
+        @Parameter(description = "영상 ID", required = true) @PathVariable UUID videoId) {
+        return ResponseEntity.ok(videoService.getVideoContent(videoId));
     }
 }

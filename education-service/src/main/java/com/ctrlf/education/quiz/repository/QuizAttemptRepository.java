@@ -21,6 +21,9 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> 
     /** 교육별 사용자의 최고 점수 시도 조회 */
     @Query("SELECT a FROM QuizAttempt a WHERE a.userUuid = :userUuid AND a.educationId = :educationId AND a.submittedAt IS NOT NULL ORDER BY COALESCE(a.score, 0) DESC, a.createdAt DESC")
     List<QuizAttempt> findTopByUserUuidAndEducationIdOrderByScoreDesc(@Param("userUuid") UUID userUuid, @Param("educationId") UUID educationId);
+    
+    /** 교육별 모든 제출 완료된 퀴즈 시도 조회 (부서별 통계용) */
+    List<QuizAttempt> findByEducationIdAndSubmittedAtIsNotNull(UUID educationId);
 }
 
 

@@ -1,8 +1,12 @@
 package com.ctrlf.education.video.service;
 
+import com.ctrlf.education.script.entity.EducationScript;
 import com.ctrlf.education.script.repository.EducationScriptRepository;
+import com.ctrlf.education.video.client.VideoAiClient;
 import com.ctrlf.education.video.dto.VideoDtos.AiVideoResponse;
 import com.ctrlf.education.video.dto.VideoDtos.JobItem;
+import com.ctrlf.education.video.dto.VideoDtos.RenderJobRequest;
+import com.ctrlf.education.video.dto.VideoDtos.RenderJobResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteCallback;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCreateRequest;
@@ -15,8 +19,10 @@ import com.ctrlf.education.video.dto.VideoDtos.VideoMetaUpdateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoRetryResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
+import com.ctrlf.education.video.entity.EducationVideoReview;
 import com.ctrlf.education.video.entity.VideoGenerationJob;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
+import com.ctrlf.education.video.repository.EducationVideoReviewRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
 import java.time.Instant;
 import java.util.List;
@@ -56,7 +62,8 @@ public class VideoService {
     private final EducationScriptRepository scriptRepository;
     private final VideoGenerationJobRepository jobRepository;
     private final EducationVideoRepository videoRepository;
-    // private final VideoAiClient videoAiClient; // 현재 모의 처리로 사용하지 않음
+    private final EducationVideoReviewRepository reviewRepository;
+    private final VideoAiClient videoAiClient;
 
     // ========================
     // 영상 생성 Job 관련 메서드
@@ -71,10 +78,9 @@ public class VideoService {
      */
     @Transactional
     public VideoJobResponse createVideoJob(VideoJobRequest request) {
-        // 스크립트 존재 확인
-        if (!scriptRepository.existsById(request.scriptId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + request.scriptId());
-        }
+        // 스크립트 존재 확인 및 조회
+        EducationScript script = scriptRepository.findById(request.scriptId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + request.scriptId()));
 
         // 영상 컨텐츠 존재 확인
         EducationVideo video = videoRepository.findById(request.videoId())
@@ -97,30 +103,48 @@ public class VideoService {
 
         // 영상 컨텐츠 상태 업데이트 및 Job 연결
         video.setGenerationJobId(job.getId());
-        
-        // ============================================
-        // [MOCK] AI 서버 미구현: 영상 생성 완료까지 모의 처리
-        // 실제 구현 시에는 AI 서버에서 콜백으로 처리됨
-        // ============================================
-        String mockVideoUrl = "https://mock-cdn.example.com/videos/" + job.getId() + ".mp4";
-        int mockDuration = 600; // 10분 (600초)
-        
-        // Job 완료 처리
-        job.setStatus("COMPLETED");
-        job.setGeneratedVideoUrl(mockVideoUrl);
-        job.setDuration(mockDuration);
-        jobRepository.save(job);
-        
-        // EducationVideo 완료 처리 → READY 상태로 변경
-        video.setFileUrl(mockVideoUrl);
-        video.setDuration(mockDuration);
-        video.setStatus("READY"); // 검토 전 상태
+        video.setStatus("PROCESSING"); // 영상 생성 중 상태
         videoRepository.save(video);
-        
-        log.info("[MOCK] 영상 생성 완료 처리. jobId={}, videoId={}, videoUrl={}, status=READY", 
-            job.getId(), request.videoId(), mockVideoUrl);
 
-        return new VideoJobResponse(job.getId(), "COMPLETED");
+        // AI 서버에 렌더 생성 요청 (BestEffort)
+        try {
+            RenderJobRequest renderRequest = new RenderJobRequest(
+                job.getId(),
+                request.videoId().toString(),
+                request.scriptId(),
+                script.getVersion() != null ? script.getVersion() : 1, // 스크립트 버전 (기본값 1)
+                null, // renderPolicyId는 선택적
+                UUID.randomUUID() // requestId (멱등 키)
+            );
+
+            RenderJobResponse renderResponse = videoAiClient.createRenderJob(renderRequest);
+            
+            if (renderResponse != null && renderResponse.received()) {
+                log.info("렌더 생성 요청 성공. jobId={}, videoId={}, scriptId={}, status={}",
+                    renderResponse.jobId(), request.videoId(), request.scriptId(), renderResponse.status());
+                
+                // Job 상태를 PROCESSING으로 업데이트 (AI 서버가 RENDERING으로 응답했을 수도 있음)
+                job.setStatus("PROCESSING");
+                jobRepository.save(job);
+            } else {
+                log.warn("렌더 생성 요청 실패. jobId={}, response={}", job.getId(), renderResponse);
+                job.setStatus(STATUS_FAILED);
+                job.setFailReason("AI 서버 요청 실패");
+                jobRepository.save(job);
+                video.setStatus("SCRIPT_APPROVED"); // 상태 롤백
+                videoRepository.save(video);
+            }
+        } catch (Exception e) {
+            log.error("렌더 생성 요청 중 오류. jobId={}, error={}", job.getId(), e.getMessage(), e);
+            // 실패해도 Job은 생성되었으므로 상태만 업데이트
+            job.setStatus(STATUS_FAILED);
+            job.setFailReason("AI 서버 요청 중 오류: " + e.getMessage());
+            jobRepository.save(job);
+            video.setStatus("SCRIPT_APPROVED"); // 상태 롤백
+            videoRepository.save(video);
+        }
+
+        return new VideoJobResponse(job.getId(), job.getStatus());
     }
 
     /**
@@ -396,7 +420,7 @@ public class VideoService {
      * - FINAL_REVIEW_REQUESTED → READY (2차 반려 - 영상 수정)
      */
     @Transactional
-    public VideoStatusResponse rejectVideo(UUID videoId, String reason) {
+    public VideoStatusResponse rejectVideo(UUID videoId, String reason, UUID reviewerUuid) {
         EducationVideo video = findVideoOrThrow(videoId);
         String prevStatus = video.getStatus();
         String newStatus;
@@ -414,7 +438,91 @@ public class VideoService {
                 "반려는 SCRIPT_REVIEW_REQUESTED 또는 FINAL_REVIEW_REQUESTED 상태에서만 가능합니다. 현재 상태: " + prevStatus);
         }
         
-        // TODO: 반려 사유 저장 (필요시 별도 테이블 또는 필드 추가)
+        // 반려 사유 저장 (EducationVideoReview 테이블)
+        if (reason != null && !reason.isBlank()) {
+            EducationVideoReview review = EducationVideoReview.createRejection(
+                videoId,
+                reason,
+                reviewerUuid
+            );
+            reviewRepository.save(review);
+            log.debug("반려 사유 저장 완료. videoId={}, reason={}, reviewerUuid={}", videoId, reason, reviewerUuid);
+        }
+        
+        video.setStatus(newStatus);
+        video = videoRepository.save(video);
+        
+        return new VideoStatusResponse(video.getId(), prevStatus, video.getStatus(), Instant.now().toString());
+    }
+
+    /**
+     * 스크립트 ID로 스크립트 승인 (1차 승인).
+     * scriptId로 연결된 Video를 찾아서 SCRIPT_REVIEW_REQUESTED → SCRIPT_APPROVED로 변경.
+     */
+    @Transactional
+    public VideoStatusResponse approveScript(UUID scriptId) {
+        // scriptId로 연결된 Video 찾기
+        List<EducationVideo> videos = videoRepository.findByScriptId(scriptId);
+        if (videos.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "스크립트에 연결된 영상을 찾을 수 없습니다: " + scriptId);
+        }
+        
+        // 첫 번째 Video 사용 (일반적으로 1:1 관계)
+        EducationVideo video = videos.get(0);
+        String prevStatus = video.getStatus();
+        
+        if (!"SCRIPT_REVIEW_REQUESTED".equals(prevStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "스크립트 승인은 SCRIPT_REVIEW_REQUESTED 상태에서만 가능합니다. 현재 상태: " + prevStatus);
+        }
+        
+        String newStatus = "SCRIPT_APPROVED";
+        log.info("스크립트 승인. scriptId={}, videoId={}, {} → {}", scriptId, video.getId(), prevStatus, newStatus);
+        
+        video.setStatus(newStatus);
+        video = videoRepository.save(video);
+        
+        return new VideoStatusResponse(video.getId(), prevStatus, video.getStatus(), Instant.now().toString());
+    }
+
+    /**
+     * 스크립트 ID로 스크립트 반려 (1차 반려).
+     * scriptId로 연결된 Video를 찾아서 SCRIPT_REVIEW_REQUESTED → SCRIPT_READY로 변경.
+     */
+    @Transactional
+    public VideoStatusResponse rejectScript(UUID scriptId, String reason, UUID reviewerUuid) {
+        // scriptId로 연결된 Video 찾기
+        List<EducationVideo> videos = videoRepository.findByScriptId(scriptId);
+        if (videos.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "스크립트에 연결된 영상을 찾을 수 없습니다: " + scriptId);
+        }
+        
+        // 첫 번째 Video 사용 (일반적으로 1:1 관계)
+        EducationVideo video = videos.get(0);
+        String prevStatus = video.getStatus();
+        
+        if (!"SCRIPT_REVIEW_REQUESTED".equals(prevStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "스크립트 반려는 SCRIPT_REVIEW_REQUESTED 상태에서만 가능합니다. 현재 상태: " + prevStatus);
+        }
+        
+        String newStatus = "SCRIPT_READY";
+        log.info("스크립트 반려. scriptId={}, videoId={}, {} → {}, reason={}", 
+            scriptId, video.getId(), prevStatus, newStatus, reason);
+        
+        // 반려 사유 저장 (EducationVideoReview 테이블)
+        if (reason != null && !reason.isBlank()) {
+            EducationVideoReview review = EducationVideoReview.createRejection(
+                video.getId(),
+                reason,
+                reviewerUuid
+            );
+            reviewRepository.save(review);
+            log.debug("스크립트 반려 사유 저장 완료. videoId={}, reason={}, reviewerUuid={}", video.getId(), reason, reviewerUuid);
+        }
+        
         video.setStatus(newStatus);
         video = videoRepository.save(video);
         
@@ -471,6 +579,7 @@ public class VideoService {
             v.getEducationId(),
             v.getTitle(),
             v.getGenerationJobId(),
+            v.getScriptId(),
             v.getFileUrl(),
             v.getVersion(),
             v.getDuration(),

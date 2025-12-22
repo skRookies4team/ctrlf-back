@@ -12,6 +12,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "education_script_scene", schema = "education")
@@ -48,8 +50,14 @@ public class EducationScriptScene {
     @Column(name = "duration_sec")
     private Integer durationSec;
 
+    /** 레거시: 단일 문서일 때만 사용 (deprecated) */
     @Column(name = "source_chunk_indexes", columnDefinition = "int[]")
     private int[] sourceChunkIndexes;
+
+    /** 출처 참조 (멀티문서): [{"documentId": "uuid", "chunkIndex": 0}, ...] */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "source_refs", columnDefinition = "jsonb")
+    private String sourceRefs;
 
     @Column(name = "confidence_score")
     private Float confidenceScore;

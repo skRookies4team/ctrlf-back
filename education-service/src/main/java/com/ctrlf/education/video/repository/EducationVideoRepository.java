@@ -36,6 +36,12 @@ public interface EducationVideoRepository extends JpaRepository<EducationVideo, 
     @Modifying
     @Query(value = "UPDATE education.education_video SET deleted_at = now() WHERE education_id = :educationId AND deleted_at IS NULL", nativeQuery = true)
     int softDeleteByEducationId(@Param("educationId") UUID educationId);
+
+    /**
+     * 스크립트 ID로 영상 조회 (삭제되지 않은 것만).
+     */
+    @Query("SELECT v FROM EducationVideo v WHERE v.scriptId = :scriptId AND v.deletedAt IS NULL")
+    List<EducationVideo> findByScriptId(@Param("scriptId") UUID scriptId);
 }
 
 

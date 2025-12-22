@@ -125,5 +125,32 @@ public final class QuizResponse {
         private Instant submittedAt;
         private Boolean isBestScore; // 교육별 최고 점수 여부
     }
+
+    // ---------- Department Stats (GET /quiz/department-stats) ----------
+    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DepartmentStatsItem {
+        private String departmentName; // 부서명 (예: "인사팀", "총무팀")
+        private Integer averageScore; // 부서 평균 점수
+        private Integer progressPercent; // 부서 전체 진행률 (%)
+        private Integer participantCount; // 참여자 수
+    }
+
+    // ---------- Retry Info (GET /quiz/{eduId}/retry-info) ----------
+    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class RetryInfoResponse {
+        private UUID educationId;
+        private String educationTitle;
+        private Boolean canRetry; // 재응시 가능 여부
+        private Integer currentAttemptCount; // 현재 응시 횟수
+        private Integer maxAttempts; // 최대 응시 횟수 (null이면 무제한)
+        private Integer remainingAttempts; // 남은 응시 횟수 (null이면 무제한)
+        private Integer bestScore; // 최고 점수 (응시한 경우)
+        private Boolean passed; // 통과 여부 (최고 점수 시도 기준)
+        private Instant lastAttemptAt; // 마지막 응시 시각
+    }
 }
 

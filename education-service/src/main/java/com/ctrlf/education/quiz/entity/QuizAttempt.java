@@ -62,6 +62,10 @@ public class QuizAttempt {
     @Column(name = "submitted_at")
     private Instant submittedAt;
 
+    /** 응시자 부서 (제출 시 JWT에서 추출하여 저장) */
+    @Column(name = "department")
+    private String department;
+
     /** 삭제(소프트딜리트) 시각 */
     @Column(name = "deleted_at")
     private Instant deletedAt;

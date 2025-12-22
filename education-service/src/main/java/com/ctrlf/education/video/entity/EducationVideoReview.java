@@ -53,6 +53,18 @@ public class EducationVideoReview {
     /** 삭제(소프트딜리트) 시각 */
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    /**
+     * 반려 리뷰 생성 팩토리 메서드.
+     */
+    public static EducationVideoReview createRejection(UUID videoId, String comment, UUID reviewerUuid) {
+        EducationVideoReview review = new EducationVideoReview();
+        review.setVideoId(videoId);
+        review.setStatus("REJECTED");
+        review.setComment(comment);
+        review.setReviewerUuid(reviewerUuid);
+        return review;
+    }
 }
 
 

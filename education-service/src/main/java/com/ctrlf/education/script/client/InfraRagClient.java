@@ -44,6 +44,20 @@ public class InfraRagClient {
     }
 
     /**
+     * 문서 정보 조회.
+     * 
+     * @param documentId 문서 ID
+     * @return 문서 정보 응답
+     * @throws org.springframework.web.client.RestClientException 네트워크/서버 오류 시
+     */
+    public DocumentInfoResponse getDocument(String documentId) {
+        return restClient.get()
+            .uri("/rag/documents/{documentId}", documentId)
+            .retrieve()
+            .body(DocumentInfoResponse.class);
+    }
+
+    /**
      * 문서 원문 텍스트 응답 DTO.
      */
     @Getter
@@ -52,5 +66,19 @@ public class InfraRagClient {
     public static class DocumentTextResponse {
         private String documentId;
         private String text;
+    }
+
+    /**
+     * 문서 정보 응답 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DocumentInfoResponse {
+        private String id;
+        private String title;
+        private String domain;
+        private String sourceUrl; // fileUrl
+        private String status;
     }
 }
