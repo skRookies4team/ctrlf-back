@@ -16,7 +16,7 @@ spec:
       containers:
         - name: chat-service
           # 여기에 아까 성공한 ECR 이미지 주소를 정확히 넣으세요a
-          image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/chat-service:43b35b4f780fd6b8c6e9b47a96115e83ea26cfef
+          image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/chat-service:2f9b512b27fe02cdae2189ef2872342df5c9b899
           ports:
             - containerPort: 9001 # Spring Boot 앱 포트
           imagePullPolicy: Always
