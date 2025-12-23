@@ -45,9 +45,13 @@ public class EducationVideo {
     @Column(name = "script_id", columnDefinition = "uuid")
     private UUID scriptId;
 
-    /** 연결된 자료(RagDocument) ID */
+    /** 레거시: 단일 문서일 때만 사용 (deprecated) */
     @Column(name = "material_id", columnDefinition = "uuid")
     private UUID materialId;
+
+    /** 연결된 소스셋 ID (멀티문서 지원) */
+    @Column(name = "source_set_id", columnDefinition = "uuid")
+    private UUID sourceSetId;
 
     /** 영상 파일 URL */
     @Column(name = "file_url")

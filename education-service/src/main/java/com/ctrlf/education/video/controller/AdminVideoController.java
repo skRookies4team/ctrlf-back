@@ -1,5 +1,6 @@
 package com.ctrlf.education.video.controller;
 
+import com.ctrlf.common.security.SecurityUtils;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCreateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCreateResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoMetaItem;
@@ -21,6 +22,8 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -95,9 +98,12 @@ public class AdminVideoController {
   @PutMapping("/{videoId}/reject")
   public ResponseEntity<VideoStatusResponse> rejectVideo(
       @Parameter(description = "영상 ID", required = true) @PathVariable UUID videoId,
-      @RequestBody(required = false) VideoRejectRequest req) {
+      @RequestBody(required = false) VideoRejectRequest req,
+      @AuthenticationPrincipal Jwt jwt) {
     String reason = req != null ? req.reason() : null;
-    return ResponseEntity.ok(videoService.rejectVideo(videoId, reason));
+    UUID reviewerUuid = SecurityUtils.extractUserUuid(jwt)
+        .orElseThrow(() -> new IllegalArgumentException("사용자 UUID를 추출할 수 없습니다."));
+    return ResponseEntity.ok(videoService.rejectVideo(videoId, reason, reviewerUuid));
   }
 
   @Operation(summary = "게시 (프론트 -> 백엔드)", description = "승인된 영상을 유저에게 노출합니다. (APPROVED → ACTIVE)")
@@ -130,18 +136,6 @@ public class AdminVideoController {
   // ========================
   // 영상 메타 CRUD API
   // ========================
-
-  @Operation(summary = "영상 상세 조회 (* 프론트 -> 백엔드)", description = "영상 메타 정보를 조회합니다.")
-  @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "성공",
-      content = @Content(schema = @Schema(implementation = VideoMetaItem.class))),
-    @ApiResponse(responseCode = "404", description = "영상을 찾을 수 없음", content = @Content)
-  })
-  @GetMapping("/{videoId}")
-  public ResponseEntity<VideoMetaItem> getVideo(
-      @Parameter(description = "영상 ID", required = true) @PathVariable UUID videoId) {
-    return ResponseEntity.ok(videoService.getVideoContent(videoId));
-  }
 
   @Operation(summary = "영상 목록 조회(페이징) (* 프론트 -> 백엔드)", description = "영상 메타 목록을 페이징으로 조회합니다.")
   @ApiResponses({

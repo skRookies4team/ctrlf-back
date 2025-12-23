@@ -13,6 +13,8 @@ import com.ctrlf.education.script.repository.EducationScriptSceneRepository;
 import com.ctrlf.education.repository.EducationProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
+import com.ctrlf.education.video.repository.SourceSetDocumentRepository;
+import com.ctrlf.education.video.repository.SourceSetRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
 
 
@@ -45,6 +47,8 @@ public class SeedDataRunner implements CommandLineRunner {
     private final EducationVideoProgressRepository educationVideoProgressRepository;
     private final EducationProgressRepository educationProgressRepository;
     private final VideoGenerationJobRepository videoGenerationJobRepository;
+    private final SourceSetDocumentRepository sourceSetDocumentRepository;
+    private final SourceSetRepository sourceSetRepository;
 
     public SeedDataRunner(
         EducationRepository educationRepository,
@@ -54,7 +58,9 @@ public class SeedDataRunner implements CommandLineRunner {
         EducationVideoRepository educationVideoRepository,
         EducationVideoProgressRepository educationVideoProgressRepository,
         EducationProgressRepository educationProgressRepository,
-        VideoGenerationJobRepository videoGenerationJobRepository
+        VideoGenerationJobRepository videoGenerationJobRepository,
+        SourceSetDocumentRepository sourceSetDocumentRepository,
+        SourceSetRepository sourceSetRepository
     ) {
         this.educationRepository = educationRepository;
         this.scriptRepository = scriptRepository;
@@ -64,6 +70,8 @@ public class SeedDataRunner implements CommandLineRunner {
         this.educationVideoProgressRepository = educationVideoProgressRepository;
         this.educationProgressRepository = educationProgressRepository;
         this.videoGenerationJobRepository = videoGenerationJobRepository;
+        this.sourceSetDocumentRepository = sourceSetDocumentRepository;
+        this.sourceSetRepository = sourceSetRepository;
     }
 
     @Override
@@ -89,27 +97,35 @@ public class SeedDataRunner implements CommandLineRunner {
         educationVideoProgressRepository.deleteAll();
         log.info("교육 영상 진행률 삭제 완료");
         
-        // 3. 영상 삭제
+        // 3. 소스셋 문서 삭제 (source_set_id FK 참조)
+        sourceSetDocumentRepository.deleteAll();
+        log.info("소스셋 문서 삭제 완료");
+        
+        // 4. 소스셋 삭제 (video_id FK 참조하므로 video보다 먼저 삭제)
+        sourceSetRepository.deleteAll();
+        log.info("소스셋 삭제 완료");
+        
+        // 5. 영상 삭제
         educationVideoRepository.deleteAll();
         log.info("교육 영상 삭제 완료");
         
-        // 4. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
+        // 6. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
         videoGenerationJobRepository.deleteAll();
         log.info("영상 생성 작업 삭제 완료");
         
-        // 5. 스크립트 씬 삭제
+        // 7. 스크립트 씬 삭제
         sceneRepository.deleteAll();
         log.info("스크립트 씬 삭제 완료");
         
-        // 6. 스크립트 챕터 삭제
+        // 8. 스크립트 챕터 삭제
         chapterRepository.deleteAll();
         log.info("스크립트 챕터 삭제 완료");
         
-        // 7. 스크립트 삭제
+        // 9. 스크립트 삭제
         scriptRepository.deleteAll();
         log.info("스크립트 삭제 완료");
         
-        // 8. 교육 삭제
+        // 10. 교육 삭제
         educationRepository.deleteAll();
         log.info("교육 삭제 완료");
         
@@ -295,8 +311,7 @@ public class SeedDataRunner implements CommandLineRunner {
     private UUID insertScript(UUID eduId, UUID materialId, String content, Integer version, String title) {
         EducationScript s = new EducationScript();
         s.setEducationId(eduId);
-        // FK 충돌 방지: 소스 문서 시더가 없으므로 null로 둡니다.
-        s.setSourceDocId(materialId);
+        // Note: sourceDocId는 제거되었으며, 이제 SourceSet을 통해 문서와 연결됩니다.
         s.setTitle(title);
         s.setTotalDurationSec(720);
         // 변경된 스키마에 맞춰 raw_payload(JSONB)에 저장

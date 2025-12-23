@@ -22,8 +22,6 @@ public final class EducationScriptDto {
       UUID scriptId,
       @Schema(description = "교육 ID", example = "550e8400-e29b-41d4-a716-446655440001")
       UUID educationId,
-      @Schema(description = "자료 ID", example = "550e8400-e29b-41d4-a716-446655440002")
-      UUID materialId,
       @Schema(description = "스크립트 내용", example = "교육 영상 스크립트 내용...")
       String script,
       @Schema(description = "스크립트 버전", example = "1")
@@ -33,7 +31,7 @@ public final class EducationScriptDto {
   public record ScriptDetailResponse(
       @Schema(description = "스크립트 ID") UUID scriptId,
       @Schema(description = "교육 ID") UUID educationId,
-      @Schema(description = "자료 ID") UUID materialId,
+      @Schema(description = "영상 ID") UUID videoId,
       @Schema(description = "제목") String title,
       @Schema(description = "총 길이(초)") Integer totalDurationSec,
       @Schema(description = "스크립트 버전") Integer version,
@@ -118,17 +116,4 @@ public final class EducationScriptDto {
       @Schema(description = "스크립트 ID", example = "550e8400-e29b-41d4-a716-446655440001")
       UUID scriptId) {}
 
-  // ========================
-  // 스크립트 자동생성 요청
-  // ========================
-
-  @Schema(description = "스크립트 자동생성 요청")
-  public record ScriptGenerateRequest(
-      @Schema(description = "교육 ID", example = "550e8400-e29b-41d4-a716-446655440000")
-      @NotNull(message = "eduId는 필수입니다")
-      UUID eduId,
-      @Schema(description = "영상 컨텐츠 ID", example = "550e8400-e29b-41d4-a716-446655440003")
-      @NotNull(message = "videoId는 필수입니다")
-      UUID videoId
-  ){}
 }

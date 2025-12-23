@@ -2,6 +2,8 @@ package com.ctrlf.education.quiz.service;
 
 import static com.ctrlf.education.quiz.dto.QuizRequest.*;
 import static com.ctrlf.education.quiz.dto.QuizResponse.*;
+import com.ctrlf.education.quiz.dto.QuizResponse.DepartmentStatsItem;
+import com.ctrlf.education.quiz.dto.QuizResponse.RetryInfoResponse;
 
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationProgress;
@@ -19,6 +21,9 @@ import com.ctrlf.education.script.entity.EducationScript;
 import com.ctrlf.education.script.entity.EducationScriptScene;
 import com.ctrlf.education.script.repository.EducationScriptRepository;
 import com.ctrlf.education.script.repository.EducationScriptSceneRepository;
+import com.ctrlf.education.video.entity.SourceSet;
+import com.ctrlf.education.video.entity.SourceSetDocument;
+import com.ctrlf.education.video.repository.SourceSetRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -54,6 +59,7 @@ public class QuizService {
     private final EducationProgressRepository progressRepository;
     private final EducationScriptRepository scriptRepository;
     private final EducationScriptSceneRepository sceneRepository;
+    private final SourceSetRepository sourceSetRepository;
     private final ObjectMapper objectMapper;
     private final QuizAiClient quizAiClient;
 
@@ -105,11 +111,20 @@ public class QuizService {
                 List<QuizAiDtos.QuizCandidateBlock> candidateBlocks = new ArrayList<>();
                 String docId = null;
                 String docVersion = null;
+                
+                // SourceSet에서 첫 번째 문서 ID 가져오기 (docId용)
+                List<SourceSet> sourceSets = sourceSetRepository.findByEducationIdAndNotDeleted(educationId);
+                if (!sourceSets.isEmpty()) {
+                    SourceSet sourceSet = sourceSets.get(0);
+                    List<SourceSetDocument> documents = sourceSet.getDocuments();
+                    if (documents != null && !documents.isEmpty()) {
+                        // 첫 번째 문서 ID 사용
+                        docId = documents.get(0).getDocumentId().toString();
+                    }
+                }
+                
                 if (scriptOpt.isPresent()) {
                     EducationScript script = scriptOpt.get();
-                    if (script.getSourceDocId() != null) {
-                        docId = script.getSourceDocId().toString();
-                    }
                     if (script.getVersion() != null) {
                         docVersion = "v" + script.getVersion();
                     }
@@ -285,7 +300,7 @@ public class QuizService {
      * @throws ResponseStatusException 시도를 찾을 수 없으면 404, 권한 없으면 403, 이미 제출했으면 409
      */
     @Transactional
-    public SubmitResponse submit(UUID attemptId, UUID userUuid, SubmitRequest req) {
+    public SubmitResponse submit(UUID attemptId, UUID userUuid, String department, SubmitRequest req) {
         QuizAttempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "attempt not found"));
         if (!attempt.getUserUuid().equals(userUuid)) {
@@ -324,6 +339,10 @@ public class QuizService {
         attempt.setScore(score);
         attempt.setPassed(passed);
         attempt.setSubmittedAt(Instant.now());
+        // 부서 정보 저장 (부서별 통계용)
+        if (department != null && !department.isBlank()) {
+            attempt.setDepartment(department);
+        }
         attemptRepository.save(attempt);
         return new SubmitResponse(score, passed, correct, wrong, total, attempt.getSubmittedAt());
     }
@@ -638,6 +657,172 @@ public class QuizService {
         }
         
         return items;
+    }
+
+    /**
+     * 부서별 퀴즈 통계 조회.
+     * 특정 교육에 대한 부서별 평균 점수와 진행률을 계산합니다.
+     *
+     * @param educationId 교육 ID (null이면 전체 교육 대상)
+     * @return 부서별 통계 목록
+     */
+    public List<DepartmentStatsItem> getDepartmentStats(UUID educationId) {
+        // 교육별 모든 제출 완료된 퀴즈 시도 조회
+        List<QuizAttempt> allAttempts;
+        if (educationId != null) {
+            allAttempts = attemptRepository.findByEducationIdAndSubmittedAtIsNotNull(educationId);
+        } else {
+            // 전체 교육 대상인 경우 모든 제출된 시도 조회
+            allAttempts = attemptRepository.findAll().stream()
+                .filter(a -> a.getSubmittedAt() != null && a.getDeletedAt() == null)
+                .toList();
+        }
+
+        if (allAttempts.isEmpty()) {
+            return List.of();
+        }
+
+        // 사용자별 최고 점수 계산 (같은 교육 내에서)
+        Map<UUID, Integer> bestScoresByUser = new HashMap<>();
+        Map<UUID, UUID> educationIdByUser = new HashMap<>();
+        
+        for (QuizAttempt attempt : allAttempts) {
+            UUID userId = attempt.getUserUuid();
+            UUID eduId = attempt.getEducationId();
+            Integer score = attempt.getScore() != null ? attempt.getScore() : 0;
+            
+            educationIdByUser.put(userId, eduId);
+            bestScoresByUser.merge(userId, score, Math::max);
+        }
+
+        // QuizAttempt에 저장된 부서 정보 사용
+        Map<UUID, String> userDepartmentMap = new HashMap<>();
+        for (QuizAttempt attempt : allAttempts) {
+            UUID userId = attempt.getUserUuid();
+            String dept = attempt.getDepartment();
+            if (dept != null && !dept.isBlank()) {
+                // 같은 사용자의 여러 시도 중 부서 정보가 있는 것을 사용
+                userDepartmentMap.putIfAbsent(userId, dept);
+            }
+        }
+        // 부서 정보가 없는 사용자는 "기타"로 처리
+        for (UUID userId : bestScoresByUser.keySet()) {
+            userDepartmentMap.putIfAbsent(userId, "기타");
+        }
+
+        // 부서별로 그룹화하여 통계 계산
+        Map<String, List<Integer>> scoresByDepartment = new HashMap<>();
+        Map<String, Integer> participantCountByDepartment = new HashMap<>();
+        
+        for (Map.Entry<UUID, Integer> entry : bestScoresByUser.entrySet()) {
+            UUID userId = entry.getKey();
+            Integer score = entry.getValue();
+            String department = userDepartmentMap.getOrDefault(userId, "기타");
+            
+            scoresByDepartment.computeIfAbsent(department, k -> new ArrayList<>()).add(score);
+            participantCountByDepartment.merge(department, 1, Integer::sum);
+        }
+
+        // 부서별 평균 점수 및 진행률 계산
+        List<DepartmentStatsItem> stats = new ArrayList<>();
+        int totalParticipants = bestScoresByUser.size();
+        
+        for (Map.Entry<String, List<Integer>> entry : scoresByDepartment.entrySet()) {
+            String department = entry.getKey();
+            List<Integer> scores = entry.getValue();
+            int participantCount = participantCountByDepartment.get(department);
+            
+            // 평균 점수 계산
+            double avgScore = scores.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+            
+            // 진행률 계산 (해당 부서 참여자 수 / 전체 참여자 수 * 100)
+            // 또는 교육 이수 완료율로 계산할 수도 있음
+            int progressPercent = totalParticipants > 0 
+                ? (int) Math.round((participantCount * 100.0) / totalParticipants)
+                : 0;
+            
+            stats.add(new DepartmentStatsItem(
+                department,
+                (int) Math.round(avgScore),
+                progressPercent,
+                participantCount
+            ));
+        }
+
+        // 평균 점수 내림차순으로 정렬
+        stats.sort((a, b) -> Integer.compare(b.getAverageScore(), a.getAverageScore()));
+        
+        return stats;
+    }
+
+    /**
+     * 퀴즈 재응시 정보 조회.
+     * 특정 교육에 대한 재응시 가능 여부 및 관련 정보를 반환합니다.
+     *
+     * @param educationId 교육 ID
+     * @param userUuid 사용자 UUID
+     * @return 재응시 정보 (가능 여부, 응시 횟수, 최고 점수 등)
+     * @throws ResponseStatusException 교육을 찾을 수 없으면 404
+     */
+    @Transactional(readOnly = true)
+    public RetryInfoResponse getRetryInfo(UUID educationId, UUID userUuid) {
+        Education education = educationRepository.findById(educationId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
+
+        // 사용자의 해당 교육 퀴즈 응시 이력 조회
+        List<QuizAttempt> attempts = attemptRepository
+            .findByUserUuidAndEducationIdAndSubmittedAtIsNotNullOrderByCreatedAtDesc(userUuid, educationId);
+        
+        int currentAttemptCount = attempts.size();
+        
+        // 최고 점수 및 통과 여부 계산
+        Integer bestScore = null;
+        Boolean passed = null;
+        Instant lastAttemptAt = null;
+        
+        if (!attempts.isEmpty()) {
+            QuizAttempt bestAttempt = attempts.stream()
+                .filter(a -> a.getScore() != null)
+                .max((a1, a2) -> Integer.compare(
+                    a1.getScore() != null ? a1.getScore() : 0,
+                    a2.getScore() != null ? a2.getScore() : 0
+                ))
+                .orElse(null);
+            
+            if (bestAttempt != null) {
+                bestScore = bestAttempt.getScore();
+                passed = bestAttempt.getPassed();
+            }
+            
+            // 마지막 응시 시각
+            QuizAttempt lastAttempt = attempts.get(0);
+            lastAttemptAt = lastAttempt.getSubmittedAt();
+        }
+        
+        // 최대 응시 횟수 (현재는 null = 무제한, 추후 정책 테이블에서 조회 가능)
+        Integer maxAttempts = 2;
+        
+        // 재응시 가능 여부 판단
+        // - maxAttempts가 있으면 currentAttemptCount < maxAttempts일 때 재응시 가능
+        boolean canRetry = maxAttempts == null || currentAttemptCount < maxAttempts;
+        
+        // 남은 응시 횟수 계산
+        Integer remainingAttempts = null;
+        if (maxAttempts != null) {
+            remainingAttempts = Math.max(0, maxAttempts - currentAttemptCount);
+        }
+        
+        return new RetryInfoResponse(
+            educationId,
+            education.getTitle() != null ? education.getTitle() : "",
+            canRetry,
+            currentAttemptCount,
+            maxAttempts,
+            remainingAttempts,
+            bestScore,
+            passed,
+            lastAttemptAt
+        );
     }
 
     // ========== Helper Methods ==========

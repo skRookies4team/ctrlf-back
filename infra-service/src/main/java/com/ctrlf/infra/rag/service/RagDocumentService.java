@@ -3,6 +3,8 @@ package com.ctrlf.infra.rag.service;
 import static com.ctrlf.infra.rag.dto.RagDtos.*;
 
 import com.ctrlf.infra.rag.entity.RagDocument;
+import com.ctrlf.infra.rag.entity.RagDocumentChunk;
+import com.ctrlf.infra.rag.entity.RagFailChunk;
 import com.ctrlf.infra.rag.client.RagAiClient;
 import com.ctrlf.infra.rag.repository.RagDocumentChunkRepository;
 import com.ctrlf.infra.rag.repository.RagFailChunkRepository;
@@ -51,29 +53,20 @@ public class RagDocumentService {
 
     /**
      * 문서 업로드 메타를 저장하고 초기 상태를 반환합니다.
-     * @param req 업로드 요청 DTO(제목/도메인/업로더UUID/파일URL)
+     * @param req 업로드 요청 DTO(제목/도메인/파일URL)
+     * @param uploaderUuid 업로더 UUID (JWT에서 추출)
      * @return 업로드 응답(문서ID, 상태=QUEUED, 생성시각)
      */
-    public UploadResponse upload(UploadRequest req) {
+    public UploadResponse upload(UploadRequest req, UUID uploaderUuid) {
         RagDocument d = new RagDocument();
         d.setTitle(req.getTitle());
         d.setDomain(req.getDomain());
-        d.setUploaderUuid(req.getUploaderUuid());
+        d.setUploaderUuid(uploaderUuid.toString());
         d.setSourceUrl(req.getFileUrl());
+        // DB 체크 제약 조건: QUEUED, PROCESSING, SUCCEEDED, FAILED, REPROCESSING만 허용
         d.setStatus("QUEUED");
         d.setCreatedAt(Instant.now());
         d = documentRepository.save(d);
-
-        // 업로드 직후 AI 서버에 처리 요청 (베스트Effort)
-        try {
-            ragAiClient.process(d.getId(), d.getTitle(), d.getDomain(), d.getSourceUrl(), Instant.now());
-            // AI 서버 요청 성공 시 상태를 PROCESSING으로 변경
-            d.setStatus("PROCESSING");
-            documentRepository.save(d);
-        } catch (Exception e) {
-            // 실패해도 업로드 API는 성공으로 처리. 로그만 남김
-            // 운영에서는 재시도 큐에 적재하는 것을 권장
-        }
 
         return new UploadResponse(
             d.getId().toString(),
@@ -220,6 +213,23 @@ public class RagDocumentService {
     }
 
     /**
+     * 문서 정보를 조회합니다.
+     */
+    public DocumentInfoResponse getDocument(String documentId) {
+        UUID id = parseUuid(documentId);
+        RagDocument d = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found"));
+        
+        return new DocumentInfoResponse(
+            d.getId().toString(),
+            d.getTitle(),
+            d.getDomain(),
+            d.getSourceUrl(),
+            d.getStatus() != null ? d.getStatus() : "QUEUED"
+        );
+    }
+
+    /**
      * 문서의 임베딩 처리 상태를 조회합니다.
      */
     public DocumentStatusResponse getStatus(String documentId) {
@@ -299,6 +309,83 @@ public class RagDocumentService {
                 return reader.lines().collect(Collectors.joining("\n"));
             }
         }
+    }
+
+    /**
+     * 문서 청크 Bulk Upsert (내부 API - FastAPI → Spring).
+     * 
+     * @param documentId 문서 ID
+     * @param req 청크 bulk upsert 요청
+     * @return 저장 결과
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public ChunksBulkUpsertResponse bulkUpsertChunks(String documentId, ChunksBulkUpsertRequest req) {
+        UUID docId = parseUuid(documentId);
+        
+        // 문서 존재 확인
+        if (!documentRepository.existsById(docId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found: " + documentId);
+        }
+
+        // 기존 청크 삭제 (재적재 시)
+        chunkRepository.deleteByDocumentId(docId);
+
+        // 새 청크 저장
+        List<RagDocumentChunk> chunks = new ArrayList<>();
+        for (ChunkItem item : req.getChunks()) {
+            RagDocumentChunk chunk = new RagDocumentChunk();
+            chunk.setDocumentId(docId);
+            chunk.setChunkIndex(item.getChunkIndex());
+            chunk.setChunkText(item.getChunkText());
+            chunk.setCreatedAt(Instant.now());
+            // embedding은 null (Milvus에 저장됨)
+            // chunkMeta는 현재 DB 스키마에 없으므로 저장하지 않음 (추후 추가 가능)
+            chunks.add(chunk);
+        }
+        
+        chunkRepository.saveAll(chunks);
+        
+        log.info("청크 bulk upsert 완료: documentId={}, count={}", documentId, chunks.size());
+        
+        return new ChunksBulkUpsertResponse(true, chunks.size());
+    }
+
+    /**
+     * 임베딩 실패 로그 Bulk Upsert (내부 API - FastAPI → Spring).
+     * 
+     * @param documentId 문서 ID
+     * @param req 실패 청크 bulk upsert 요청
+     * @return 저장 결과
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public FailChunksBulkUpsertResponse bulkUpsertFailChunks(String documentId, FailChunksBulkUpsertRequest req) {
+        UUID docId = parseUuid(documentId);
+        
+        // 문서 존재 확인
+        if (!documentRepository.existsById(docId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found: " + documentId);
+        }
+
+        // 실패 청크 저장 (멱등: 같은 chunkIndex가 있으면 업데이트)
+        List<RagFailChunk> failChunks = new ArrayList<>();
+        for (FailChunkItem item : req.getFails()) {
+            // 기존 실패 로그가 있으면 삭제 (멱등 처리)
+            failChunkRepository.findByDocumentIdAndChunkIndex(docId, item.getChunkIndex())
+                .ifPresent(failChunkRepository::delete);
+            
+            RagFailChunk failChunk = new RagFailChunk();
+            failChunk.setDocumentId(docId);
+            failChunk.setChunkIndex(item.getChunkIndex());
+            failChunk.setFailReason(item.getFailReason());
+            failChunk.setCreatedAt(Instant.now());
+            failChunks.add(failChunk);
+        }
+        
+        failChunkRepository.saveAll(failChunks);
+        
+        log.info("실패 청크 bulk upsert 완료: documentId={}, count={}", documentId, failChunks.size());
+        
+        return new FailChunksBulkUpsertResponse(true, failChunks.size());
     }
 
     private static UUID parseUuid(String s) {
