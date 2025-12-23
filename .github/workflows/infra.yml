@@ -70,7 +70,7 @@ jobs:
         run: |
             git config --global user.email "github-actions@github.com"
             git config --global user.name "github-actions"
-            git add kubernetes/infra-deployment.yaml
+            git add kubernetes/infra-deploy.yaml
 
             # 변경사항이 있다면 pull 후 push 하도록 수정
             if [ -z "$(git status --porcelain)" ]; then
