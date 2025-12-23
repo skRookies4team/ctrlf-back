@@ -1,4 +1,4 @@
-name: CI Infrastructure Service
+name: CI Chat Service
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'chat-service/**'
       - 'build.gradle'
       - '.github/workflows/chat.yml'
-      - 'kubernetes/infra*'
+      - 'kubernetes/chat*'
 
 jobs:
   build:
