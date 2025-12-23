@@ -70,7 +70,7 @@ jobs:
         run: |
           git config --global user.email "github-actions@github.com"
           git config --global user.name "github-actions"
-          git add kubernetes/chay-deploy.yaml
+          git add kubernetes/chat-deploy.yaml
 
           # 변경 사항이 있는지 체크 후 커밋 (에러 방지)
           if [ -z "$(git status --porcelain)" ]; then
