@@ -20,6 +20,11 @@ spring:
     schemas: infra
     default-schema: infra
     locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8090/realms/ctrlf
 
 management:
   endpoints:

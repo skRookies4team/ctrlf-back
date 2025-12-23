@@ -12,11 +12,15 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import com.ctrlf.common.security.SecurityUtils;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -30,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/rag/documents")
 @RequiredArgsConstructor
-@Tag(name = "RAG - Documents", description = "RAG 문서 관리 API (임시)")
+@Tag(name = "RAG - Documents", description = "RAG 문서 관리 API")
 /**
  * RAG 문서 관리용 REST 컨트롤러.
  * - 업로드 메타 등록(POST /rag/documents/upload)
@@ -52,7 +56,7 @@ public class RagDocumentsController {
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = UploadRequest.class),
-                examples = @ExampleObject(name = "request", value = "{\n  \"title\": \"산업안전 규정집 v3\",\n  \"domain\": \"HR\",\n  \"uploaderUuid\": \"c13c91f2-fb1a-4d42-b381-72847a52fb99\",\n  \"fileUrl\": \"s3://bucket/docs/hr_safety_v3.pdf\"\n}")
+                examples = @ExampleObject(name = "request", value = "{\n  \"title\": \"산업안전 규정집 v3\",\n  \"domain\": \"HR\",\n  \"fileUrl\": \"s3://bucket/docs/hr_safety_v3.pdf\"\n}")
             )
         )
     )
@@ -68,9 +72,24 @@ public class RagDocumentsController {
      * 문서 업로드 메타 정보를 저장합니다.
      * 실제 파일 업로드는 S3 presigned URL을 통해 선행되며,
      * 여기서는 제목/도메인/업로더/파일URL을 DB에 기록하고 초기 상태(QUEUED)를 반환합니다.
+     * uploaderUuid는 JWT 토큰에서 자동으로 추출됩니다.
      */
-    public ResponseEntity<UploadResponse> upload(@Valid @RequestBody UploadRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ragDocumentService.upload(req));
+    public ResponseEntity<UploadResponse> upload(
+        @Valid @RequestBody UploadRequest req,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        if (jwt == null) {
+            throw new IllegalArgumentException("JWT 토큰이 없습니다. 인증이 필요합니다.");
+        }
+        
+        UUID uploaderUuid = SecurityUtils.extractUserUuid(jwt)
+            .orElseThrow(() -> {
+                String sub = jwt.getSubject();
+                return new IllegalArgumentException(
+                    String.format("JWT 토큰에서 사용자 UUID를 추출할 수 없습니다. subject: %s", sub));
+            });
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ragDocumentService.upload(req, uploaderUuid));
     }
 
     @GetMapping
@@ -144,6 +163,22 @@ public class RagDocumentsController {
         return ResponseEntity.ok(ragDocumentService.getStatus(id));
     }
 
+    @GetMapping("/{id}")
+    @Operation(
+        summary = "RAG 문서 정보 조회",
+        description = "문서의 메타 정보를 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "문서 정보 조회 성공",
+            content = @Content(schema = @Schema(implementation = DocumentInfoResponse.class))),
+        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음")
+    })
+    public ResponseEntity<DocumentInfoResponse> getDocument(
+        @Parameter(description = "문서 ID") @PathVariable("id") String id
+    ) {
+        return ResponseEntity.ok(ragDocumentService.getDocument(id));
+    }
+
     @GetMapping("/{id}/text")
     @Operation(
         summary = "RAG 문서 원문 텍스트 조회",
@@ -159,6 +194,48 @@ public class RagDocumentsController {
         @Parameter(description = "문서 ID") @PathVariable("id") String id
     ) {
         return ResponseEntity.ok(ragDocumentService.getText(id));
+    }
+
+    // ========================
+    // 내부 API (FastAPI → Spring)
+    // ========================
+
+    @PostMapping("/{documentId}/chunks:bulk")
+    @Operation(
+        summary = "문서 청크 Bulk Upsert (내부 API)",
+        description = "FastAPI가 문서 청크를 bulk upsert합니다. (임베딩 벡터는 Milvus에 저장, DB는 chunk_text만 저장)"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "저장 성공",
+            content = @Content(schema = @Schema(implementation = ChunksBulkUpsertResponse.class))),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류"),
+        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음")
+    })
+    public ResponseEntity<ChunksBulkUpsertResponse> bulkUpsertChunks(
+        @Parameter(description = "문서 ID", required = true) @PathVariable("documentId") String documentId,
+        @Valid @RequestBody ChunksBulkUpsertRequest req
+    ) {
+        return ResponseEntity.ok(ragDocumentService.bulkUpsertChunks(documentId, req));
+    }
+
+    @PostMapping("/{documentId}/fail-chunks:bulk")
+    @Operation(
+        summary = "임베딩 실패 로그 Bulk Upsert (내부 API)",
+        description = "FastAPI가 임베딩 실패한 청크 로그를 bulk upsert합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "저장 성공",
+            content = @Content(schema = @Schema(implementation = FailChunksBulkUpsertResponse.class))),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류"),
+        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음")
+    })
+    public ResponseEntity<FailChunksBulkUpsertResponse> bulkUpsertFailChunks(
+        @Parameter(description = "문서 ID", required = true) @PathVariable("documentId") String documentId,
+        @Valid @RequestBody FailChunksBulkUpsertRequest req
+    ) {
+        return ResponseEntity.ok(ragDocumentService.bulkUpsertFailChunks(documentId, req));
     }
 }
 
