@@ -1,11 +1,11 @@
 package com.ctrlf.chat.service;
 
-import com.ctrlf.chat.ai.search.client.ChatAiClient;
+// import com.ctrlf.chat.ai.search.client.ChatAiClient; // ⚠️ session-summary 기능 주석 처리로 인해 사용 안 함
 import com.ctrlf.chat.dto.request.ChatSessionCreateRequest;
 import com.ctrlf.chat.dto.request.ChatSessionUpdateRequest;
 import com.ctrlf.chat.dto.response.ChatSessionHistoryResponse;
 import com.ctrlf.chat.dto.response.ChatSessionResponse;
-import com.ctrlf.chat.dto.summary.ChatSessionSummaryResponse;
+// import com.ctrlf.chat.dto.summary.ChatSessionSummaryResponse; // ⚠️ session-summary 기능 주석 처리로 인해 사용 안 함
 import com.ctrlf.chat.entity.ChatMessage;
 import com.ctrlf.chat.entity.ChatSession;
 import com.ctrlf.chat.exception.chat.ChatSessionNotFoundException;
@@ -27,8 +27,8 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
 
-    // ✅ AI 요약용 Client 추가
-    private final ChatAiClient chatAiClient;
+    // ⚠️ AI 요약용 Client (현재 사용 안 함 - session-summary 기능 주석 처리)
+    // private final ChatAiClient chatAiClient;
 
     @Override
     public ChatSessionResponse createSession(ChatSessionCreateRequest request) {
@@ -117,7 +117,9 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         List<ChatMessage> messages =
             chatMessageRepository.findAllBySessionIdOrderByCreatedAtAsc(sessionId);
 
-        // 2. AI 요약 호출 (실패해도 세션 종료는 진행)
+        // 2. AI 요약 호출 (현재 AI 서비스에 해당 엔드포인트가 없어 주석 처리)
+        // AI 서비스에는 FAQ 관련 API만 제공되며, /ai/chat/session-summary 엔드포인트는 구현되지 않음
+        /*
         try {
             ChatSessionSummaryResponse summary =
                 chatAiClient.summarizeSession(sessionId, messages);
@@ -132,6 +134,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                 e
             );
         }
+        */
 
         // 3. 세션 종료 처리
         session.softDelete();

@@ -61,8 +61,11 @@ public class ChatStreamService {
                         .orElseThrow();
 
                 // 5) AI 스트리밍 요청 생성
+                // request_id: messageId를 기반으로 생성 (중복 방지용)
+                String requestId = "stream-" + messageId.toString();
                 ChatCompletionRequest req =
                     new ChatCompletionRequest(
+                        requestId,  // request_id 추가 (스트리밍 필수)
                         sessionId,
                         session.getUserUuid(),
                         "EMPLOYEE",

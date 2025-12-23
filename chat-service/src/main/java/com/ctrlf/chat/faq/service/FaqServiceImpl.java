@@ -87,6 +87,34 @@ public class FaqServiceImpl implements FaqService {
     // FAQ 자동 생성 연계
     // =========================
 
+    /**
+     * Domain을 RAGFlow가 지원하는 dataset 값으로 매핑
+     * 
+     * 현재 RAGFlow는 'POLICY', 'TEST'만 지원하므로,
+     * 모든 domain을 'POLICY'로 매핑합니다.
+     * 
+     * @param domain 원본 domain (예: "HR", "SECURITY", "POLICY" 등)
+     * @return RAGFlow가 지원하는 dataset 값
+     */
+    private String mapDomainToRagflowDataset(String domain) {
+        // RAGFlow가 지원하는 dataset: 'POLICY', 'TEST'
+        // 모든 domain을 'POLICY'로 매핑 (필요시 확장 가능)
+        if (domain == null || domain.isBlank()) {
+            return "POLICY";
+        }
+        
+        // 대소문자 무시하고 매핑
+        String upperDomain = domain.toUpperCase();
+        
+        // 이미 RAGFlow가 지원하는 값이면 그대로 사용
+        if ("POLICY".equals(upperDomain) || "TEST".equals(upperDomain)) {
+            return upperDomain;
+        }
+        
+        // 그 외의 모든 domain은 'POLICY'로 매핑
+        return "POLICY";
+    }
+
     @Override
     public UUID generateDraftFromCandidate(UUID candidateId) {
         FaqCandidate candidate = faqCandidateRepository.findById(candidateId)
@@ -109,27 +137,51 @@ public class FaqServiceImpl implements FaqService {
         // ======================================
         // 🔹 RAG 검색 연동 (LLM 미사용)
         // ======================================
-        List<AiSearchResponse.Result> topDocs =
+        List<AiSearchResponse.Result> searchResults =
             searchFacade.searchDocs(
                 candidate.getCanonicalQuestion(),
                 SearchDataset.POLICY,
                 5
             );
 
-        // TODO
-        // 1. topDocs → top_docs DTO 변환
-        // 2. /ai/faq/generate 호출 시 top_docs 전달
-        // (AI 서버 완성 후 구현)
+        // RAG 검색 결과를 AI 서비스 요청 DTO로 변환
+        List<FaqAiClient.TopDoc> topDocs = searchResults.stream()
+            .map(result -> new FaqAiClient.TopDoc(
+                result.getDocId(),
+                result.getTitle(),
+                result.getSnippet(),
+                result.getScore(),
+                result.getPage(),
+                result.getDataset(),
+                result.getSource()
+            ))
+            .toList();
 
         // ======================================
-        // 기존 AI FAQ 생성 로직 유지
+        // AI 서비스 호출 (RAG + LLM을 사용한 FAQ 초안 생성)
         // ======================================
+        // ⚠️ AI 서비스가 domain을 RAGFlow dataset으로 사용하므로,
+        // RAGFlow가 지원하는 값으로 매핑 (POLICY, TEST 등)
+        // 현재 RAGFlow는 'POLICY', 'TEST'만 지원하므로, 모든 domain을 'POLICY'로 매핑
+        String mappedDomain = mapDomainToRagflowDataset(candidate.getDomain());
+        
         FaqAiClient.AiFaqResponse aiResponse =
             faqAiClient.generate(
-                candidate.getDomain(),
+                mappedDomain,  // RAGFlow가 지원하는 dataset 값으로 매핑
                 candidate.getId().toString(), // cluster_id 대체
-                candidate.getCanonicalQuestion()
+                candidate.getCanonicalQuestion(),
+                topDocs  // RAG 검색 결과 전달
             );
+
+        // AI 서비스 응답 검증
+        if (!"SUCCESS".equals(aiResponse.status()) || aiResponse.faq_draft() == null) {
+            String errorMsg = aiResponse.error_message() != null 
+                ? aiResponse.error_message() 
+                : "AI 서비스에서 FAQ 초안 생성에 실패했습니다.";
+            throw new IllegalStateException(
+                String.format("FAQ 초안 생성 실패: %s (status: %s)", errorMsg, aiResponse.status())
+            );
+        }
 
         FaqDraft draft = FaqDraft.builder()
             .faqDraftId(aiResponse.faq_draft().faq_draft_id())
