@@ -7,6 +7,7 @@ on:
       - 'infra-service/**'
       - 'build.gradle'
       - '.github/workflows/infra.yml'
+      - 'kubernetes/infra*'
 
 jobs:
   build:
@@ -46,7 +47,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: argocd/infra-service  #
-          IMAGE_TAG: latest
+          IMAGE_TAG: 1.1
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f infra-service/Dockerfile .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

@@ -16,7 +16,8 @@ spec:
       containers:
         - name: infra-service
           # 여기에 아까 성공한 ECR 이미지 주소를 정확히 넣으세요
-          image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/infra-service:latest
+          image:
+            858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/infra-service:1.1
           ports:
             - containerPort: 9003 # Spring Boot 앱 포트
           imagePullPolicy: Always
