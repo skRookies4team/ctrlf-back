@@ -47,7 +47,23 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: argocd/infra-service  #
-          IMAGE_TAG: 1.1
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f infra-service/Dockerfile .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+        # 5. Kubernetes Manifest 파일 업데이트 (태그 자동 변경)
+      - name: Update Kubernetes resources
+        run: |
+          # sed 명령어로 deployment 파일의 이미지 태그 부분을 변경합니다.
+          # 주의: infra-deployment.yaml 파일 내 이미지 경로와 형식이 일치해야 합니다.
+           sed -i "s|image: .*|image: ${{ env.IMAGE }}|g" kubernetes/infra-deployment.yaml
+        # 6. 변경된 YAML을 Git에 다시 Push
+      - name: Commit and push changes
+        run: |
+           git config --global user.email "github-actions@github.com"
+           git config --global user.name "github-actions"
+           git add kubernetes/infra-deployment.yaml
+           git commit -m "Update image tag to ${{ github.sha }} [skip ci]" # [skip ci]를 넣어 무한 루프 방지
+           git push
