@@ -57,8 +57,8 @@ jobs:
       - name: Update Kubernetes resources
         run: |
           # sed 명령어로 deployment 파일의 이미지 태그 부분을 변경합니다.
-          # 주의: infra-deployment.yaml 파일 내 이미지 경로와 형식이 일치해야 합니다.
-           sed -i "s|image: .*|image: ${{ env.IMAGE }}|g" kubernetes/infra-deployment.yaml
+          # 주의: infra-deploy.yaml 파일 내 이미지 경로와 형식이 일치해야 합니다.
+           sed -i "s|image: .*|image: ${{ env.IMAGE }}|g" kubernetes/infra-deploy.yaml
         # 6. 변경된 YAML을 Git에 다시 Push
       - name: Commit and push changes
         run: |
