@@ -77,5 +77,6 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update image tag to ${{ github.sha }} [skip ci]"
+            git pull --rebase origin test
             git push origin test  # 현재 브랜치인 'test'로 명시적 푸시
           fi
