@@ -60,7 +60,7 @@ jobs:
           echo "Before update:"
           grep "image:" kubernetes/infra-deploy.yaml
           # sed 명령어로 deployment 파일의 이미지 태그 부분을 변경합니다.
-          sed -i "s|image:.*|image: ${{ env.IMAGE }}|g" kubernetes/infra-deploy.yaml        # 6. 변경된 YAML을 Git에 다시 Push
+          sed -i "s|image:.*|image: ${{ env.IMAGE }}|g" kubernetes/infra-deploy.yaml
 
           echo "After update:"
           grep "image:" kubernetes/infra-deploy.yaml
