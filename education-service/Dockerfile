@@ -7,6 +7,6 @@ RUN gradlew :education-service:build -x test
 # 2. Run stage
 FROM amazoncorretto:17-alpine-jdk
 WORKDIR /app
-# 빌드된 jar 파일 이름을 확인하여 복사하세요
+# 빌드된 jar 파일 이름을 확인하여 복사하세요t
 COPY education-service/build/libs/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
