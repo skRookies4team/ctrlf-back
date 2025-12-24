@@ -25,7 +25,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8090/realms/ctrlf
+          issuer-uri: http://10.0.133.239:8090/realms/ctrlf
 
 management:
   endpoints:
@@ -40,7 +40,7 @@ management:
 
 ai:
   gateway:
-    url: http://localhost:8000
+    url: http://192.168.0.112:8000
 
 app:
   api:

@@ -34,7 +34,7 @@ management:
 
 keycloak:
   admin:
-    base-url: http://localhost:8090
+    base-url: http://10.0.133.239:8090
     realm: ctrlf
     client-id: infra-admin
     client-secret: changeme
@@ -53,6 +53,6 @@ app:
 
   rag:
     ai:
-      base-url: http://localhost:8000
+      base-url: http://192.168.0.112:8000
       token: changeme # 선택
       timeout-seconds: 10
