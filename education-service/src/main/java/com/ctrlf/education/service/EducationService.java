@@ -10,12 +10,14 @@ import com.ctrlf.education.dto.EducationResponses.EducationVideosResponse;
 import com.ctrlf.education.dto.EducationResponses.VideoProgressResponse;
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
-import com.ctrlf.education.entity.EducationVideo;
-import com.ctrlf.education.entity.EducationVideoProgress;
+import com.ctrlf.education.entity.EducationProgress;
 import com.ctrlf.education.repository.EducationRepository;
-import com.ctrlf.education.repository.EducationVideoProgressRepository;
-import com.ctrlf.education.repository.EducationVideoRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.ctrlf.education.repository.EducationProgressRepository;
+import com.ctrlf.education.video.entity.EducationVideo;
+import com.ctrlf.education.video.entity.EducationVideoProgress;
+import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
+import com.ctrlf.education.video.repository.EducationVideoRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -47,6 +49,7 @@ public class EducationService {
     private final EducationRepository educationRepository;
     private final EducationVideoRepository educationVideoRepository;
     private final EducationVideoProgressRepository educationVideoProgressRepository;
+    private final EducationProgressRepository educationProgressRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -58,17 +61,12 @@ public class EducationService {
     @Transactional
     public MutationResponse<UUID> createEducation(CreateEducationRequest req) {
         validateCreate(req);
-        String departmentScopeJson = null;
-        if (req.getDepartmentScope() != null) {
-            try {
-                departmentScopeJson = objectMapper.writeValueAsString(req.getDepartmentScope());
-            } catch (JsonProcessingException ignored) {
-            }
-        }
         Education e = new Education();
         e.setTitle(req.getTitle());
-        e.setCategory(parseCategory(req.getCategory()));
-        e.setDepartmentScope(departmentScopeJson);
+        // 주제 카테고리 enum 저장
+        e.setCategory(parseTopic(req.getCategory()));
+        // edu_type은 enum으로 저장
+        e.setEduType(parseEduType(req.getEduType() != null ? req.getEduType() : req.getCategory()));
         e.setDescription(req.getDescription());
         e.setPassScore(req.getPassScore());
         e.setPassRatio(req.getPassRatio());
@@ -87,95 +85,129 @@ public class EducationService {
     }
 
     /**
-     * 교육 목록 조회(사용자 기준).
+     * 교육 및 영상 목록(내 목록).
+     * - completed/category/sort 파라미터를 받아 사용자 기준으로 영상 목록과 진행 정보를 포함해 반환
+     * - 페이지네이션 없음(상한 1000)
+     */
+    /**
+     * 사용자 기준 교육 및 영상 목록 집계.
      *
-     * - 카테고리/필수 여부/이수 상태(미이수/진행중/완료)/제목/설명/대상 부서를 반환합니다.
-     * - sort: UPDATED(최신 업데이트순), TITLE(제목 오름차순)
+     * - 정렬/카테고리/이수여부 필터를 적용해 교육 목록을 조회한 뒤,
+     *   각 교육에 포함된 영상 목록과 사용자 진행 정보를 합성한다.
+     * - 영상 시청완료 판단은 education.pass_ratio(%) 이상 시청 또는 진행 엔티티의 완료 플래그로 결정한다.
+     * - 교육 진행률은 포함된 영상 진행률의 평균으로 계산한다.
+     * - 페이지네이션은 적용하지 않고 최대 1000건까지 반환한다.
      *
-     * @param page 페이지 번호(0-base)
-     * @param size 페이지 크기
-     * @param completedFilter 이수 여부(로그인 사용자 있을 때만 적용)
-     * @param yearFilter 연도 필터
-     * @param categoryFilter 카테고리 필터(MANDATORY/JOB/ETC)
-     * @param userUuid 사용자 UUID(옵션)
-     * @param sort 정렬 기준(UPDATED|TITLE)
-     * @return 목록 DTO
+     * @param completed 이수 여부 필터(옵션)
+     * @param category 카테고리(MANDATORY/JOB/ETC, 옵션)
+     * @param sort 정렬 기준(UPDATED|TITLE, 기본 UPDATED)
+     * @param userUuid 로그인 사용자 UUID(옵션)
+     * @return 교육 목록(영상 목록/진행 포함)
      */
     public List<EducationResponses.EducationListItem> getEducationsMe(
-        Integer page,
-        Integer size,
-        Optional<Boolean> completedFilter,
-        Optional<Integer> yearFilter,
-        Optional<String> categoryFilter,
-        Optional<UUID> userUuid,
-        String sort
+        Boolean completed,
+        String category,
+        String sort,
+        Optional<UUID> userUuid
     ) {
-        // sort 유효성 검증: 허용값(UPDATED|TITLE)이 아니면 400
-        if (StringUtils.hasText(sort)) {
-            String s = sort.trim().toUpperCase();
-            if (!s.equals("UPDATED") && !s.equals("TITLE")) {
-                throw new IllegalArgumentException("invalid sort: " + sort + " (allowed: UPDATED, TITLE)");
-            }
+        // 정렬 키 정규화
+        String sortKey = (!StringUtils.hasText(sort)) ? "UPDATED" : sort.trim().toUpperCase();
+        if (!"UPDATED".equals(sortKey) && !"TITLE".equals(sortKey)) {
+            sortKey = "UPDATED";
         }
-        int pageSafe = page == null ? 0 : Math.max(page, 0);
-        int sizeSafe = size == null ? 10 : Math.min(Math.max(size, 1), 100);
-        int offset = pageSafe * sizeSafe;
-        Optional<String> sanitizedCategory = categoryFilter
-            .filter(StringUtils::hasText)
-            .map(s -> s.trim().toUpperCase())
-            .filter(s -> s.equals("MANDATORY") || s.equals("JOB") || s.equals("ETC"));
-
-        Optional<Boolean> effectiveCompleted = userUuid.isPresent() ? completedFilter : Optional.empty();
-
-        // 정렬 키 정규화: 기본 UPDATED, 제목순은 TITLE
-        String sortKey = (!StringUtils.hasText(sort) || "UPDATED".equalsIgnoreCase(sort.trim())) ? "UPDATED" : "TITLE";
+        // 카테고리 필터 정규화(미지정이면 null)
+        String categoryFilter = !StringUtils.hasText(category) ? null : category.trim().toUpperCase();
+        int offset = 0;
+        int size = 1000;
+        // 교육 기본 목록 조회(사용자 기준 일부 플래그 포함)
         List<Object[]> rows = educationRepository.findEducationsNative(
-            offset,
-            sizeSafe,
-            effectiveCompleted.orElse(null),
-            yearFilter.orElse(null),
-            sanitizedCategory.orElse(null),
-            userUuid.orElse(null),
-            sortKey
+            offset, size, completed, null, categoryFilter, userUuid.orElse(null), sortKey
         );
         List<EducationResponses.EducationListItem> result = new ArrayList<>();
         for (Object[] r : rows) {
-            UUID id = (UUID) r[0];
+            UUID eduId = (UUID) r[0];
             String title = (String) r[1];
             String description = (String) r[2];
-            String category = (String) r[3];
+            String cat = (String) r[3];
             Boolean required = (Boolean) r[4];
-            String deptScopeJson = (String) r[5];
-            Boolean isCompleted = (Boolean) r[6];
-            Boolean hasProgress = (Boolean) r[7];
-            List<String> targetDepts = new ArrayList<>();
-            if (deptScopeJson != null && !deptScopeJson.isBlank()) {
-                try {
-                    targetDepts = objectMapper.readValue(deptScopeJson, objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
-                } catch (Exception ignored) {
+            Boolean hasProgress = (Boolean) r[6];
+            // 교육별 영상/진행 정보 결합
+            List<EducationVideo> vids = educationVideoRepository.findByEducationId(eduId);
+            List<EducationResponses.EducationVideosResponse.VideoItem> videoItems = new ArrayList<>();
+            int sumPct = 0;
+            // 교육 시청완료 기준 비율(pass_ratio), 미설정 시 100%
+            Integer passRatio = educationRepository.findById(eduId).map(Education::getPassRatio).orElse(100);
+            for (EducationVideo v : vids) {
+                Integer resume = 0;
+                Integer total = 0;
+                Boolean completedV = false;
+                Integer pctV = 0;
+                if (userUuid.isPresent()) {
+                    var pv = educationVideoProgressRepository.findByUserUuidAndEducationIdAndVideoId(userUuid.get(), eduId, v.getId());
+                    if (pv.isPresent()) {
+                        var p = pv.get();
+                        resume = p.getLastPositionSeconds() != null ? p.getLastPositionSeconds() : 0;
+                        total = p.getTotalWatchSeconds() != null ? p.getTotalWatchSeconds() : 0;
+                        completedV = p.getIsCompleted() != null && p.getIsCompleted();
+                        pctV = p.getProgress() != null ? p.getProgress() : 0;
+                    }
                 }
+                int durationSec = v.getDuration() != null ? v.getDuration() : 0;
+                // 진행률 값이 없으면 position/duration으로 보정 계산
+                if ((pctV == null || pctV == 0) && durationSec > 0 && resume != null && resume > 0) {
+                    pctV = Math.min(100, Math.max(0, (int) Math.round((resume * 100.0) / durationSec)));
+                }
+                String vStatus;
+                // 영상 시청완료: 완료 플래그이거나 pass_ratio 이상 시청
+                if (Boolean.TRUE.equals(completedV) || (pctV != null && pctV >= (passRatio != null ? passRatio : 100))) {
+                    vStatus = "시청완료";
+                    pctV = 100;
+                } else if ((pctV != null && pctV > 0) || (resume != null && resume > 0)) {
+                    vStatus = "시청중";
+                } else {
+                    vStatus = "시청전";
+                }
+                sumPct += pctV != null ? pctV : 0;
+                videoItems.add(new EducationResponses.EducationVideosResponse.VideoItem(
+                    v.getId(),
+                    v.getTitle(),
+                    v.getFileUrl(),
+                    durationSec,
+                    v.getVersion() != null ? v.getVersion() : 1,
+                    v.getTargetDeptCode(),
+                    v.getDepartmentScope(),
+                    resume,
+                    completedV,
+                    total,
+                    pctV,
+                    vStatus
+                ));
             }
-            // 이수 상태 계산: 완료 > 진행중(진행내역 존재) > 미이수
-            String status;
-            if (Boolean.TRUE.equals(isCompleted)) {
-                status = "완료";
-            } else if (Boolean.TRUE.equals(hasProgress)) {
-                status = "진행중";
+            // 교육 진행률: 포함된 영상 진행률 평균
+            int eduProgress = vids.isEmpty() ? 0 : (sumPct / Math.max(vids.size(), 1));
+            String watchStatus;
+            // 교육 시청 상태: pass_ratio 기준 또는 진행 여부로 라벨링
+            if (eduProgress >= (passRatio != null ? passRatio : 100)) {
+                watchStatus = "시청완료";
+            } else if (Boolean.TRUE.equals(hasProgress) || eduProgress > 0) {
+                watchStatus = "시청중";
             } else {
-                status = "미이수";
+                watchStatus = "시청전";
             }
             result.add(new EducationResponses.EducationListItem(
-                id,
+                eduId,
                 title,
                 description,
-                category,
+                cat,
                 required != null && required,
-                status,
-                targetDepts
+                eduProgress,
+                watchStatus,
+                videoItems
             ));
         }
         return result;
     }
+
 
     /**
      * 교육 상세 조회.
@@ -216,16 +248,11 @@ public class EducationService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
         if (StringUtils.hasText(req.getTitle())) e.setTitle(req.getTitle());
         if (req.getDescription() != null) e.setDescription(req.getDescription());
-        if (StringUtils.hasText(req.getCategory())) e.setCategory(parseCategory(req.getCategory()));
+        if (StringUtils.hasText(req.getCategory())) e.setCategory(parseTopic(req.getCategory()));
+        if (StringUtils.hasText(req.getEduType())) e.setEduType(parseEduType(req.getEduType()));
         if (req.getRequire() != null) e.setRequire(req.getRequire());
         if (req.getPassScore() != null) e.setPassScore(req.getPassScore());
         if (req.getPassRatio() != null) e.setPassRatio(req.getPassRatio());
-        if (req.getDepartmentScope() != null) {
-            try {
-                e.setDepartmentScope(objectMapper.writeValueAsString(req.getDepartmentScope()));
-            } catch (JsonProcessingException ignored) {
-            }
-        }
         educationRepository.saveAndFlush(e);
         return e.getUpdatedAt();
     }
@@ -253,28 +280,36 @@ public class EducationService {
         if (affected == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found");
         }
-        return new MutationResponse<>(id);
     }
     
     /**
      * 교육 영상 목록 조회. 사용자 UUID가 있으면 각 영상의 진행률 정보를 포함합니다.
+     * 사용자 부서 목록이 있으면 해당 부서에 속하는 영상만 필터링합니다.
      *
      * @param id 교육 ID
      * @param userUuid 사용자 UUID(옵션)
+     * @param userDepartments 사용자 부서 목록(옵션)
      * @return 영상 목록 응답
      */
-    public EducationVideosResponse getEducationVideos(UUID id, Optional<UUID> userUuid) {
+    public EducationVideosResponse getEducationVideos(UUID id, Optional<UUID> userUuid, List<String> userDepartments) {
         Education e = educationRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
         // 해당 교육에 속한 영상 목록 조회
         List<EducationVideo> videos = educationVideoRepository.findByEducationId(id);
         // 응답으로 내려줄 영상 항목 DTO 리스트
         List<EducationVideosResponse.VideoItem> items = new ArrayList<>();
+        // 영상 시청 완료 기준 비율(education.pass_ratio, 기본 100)
+        Integer passRatio = e.getPassRatio() != null ? e.getPassRatio() : 100;
         for (EducationVideo v : videos) {
+            // 사용자 부서 필터링: departmentScope가 설정된 경우 사용자 부서와 매칭 확인
+            if (!isVideoAccessibleByDepartment(v, userDepartments)) {
+                continue; // 부서 권한이 없으면 스킵
+            }
             // 사용자별 이어보기 위치/누적 시청시간/완료 여부 기본값
             Integer resume = 0;
             Integer total = 0;
             Boolean completed = false;
+            Integer pct = 0;
             // 사용자 UUID가 있으면 진행 정보 조회
             if (userUuid.isPresent()) {
                 var pv = educationVideoProgressRepository.findByUserUuidAndEducationIdAndVideoId(userUuid.get(), id, v.getId());
@@ -283,21 +318,38 @@ public class EducationService {
                     resume = p.getLastPositionSeconds() != null ? p.getLastPositionSeconds() : 0;
                     total = p.getTotalWatchSeconds() != null ? p.getTotalWatchSeconds() : 0;
                     completed = p.getIsCompleted() != null && p.getIsCompleted();
+                    pct = p.getProgress() != null ? p.getProgress() : 0;
                 }
+            }
+            // 진행률 계산 보정: progress 값이 없으면 duration/position으로 계산
+            int durationSec = v.getDuration() != null ? v.getDuration() : 0;
+            if ((pct == null || pct == 0) && durationSec > 0 && resume != null && resume > 0) {
+                pct = Math.min(100, Math.max(0, (int) Math.round((resume * 100.0) / durationSec)));
+            }
+            // 시청 상태 라벨
+            String watchStatus;
+            if (Boolean.TRUE.equals(completed) || (pct != null && pct >= (passRatio != null ? passRatio : 100))) {
+                watchStatus = "시청완료";
+                pct = 100;
+            } else if ((pct != null && pct > 0) || (resume != null && resume > 0)) {
+                watchStatus = "시청중";
+            } else {
+                watchStatus = "시청전";
             }
             // 단일 영상 항목 구성
             items.add(new EducationVideosResponse.VideoItem(
                 v.getId(),
+                v.getTitle(),
                 v.getFileUrl(),
-                v.getDuration() != null ? v.getDuration() : 0,
+                durationSec,
                 v.getVersion() != null ? v.getVersion() : 1,
-                v.getIsMain() != null && v.getIsMain(),
                 v.getTargetDeptCode(),
-                null, // drmKey (optional)
-                null, // playbackToken (optional)
+                v.getDepartmentScope(),
                 resume,
                 completed,
-                total
+                total,
+                pct,
+                watchStatus
             ));
         }
         // 목록 응답 생성
@@ -306,6 +358,40 @@ public class EducationService {
             .title(e.getTitle())
             .videos(items)
             .build();
+    }
+
+    /**
+     * 영상이 사용자 부서에서 접근 가능한지 확인합니다.
+     * - departmentScope가 null이거나 비어있으면 모든 부서에서 접근 가능
+     * - departmentScope에 사용자 부서 중 하나라도 포함되면 접근 가능
+     */
+    private boolean isVideoAccessibleByDepartment(EducationVideo video, List<String> userDepartments) {
+        String deptScope = video.getDepartmentScope();
+        // departmentScope가 없으면 모든 부서 접근 가능
+        if (deptScope == null || deptScope.isBlank()) {
+            return true;
+        }
+        // 사용자 부서가 없으면 접근 불가
+        if (userDepartments == null || userDepartments.isEmpty()) {
+            return false;
+        }
+        // departmentScope JSON 파싱
+        try {
+            List<String> allowedDepts = objectMapper.readValue(deptScope, new TypeReference<List<String>>() {});
+            if (allowedDepts == null || allowedDepts.isEmpty()) {
+                return true; // 빈 리스트면 모든 부서 접근 가능
+            }
+            // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
+            for (String userDept : userDepartments) {
+                if (allowedDepts.contains(userDept)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            // 파싱 실패 시 접근 허용 (관대하게 처리)
+            return true;
+        }
     }
 
     /**
@@ -393,8 +479,26 @@ public class EducationService {
         // 모두 영상 시청이 완료되었는지 확인
         boolean ok = !all.isEmpty() && all.stream().allMatch(p -> p.getIsCompleted() != null && p.getIsCompleted());
         if (ok) {
+            // EducationProgress 조회 또는 생성
+            EducationProgress progress = educationProgressRepository
+                .findByUserUuidAndEducationId(userUuid, educationId)
+                .orElseGet(() -> {
+                    EducationProgress newProgress = new EducationProgress();
+                    newProgress.setUserUuid(userUuid);
+                    newProgress.setEducationId(educationId);
+                    newProgress.setProgress(100);
+                    return newProgress;
+                });
+            
+            // 이수 완료 처리
+            Instant completedAt = Instant.now();
+            progress.setIsCompleted(true);
+            progress.setCompletedAt(completedAt);
+            progress.setProgress(100);
+            educationProgressRepository.save(progress);
+            
             result.put("status", "COMPLETED");
-            result.put("completedAt", Instant.now().toString());
+            result.put("completedAt", completedAt.toString());
         } else {
             result.put("status", "FAILED");
             result.put("message", "영상 이수 조건 미충족");
@@ -418,15 +522,37 @@ public class EducationService {
      * 문자열 카테고리를 enum(EducationCategory)으로 변환.
      * - 허용값: MANDATORY, JOB, ETC (대소문자 무시)
      */
-    private EducationCategory parseCategory(String category) {
-        String normalized = category == null ? null : category.trim().toUpperCase();
+    private EducationCategory parseEduType(String eduType) {
+        String normalized = eduType == null ? null : eduType.trim().toUpperCase();
         if (!StringUtils.hasText(normalized)) {
-            throw new IllegalArgumentException("category is required");
+            throw new IllegalArgumentException("eduType(category) is required");
         }
         try {
             return EducationCategory.valueOf(normalized);
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("invalid category: " + category + " (allowed: MANDATORY, JOB, ETC)");
+            throw new IllegalArgumentException("invalid eduType: " + eduType + " (allowed: MANDATORY, JOB, ETC)");
+        }
+    }
+
+    private com.ctrlf.education.entity.EducationTopic parseTopic(String topic) {
+        if (!StringUtils.hasText(topic)) {
+            throw new IllegalArgumentException("category(topic) is required");
+        }
+        String n = topic.trim().toUpperCase().replace(' ', '_');
+        // 한글 라벨 허용 매핑
+        switch (topic.trim()) {
+            case "직무": n = "JOB_DUTY"; break;
+            case "성희롱 예방": n = "SEXUAL_HARASSMENT_PREVENTION"; break;
+            case "개인 정보 보호":
+            case "개인정보 보호": n = "PERSONAL_INFO_PROTECTION"; break;
+            case "직장 내 괴롭힘": n = "WORKPLACE_BULLYING"; break;
+            case "장애인 인식 개선": n = "DISABILITY_AWARENESS"; break;
+            default: break;
+        }
+        try {
+            return com.ctrlf.education.entity.EducationTopic.valueOf(n);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("invalid category(topic): " + topic + " (allowed: JOB_DUTY, SEXUAL_HARASSMENT_PREVENTION, PERSONAL_INFO_PROTECTION, WORKPLACE_BULLYING, DISABILITY_AWARENESS)");
         }
     }
 }

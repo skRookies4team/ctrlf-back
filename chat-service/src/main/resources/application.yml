@@ -25,7 +25,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080/realms/ctrlf
+          issuer-uri: http://localhost:8090/realms/ctrlf
 
 management:
   endpoints:
@@ -37,3 +37,15 @@ management:
     health:
       probes:
         enabled: true
+
+ai:
+  gateway:
+    url: http://localhost:8000
+
+app:
+  api:
+    title: Chat Service API
+    description: Chat endpoints with JWT authorize
+    security:
+      enabled: true
+

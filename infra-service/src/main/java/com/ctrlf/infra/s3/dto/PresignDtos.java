@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * S3 Presign API 요청/응답 DTO 모음.
@@ -20,8 +21,9 @@ public final class PresignDtos {
      * - type: 파일 카테고리(경로 prefix)
      */
     @Getter
+    @Setter
     @NoArgsConstructor
-    public static class UploadRequest {
+    public static class S3UploadRequest {
         @NotBlank
         @Schema(example = "test.png")
         private String filename;
@@ -51,6 +53,7 @@ public final class PresignDtos {
      * - fileUrl: s3://bucket/key 또는 key 문자열
      */
     @Getter
+    @Setter
     @NoArgsConstructor
     public static class DownloadRequest {
         @NotBlank

@@ -1,5 +1,7 @@
 package com.ctrlf.common.security;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -24,6 +26,25 @@ public final class SecurityUtils {
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    /**
+     * JWT에서 사용자 부서 목록을 추출합니다.
+     * - department 클레임이 없거나 비어있으면 빈 리스트를 반환합니다.
+     */
+    @SuppressWarnings("unchecked")
+    public static List<String> extractDepartments(Jwt jwt) {
+        if (jwt == null) return Collections.emptyList();
+        Object deptClaim = jwt.getClaim("department");
+        if (deptClaim == null) return Collections.emptyList();
+        if (deptClaim instanceof List) {
+            return (List<String>) deptClaim;
+        }
+        if (deptClaim instanceof String) {
+            String dept = (String) deptClaim;
+            return dept.isBlank() ? Collections.emptyList() : List.of(dept);
+        }
+        return Collections.emptyList();
     }
 }
 

@@ -23,7 +23,7 @@ subprojects {
     dependencyManagement {
         imports {
             mavenBom "org.springframework.boot:spring-boot-dependencies:3.3.3"
-            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.3"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.4"
         }
     }
 
@@ -32,6 +32,9 @@ subprojects {
         annotationProcessor 'org.projectlombok:lombok:1.18.32'
         testCompileOnly 'org.projectlombok:lombok:1.18.32'
         testAnnotationProcessor 'org.projectlombok:lombok:1.18.32'
+
+        // OpenFeign (공통)
+        implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     }
 
     configurations {

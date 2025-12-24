@@ -4,6 +4,13 @@
   "displayName": "CTRL-F",
   "loginTheme": "ctrlf-theme",
 
+  "accessTokenLifespan": 3600,
+  "accessTokenLifespanForImplicitFlow": 90000,
+  "ssoSessionIdleTimeout": 180000,
+  "ssoSessionMaxLifespan": 3600000,
+  "accessCodeLifespan": 6000,
+  "accessCodeLifespanUserAction": 30000,
+
   "roles": {
     "realm": [
       {
@@ -36,20 +43,17 @@
       "publicClient": false,
       "serviceAccountsEnabled": true,
       "secret": "changeme",
-      "directAccessGrantsEnabled": false,
-      "redirectUris": []
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [],
+      "defaultClientScopes": ["profile", "email"]
     },
     {
       "clientId": "web-app",
       "protocol": "openid-connect",
       "publicClient": true,
       "standardFlowEnabled": true,
-      "redirectUris": [
-        "http://localhost:5173/*"
-      ],
-      "webOrigins": [
-        "http://localhost:5173"
-      ],
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
       "protocolMappers": [
         {
           "name": "employeeNo",
@@ -275,13 +279,11 @@
       "credentials": [
         {
           "type": "password",
-          "value": "12345",
+          "value": "11111",
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
         "employeeNo": ["1234"],
         "fullName": ["유저 원"],
@@ -309,14 +311,11 @@
       "credentials": [
         {
           "type": "password",
-          "value": "54321",
+          "value": "22222",
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "SYSTEM_ADMIN"
-      ],
+      "realmRoles": ["EMPLOYEE", "SYSTEM_ADMIN"],
       "attributes": {
         "employeeNo": ["2222"],
         "fullName": ["시스템 관리자"],
@@ -333,6 +332,70 @@
         "companyEmail": ["admin1@example.com"],
         "residentRegistrationNumber": ["000000-0000001"],
         "phoneNumber": ["010-1111-2222"]
+      }
+    },
+    {
+      "username": "reviewer1",
+      "email": "reviewer1@a.com",
+      "enabled": true,
+      "firstName": "콘텐츠",
+      "lastName": "검토자",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "33333",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["EMPLOYEE", "CONTENTS_REVIEWER"],
+      "attributes": {
+        "employeeNo": ["3001"],
+        "fullName": ["콘텐츠 검토자"],
+        "gender": ["F"],
+        "age": ["31"],
+        "tenureYears": ["6"],
+        "hireYear": ["2019"],
+        "position": ["대리"],
+        "department": ["컴플라이언스팀"],
+        "overtimeHours": ["17"],
+        "performanceScore": ["4.6"],
+        "unusedVacationDays": ["6"],
+        "salary": ["52000000"],
+        "companyEmail": ["reviewer1@a.com"],
+        "residentRegistrationNumber": ["900101-2000001"],
+        "phoneNumber": ["010-3001-0001"]
+      }
+    },
+    {
+      "username": "creator1",
+      "email": "creator1@a.com",
+      "enabled": true,
+      "firstName": "교육",
+      "lastName": "제작자",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "44444",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["EMPLOYEE", "VIDEO_CREATOR"],
+      "attributes": {
+        "employeeNo": ["4001"],
+        "fullName": ["교육 영상 제작자"],
+        "gender": ["M"],
+        "age": ["28"],
+        "tenureYears": ["2"],
+        "hireYear": ["2023"],
+        "position": ["사원"],
+        "department": ["교육콘텐츠팀"],
+        "overtimeHours": ["24"],
+        "performanceScore": ["4.2"],
+        "unusedVacationDays": ["11"],
+        "salary": ["41000000"],
+        "companyEmail": ["creator1@a.com"],
+        "residentRegistrationNumber": ["950101-1000001"],
+        "phoneNumber": ["010-4001-0001"]
       }
     }
   ]

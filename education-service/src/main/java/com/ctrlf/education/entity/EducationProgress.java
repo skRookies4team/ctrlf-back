@@ -22,7 +22,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Table(name = "education_progress", schema = "education")
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
 public class EducationProgress {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

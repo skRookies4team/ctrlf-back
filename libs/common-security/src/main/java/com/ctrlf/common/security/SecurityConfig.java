@@ -21,19 +21,15 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, Environment env) throws Exception {
         http.csrf(csrf -> csrf.disable());
         http.cors(Customizer.withDefaults());
+        // API Gateway에서 이미 인증을 검증하므로, 모든 요청을 허용
         http.authorizeHttpRequests(auth -> auth
-            .requestMatchers(
-                "/v3/api-docs/**",
-                "/swagger-ui.html",
-                "/swagger-ui/**",
-                "/actuator/**",
-                "/swagger-resources/**"
-            ).permitAll()
             .anyRequest().permitAll()
         );
         http.httpBasic(b -> b.disable());
         http.formLogin(f -> f.disable());
 
+        // OAuth2 Resource Server 활성화 (JWT 파싱용)
+        // issuer-uri가 설정되어 있으면 JWT를 파싱하여 @AuthenticationPrincipal에 주입
         String issuer = env.getProperty("spring.security.oauth2.resourceserver.jwt.issuer-uri");
         String jwk = env.getProperty("spring.security.oauth2.resourceserver.jwt.jwk-set-uri");
         if ((issuer != null && !issuer.isBlank()) || (jwk != null && !jwk.isBlank())) {

@@ -5,6 +5,7 @@ plugins {
 dependencies {
   implementation project(':libs:common-dto')
   implementation project(':libs:common-security')
+  implementation project(':libs:common-utils')
 
   implementation 'org.springframework.boot:spring-boot-starter-web:3.3.3'
   implementation 'org.springframework.boot:spring-boot-starter-data-jpa:3.3.3'
@@ -12,6 +13,9 @@ dependencies {
 
   implementation 'org.springframework.boot:spring-boot-starter-security:3.3.3'
   implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.3.3'
+
+  // 🔽 WebClient / Mono 사용을 위한 WebFlux (필수)
+  implementation 'org.springframework.boot:spring-boot-starter-webflux:3.3.3'
 
   implementation 'org.flywaydb:flyway-core'
   implementation 'org.flywaydb:flyway-database-postgresql:10.10.0'
