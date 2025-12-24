@@ -4,6 +4,7 @@ import com.ctrlf.common.security.SecurityUtils;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptCompleteCallback;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptCompleteResponse;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptDetailResponse;
+import com.ctrlf.education.script.dto.EducationScriptDto.ScriptLookupResponse;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptResponse;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptUpdateRequest;
 import com.ctrlf.education.script.dto.EducationScriptDto.ScriptUpdateResponse;
@@ -44,6 +45,25 @@ public class EducationScriptController {
 
   private final ScriptService scriptService;
   private final VideoService videoService;
+
+  @Operation(
+      summary = "스크립트 ID 조회 (프론트 -> 백엔드)",
+      description = "videoId 또는 educationId로 스크립트 ID를 조회합니다. 둘 다 제공된 경우 videoId 우선."
+  )
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "조회 성공",
+        content = @Content(schema = @Schema(implementation = ScriptLookupResponse.class))),
+    @ApiResponse(responseCode = "400", description = "videoId와 educationId 모두 없음", content = @Content),
+    @ApiResponse(responseCode = "404", description = "스크립트를 찾을 수 없음", content = @Content)
+  })
+  @GetMapping("/lookup")
+  public ResponseEntity<ScriptLookupResponse> lookupScriptId(
+      @Parameter(description = "영상 ID") @RequestParam(required = false) UUID videoId,
+      @Parameter(description = "교육 ID") @RequestParam(required = false) UUID educationId) {
+    return ResponseEntity.ok(scriptService.findScriptId(videoId, educationId));
+  }
 
   @Operation(summary = "스크립트 조회 (* 개발용)", description = "AI가 생성한 스크립트를 조회합니다. (챕터/씬 포함)")
   @ApiResponses({
