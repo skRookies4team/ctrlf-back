@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: education-service
+  namespace: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: education-service
+  template:
+    metadata:
+      labels:
+        app: education-service
+    spec:
+      containers:
+        - name: education-service
+          # 여기에 아까 성공한 ECR 이미지 주소를 정확히 넣으세요a
+          image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/education-service:304a48c83b8f58fbc3b5b9d1cbe3275c6e42fa40
+          ports:
+            - containerPort: 9002 # Spring Boot 앱 포트
+          imagePullPolicy: Always
