@@ -16,7 +16,7 @@ spec:
       containers:
         - name: education-service
           # 여기에 아까 성공한 ECR 이미지 주소를 정확히 넣으세요a
-          image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/education-service:732ba9f3453d6c4219579b1191d5bf00fd0c26e4
+          image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/education-service:200d091e3f03e7c1fcc7dca694687d794bc4069d
           ports:
             - containerPort: 9002 # Spring Boot 앱 포트
           imagePullPolicy: Always
