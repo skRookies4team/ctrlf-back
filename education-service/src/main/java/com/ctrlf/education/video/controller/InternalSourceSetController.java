@@ -1,6 +1,8 @@
 package com.ctrlf.education.video.controller;
 
 import com.ctrlf.education.script.client.InfraRagClient;
+import com.ctrlf.education.script.dto.EducationScriptDto.RenderSpecResponse;
+import com.ctrlf.education.script.service.ScriptService;
 import com.ctrlf.education.video.dto.VideoDtos.InternalSourceSetDocumentsResponse;
 import com.ctrlf.education.video.dto.VideoDtos.SourceSetCompleteCallback;
 import com.ctrlf.education.video.dto.VideoDtos.SourceSetCompleteResponse;
@@ -44,7 +46,31 @@ import org.springframework.web.client.RestClient;
 public class InternalSourceSetController {
 
     private final SourceSetService sourceSetService;
+    private final ScriptService scriptService;
     private final InfraRagClient infraRagClient;
+
+    /**
+     * 스크립트 렌더 스펙 조회 (FastAPI → Spring).
+     * AI 서버가 렌더링을 위해 스크립트의 챕터/씬 정보를 조회합니다.
+     */
+    @GetMapping("/scripts/{scriptId}/render-spec")
+    @Operation(
+        summary = "스크립트 렌더 스펙 조회 (AI -> BACK)",
+        description = "AI 서버가 렌더링을 위해 스크립트의 챕터/씬 정보를 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = RenderSpecResponse.class))),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류"),
+        @ApiResponse(responseCode = "404", description = "스크립트를 찾을 수 없음")
+    })
+    public ResponseEntity<RenderSpecResponse> getRenderSpec(
+        @Parameter(description = "스크립트 ID", required = true)
+        @PathVariable UUID scriptId
+    ) {
+        log.info("렌더 스펙 조회 요청: scriptId={}", scriptId);
+        return ResponseEntity.ok(scriptService.getRenderSpec(scriptId));
+    }
 
     /**
      * 소스셋 문서 목록 조회 (FastAPI → Spring).
