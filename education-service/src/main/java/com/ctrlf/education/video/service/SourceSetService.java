@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -99,14 +101,28 @@ public class SourceSetService {
         sourceSetDocumentRepository.saveAll(documents);
 
         // 소스셋 생성 후 AI 서버에 작업 시작 요청 (BestEffort)
-        // 실패해도 소스셋 생성은 성공으로 처리
-        try {
-            startSourceSetProcessing(sourceSet.getId(), sourceSet, req.documentIds());
-        } catch (Exception e) {
-            log.warn("소스셋 작업 시작 요청 실패 (소스셋은 생성됨): sourceSetId={}, error={}", 
-                sourceSet.getId(), e.getMessage(), e);
-            // 실패해도 소스셋 생성은 성공으로 처리
-        }
+        // 트랜잭션 커밋 후 실행하여 SourceSet이 DB에 확실히 저장된 후 AI 서버가 조회할 수 있도록 함
+        final UUID sourceSetId = sourceSet.getId();
+        final UUID educationId = sourceSet.getEducationId();
+        final UUID videoId = sourceSet.getVideoId();
+        final List<String> documentIdsForCallback = req.documentIds();
+        
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    log.info("트랜잭션 커밋 완료, AI 서버에 작업 시작 요청: sourceSetId={}", sourceSetId);
+                    // 트랜잭션 밖에서 실행되므로 SourceSet을 다시 조회
+                    SourceSet sourceSetAfterCommit = sourceSetRepository.findByIdAndNotDeleted(sourceSetId)
+                        .orElseThrow(() -> new IllegalStateException("SourceSet not found after commit: " + sourceSetId));
+                    startSourceSetProcessing(sourceSetId, sourceSetAfterCommit, documentIdsForCallback);
+                } catch (Exception e) {
+                    log.warn("소스셋 작업 시작 요청 실패 (소스셋은 생성됨): sourceSetId={}, error={}", 
+                        sourceSetId, e.getMessage(), e);
+                    // 실패해도 소스셋 생성은 성공으로 처리
+                }
+            }
+        });
 
         // 응답 생성
         List<String> documentIds = req.documentIds();
@@ -350,10 +366,32 @@ public class SourceSetService {
         UUID sourceSetId,
         SourceSetCompleteCallback callback
     ) {
+        // 디버깅: SourceSet 존재 여부 확인 (삭제된 것 포함)
+        sourceSetRepository.findById(sourceSetId).ifPresentOrElse(
+            ss -> {
+                if (ss.getDeletedAt() != null) {
+                    log.warn(
+                        "SourceSet이 삭제된 상태입니다: sourceSetId={}, deletedAt={}, status={}",
+                        sourceSetId, ss.getDeletedAt(), ss.getStatus()
+                    );
+                } else {
+                    log.debug("SourceSet 존재 확인: sourceSetId={}, status={}", sourceSetId, ss.getStatus());
+                }
+            },
+            () -> log.warn("SourceSet이 DB에 존재하지 않습니다: sourceSetId={}", sourceSetId)
+        );
+        
         SourceSet sourceSet = sourceSetRepository.findByIdAndNotDeleted(sourceSetId)
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND,
-                "소스셋을 찾을 수 없습니다: " + sourceSetId));
+            .orElseThrow(() -> {
+                log.error(
+                    "소스셋 완료 콜백 실패: sourceSetId={}, status={}, sourceSetStatus={}, errorCode={}, errorMessage={}",
+                    sourceSetId, callback.status(), callback.sourceSetStatus(),
+                    callback.errorCode(), callback.errorMessage()
+                );
+                return new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "소스셋을 찾을 수 없습니다: " + sourceSetId);
+            });
 
         // 소스셋 상태 업데이트
         sourceSet.setStatus(callback.sourceSetStatus());

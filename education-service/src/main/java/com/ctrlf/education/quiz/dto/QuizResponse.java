@@ -48,6 +48,7 @@ public final class QuizResponse {
     public static class ResultResponse {
         private int score;
         private boolean passed;
+        private Integer passScore; // 통과 기준 점수
         private int correctCount;
         private int wrongCount;
         private int totalCount;

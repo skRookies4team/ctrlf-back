@@ -78,14 +78,17 @@ public class QuizService {
      */
     @Transactional
     public StartResponse start(UUID educationId, UUID userUuid) {
+        // 1. 교육 정보 조회
         educationRepository.findById(educationId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
         
+        // 2. 이전 시도 조회
         Optional<QuizAttempt> existing = attemptRepository.findTopByUserUuidAndEducationIdAndSubmittedAtIsNullOrderByCreatedAtDesc(userUuid, educationId);
         QuizAttempt attempt;
         if (existing.isPresent()) {
             attempt = existing.get();
         } else {
+            // 3. 새 시도 생성
             attempt = new QuizAttempt();
             attempt.setUserUuid(userUuid);
             attempt.setEducationId(educationId);
@@ -96,12 +99,13 @@ public class QuizService {
             attempt = attemptRepository.save(attempt);
             // AI 서버로 문항 생성 요청 (실패 시 placeholder로 폴백)
             try {
-                // EducationScript 조회 (docId, docVersion) - 최신 버전 우선
+                // 4. EducationScript 조회 (docId, docVersion) - 승인된 스크립트 중 최신 버전 우선
                 Optional<EducationScript> scriptOpt = scriptRepository
-                    .findByEducationIdAndDeletedAtIsNullOrderByVersionDesc(educationId)
+                    .findByEducationIdAndDeletedAtIsNullAndStatusOrderByVersionDesc(educationId, "APPROVED")
                     .stream()
                     .findFirst();
                 
+                // 5. AI 서버 요청 데이터 생성
                 QuizAiDtos.GenerateRequest req = new QuizAiDtos.GenerateRequest();
                 req.setLanguage("ko");
                 req.setNumQuestions(5);
@@ -163,7 +167,7 @@ public class QuizService {
                 }
                 req.setQuizCandidateBlocks(candidateBlocks);
                 
-                // 재응시 시 이전 문항 제외
+                // 6. 재응시 시 이전 문항 제외
                 if (attempt.getAttemptNo() > 1) {
                     List<QuizAiDtos.ExcludePreviousQuestion> excludeQuestions = new ArrayList<>();
                     List<QuizAttempt> previousAttempts = attemptRepository
@@ -187,7 +191,7 @@ public class QuizService {
                     req.setExcludePreviousQuestions(excludeQuestions);
                 }
 
-                // AI 서버 요청 데이터 로깅
+                // 7. AI 서버 요청 데이터 로깅
                 try {
                     String requestJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(req);
                     log.info("AI 서버 퀴즈 생성 요청 (educationId: {}, attemptNo: {}):\n{}", 
@@ -196,7 +200,7 @@ public class QuizService {
                     log.warn("AI 서버 요청 데이터 로깅 실패: {}", e.getMessage());
                 }
 
-                // ai 서버 요청
+                // 8. ai 서버 요청
                 QuizAiDtos.GenerateResponse aiRes = quizAiClient.generate(req);
                 List<QuizQuestion> qs = new ArrayList<>();
                 if (aiRes != null && aiRes.getQuestions() != null) {
@@ -209,10 +213,14 @@ public class QuizService {
                         // map options
                         List<String> choices = new ArrayList<>();
                         Integer correctIdx = null;
+
+                        // 9. 문항 옵션 처리
                         if (aq.getOptions() != null) {
                             int idx = 0;
                             for (QuizAiDtos.AiOption opt : aq.getOptions()) {
                                 choices.add(opt.getText());
+
+                                // 9-1. 정답 옵션 처리
                                 if (Boolean.TRUE.equals(opt.getIsCorrect()) && correctIdx == null) {
                                     correctIdx = idx;
                                 }
@@ -229,6 +237,8 @@ public class QuizService {
                 if (qs.isEmpty()) {
                     qs = generatePlaceholders(attempt.getId());
                 }
+
+                // 10. 문항 저장
                 questionRepository.saveAll(qs);
             } catch (Exception ex) {
                 // 폴백
@@ -236,7 +246,11 @@ public class QuizService {
                 questionRepository.saveAll(qs);
             }
         }
+
+        // 11. 문항 조회
         List<QuizQuestion> list = questionRepository.findByAttemptIdOrderByQuestionOrderAsc(attempt.getId());
+
+        // 12. 문항 리스트 생성
         List<QuestionItem> items = new ArrayList<>();
         for (QuizQuestion q : list) {
             items.add(new QuestionItem(
@@ -264,24 +278,34 @@ public class QuizService {
      */
     @Transactional
     public SaveResponse save(UUID attemptId, UUID userUuid, SaveRequest req) {
+        // 1. 시도 조회
         QuizAttempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "attempt not found"));
+
+        // 2. 권한 처리
         if (!attempt.getUserUuid().equals(userUuid)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "forbidden");
         }
+
+        // 3. 이미 제출된 시도인지 처리
         if (attempt.getSubmittedAt() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "attempt already submitted");
         }
+
+        // 4. 시도에서 문항 조회
         List<QuizQuestion> qs = questionRepository.findByAttemptId(attemptId);
         // apply answers (임시 저장)
         int savedCount = 0;
         for (AnswerItem a : req.getAnswers()) {
+            // id 같은 문제에 유저 선택한 답 저장
             QuizQuestion q = qs.stream().filter(x -> x.getId().equals(a.getQuestionId()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "question not in attempt"));
             q.setUserSelectedOptionIdx(a.getUserSelectedIndex());
-            savedCount++;
+            savedCount++; // 저장된 문항 개수 증가
         }
+
+        // 5. 문항 저장
         questionRepository.saveAll(qs);
         return new SaveResponse(true, savedCount, Instant.now());
     }
@@ -301,48 +325,60 @@ public class QuizService {
      */
     @Transactional
     public SubmitResponse submit(UUID attemptId, UUID userUuid, String department, SubmitRequest req) {
+
+        // 1. 시도 조회
         QuizAttempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "attempt not found"));
+
+        // 2. 권한 처리
         if (!attempt.getUserUuid().equals(userUuid)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "forbidden");
         }
+
+        // 3. 이미 제출된 시도인지 처리
         if (attempt.getSubmittedAt() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "already submitted");
         }
+
+        // 4. 시도에서 문항 조회
         List<QuizQuestion> qs = questionRepository.findByAttemptId(attemptId);
-        int total = qs.size();
+        int total = qs.size(); // 문항 개수
         
         // 제출한 답안만 업데이트 및 채점
-        int correct = 0;
+        int correct = 0; // 정답 개수
         for (AnswerItem a : req.getAnswers()) {
+            // id 같은 문제에 유저 선택한 답 저장
             QuizQuestion q = qs.stream().filter(x -> x.getId().equals(a.getQuestionId()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "question not in attempt"));
-            q.setUserSelectedOptionIdx(a.getUserSelectedIndex());
+            q.setUserSelectedOptionIdx(a.getUserSelectedIndex()); // 유저 선택한 답 저장
             
             // 제출한 답안 채점
             if (q.getCorrectOptionIdx() != null
                 && a.getUserSelectedIndex() != null
                 && a.getUserSelectedIndex().intValue() == q.getCorrectOptionIdx().intValue()) {
-                correct++;
+                correct++; // 정답 개수 증가
             }
         }
-        questionRepository.saveAll(qs);
+        questionRepository.saveAll(qs); // 문항 저장
         
         // 제출하지 않은 문항은 오답 처리 (userSelectedOptionIdx가 null이므로 자동으로 오답)
-        int wrong = total - correct;
+        int wrong = total - correct; // 오답 개수
         int score = total == 0 ? 0 : Math.round(correct * 100f / total);
-        // pass criteria
+                        
+        // 5. 교육 정보 조회
         Education edu = educationRepository.findById(attempt.getEducationId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
         boolean passed = edu.getPassScore() != null ? score >= edu.getPassScore() : correct == total;
         attempt.setScore(score);
         attempt.setPassed(passed);
         attempt.setSubmittedAt(Instant.now());
-        // 부서 정보 저장 (부서별 통계용)
+        // 6. 부서 정보 저장 (부서별 통계용)
         if (department != null && !department.isBlank()) {
             attempt.setDepartment(department);
         }
+
+        // 7. 최종 퀴즈 시도 저장
         attemptRepository.save(attempt);
         return new SubmitResponse(score, passed, correct, wrong, total, attempt.getSubmittedAt());
     }
@@ -360,28 +396,43 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public ResultResponse result(UUID attemptId, UUID userUuid) {
+
+        // 1. 시도 조회
         QuizAttempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "attempt not found"));
+
+        // 2. 권한 처리
         if (!attempt.getUserUuid().equals(userUuid)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "forbidden");
         }
+
+        // 3. 이미 제출된 시도인지 처리
         if (attempt.getSubmittedAt() == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "attempt not submitted");
         }
+
+        // 4. 시도에서 문항 조회
         List<QuizQuestion> qs = questionRepository.findByAttemptId(attemptId);
-        int correct = 0;
+        int correct = 0; // 정답 개수
         for (QuizQuestion q : qs) {
             if (q.getUserSelectedOptionIdx() != null
                 && q.getCorrectOptionIdx() != null
                 && q.getUserSelectedOptionIdx().intValue() == q.getCorrectOptionIdx().intValue()) {
-                correct++;
+                correct++; // 정답 개수 증가
             }
         }
-        int total = qs.size();
-        int wrong = total - correct;
+        int total = qs.size(); // 문항 개수
+        int wrong = total - correct; // 오답 개수
+        
+        // 5. 교육 정보 조회하여 passScore(합격 점수) 가져오기
+        Education edu = educationRepository.findById(attempt.getEducationId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
+        
+        // 6. 결과 반환
         return new ResultResponse(
             attempt.getScore() != null ? attempt.getScore() : 0,
             attempt.getPassed() != null ? attempt.getPassed() : false,
+            edu.getPassScore(), // 통과 기준 점수
             correct, wrong, total,
             attempt.getSubmittedAt()
         );
@@ -400,14 +451,21 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public List<WrongNoteItem> wrongs(UUID attemptId, UUID userUuid) {
+        // 1. 시도 조회
         QuizAttempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "attempt not found"));
+
+        // 2. 권한 처리
         if (!attempt.getUserUuid().equals(userUuid)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "forbidden");
         }
+
+        // 3. 이미 제출된 시도인지 처리
         if (attempt.getSubmittedAt() == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "attempt not submitted");
         }
+
+        // 4. 시도에서 문항 조회 후, 오답 노트 조회
         List<WrongNoteItem> items = new ArrayList<>();
         for (QuizQuestion q : questionRepository.findByAttemptId(attemptId)) {
             Integer sel = q.getUserSelectedOptionIdx();
@@ -439,14 +497,21 @@ public class QuizService {
      */
     @Transactional
     public LeaveResponse leave(UUID attemptId, UUID userUuid, LeaveRequest req) {
+        // 1. 시도 조회
         QuizAttempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "attempt not found"));
+
+        // 2. 권한 처리
         if (!attempt.getUserUuid().equals(userUuid)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "forbidden");
         }
+
+        // 3. 이미 제출된 시도인지 처리
         if (attempt.getSubmittedAt() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "attempt already submitted");
         }
+
+        // 4. 이탈 기록 조회
         QuizLeaveTracking t = leaveRepository.findByAttemptId(attemptId).orElseGet(() -> {
             QuizLeaveTracking nt = new QuizLeaveTracking();
             nt.setAttemptId(attemptId);
@@ -454,13 +519,14 @@ public class QuizService {
             nt.setTotalLeaveSeconds(0);
             return nt;
         });
-        t.setLeaveCount(t.getLeaveCount() == null ? 1 : t.getLeaveCount() + 1);
-        t.setLastLeaveAt(req.getTimestamp() != null ? req.getTimestamp() : Instant.now());
+        t.setLeaveCount(t.getLeaveCount() == null ? 1 : t.getLeaveCount() + 1); // 이탈 횟수 증가
+        t.setLastLeaveAt(req.getTimestamp() != null ? req.getTimestamp() : Instant.now()); // 마지막 이탈 시각 저장
         // 이탈 시간 누적
         if (req.getLeaveSeconds() != null && req.getLeaveSeconds() > 0) {
-            t.setTotalLeaveSeconds((t.getTotalLeaveSeconds() == null ? 0 : t.getTotalLeaveSeconds()) + req.getLeaveSeconds());
+            t.setTotalLeaveSeconds((t.getTotalLeaveSeconds() == null ? 0 : t.getTotalLeaveSeconds()) + req.getLeaveSeconds()); // 이탈 시간 누적
         }
         leaveRepository.save(t);
+        // 5. 결과 반환
         return new LeaveResponse(true, t.getLeaveCount(), t.getLastLeaveAt());
     }
 
@@ -667,12 +733,14 @@ public class QuizService {
      * @return 부서별 통계 목록
      */
     public List<DepartmentStatsItem> getDepartmentStats(UUID educationId) {
-        // 교육별 모든 제출 완료된 퀴즈 시도 조회
+        // 1. 교육별 모든 제출 완료된 퀴즈 시도 조회
         List<QuizAttempt> allAttempts;
+
         if (educationId != null) {
+            // 1-1. 특정 교육 시도들 모두 조회
             allAttempts = attemptRepository.findByEducationIdAndSubmittedAtIsNotNull(educationId);
         } else {
-            // 전체 교육 대상인 경우 모든 제출된 시도 조회
+            // 1-2. 전체 교육 대상인 경우 모두 시도 조회
             allAttempts = attemptRepository.findAll().stream()
                 .filter(a -> a.getSubmittedAt() != null && a.getDeletedAt() == null)
                 .toList();
@@ -682,20 +750,77 @@ public class QuizService {
             return List.of();
         }
 
-        // 사용자별 최고 점수 계산 (같은 교육 내에서)
-        Map<UUID, Integer> bestScoresByUser = new HashMap<>();
-        Map<UUID, UUID> educationIdByUser = new HashMap<>();
+        // 2. 사용자별 점수 계산
+        Map<UUID, Integer> scoresByUser = new HashMap<>();
         
-        for (QuizAttempt attempt : allAttempts) {
-            UUID userId = attempt.getUserUuid();
-            UUID eduId = attempt.getEducationId();
-            Integer score = attempt.getScore() != null ? attempt.getScore() : 0;
+        if (educationId != null) {
+            // 2-1. 특정 교육일 경우: 해당 교육 내에서 사용자별 모든 시도 점수의 평균 계산
+            Map<UUID, List<Integer>> scoresByUserList = new HashMap<>();
+            for (QuizAttempt attempt : allAttempts) {
+                UUID userId = attempt.getUserUuid();
+                Integer score = attempt.getScore();
+                // null인 경우는 제외 (에러 데이터 예외 처리)
+                if (score != null) {
+                    // 키 있으면, 점수 계산
+                    scoresByUserList.computeIfAbsent(userId, k -> new ArrayList<>()).add(score);
+                }
+            }
             
-            educationIdByUser.put(userId, eduId);
-            bestScoresByUser.merge(userId, score, Math::max);
+            // 2-2. 사용자별 평균 점수 계산
+            for (Map.Entry<UUID, List<Integer>> entry : scoresByUserList.entrySet()) {
+                UUID userId = entry.getKey();
+                List<Integer> scores = entry.getValue();
+                // 점수가 있는 경우만 평균 계산
+                if (!scores.isEmpty()) {
+                    double avgScore = scores.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+                    scoresByUser.put(userId, (int) Math.round(avgScore));
+                }
+            }
+        } else {
+            // 2-3. 전체 교육일 경우: 각 교육별로 모든 시도 점수의 평균을 구한 후, 사용자별 평균 점수 계산
+            // 1단계: 교육별로 그룹화하여 각 교육 내에서 사용자별 모든 시도 점수 수집
+            Map<UUID, Map<UUID, List<Integer>>> scoresByEducationAndUser = new HashMap<>();
+            for (QuizAttempt attempt : allAttempts) {
+                UUID eduId = attempt.getEducationId();
+                UUID userId = attempt.getUserUuid();
+                Integer score = attempt.getScore();
+                // null인 경우는 제외
+                if (score != null) {
+                    scoresByEducationAndUser
+                        .computeIfAbsent(eduId, k -> new HashMap<>())
+                        .computeIfAbsent(userId, k -> new ArrayList<>())
+                        .add(score);
+                }
+            }
+            
+            // 2단계: 각 교육별로 사용자별 평균 점수 계산
+            Map<UUID, List<Integer>> avgScoresByUserList = new HashMap<>();
+            for (Map<UUID, List<Integer>> userScores : scoresByEducationAndUser.values()) {
+                for (Map.Entry<UUID, List<Integer>> entry : userScores.entrySet()) {
+                    UUID userId = entry.getKey();
+                    List<Integer> scores = entry.getValue();
+                    // 점수가 있는 경우만 평균 계산
+                    if (!scores.isEmpty()) {
+                        double avgScore = scores.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+                        avgScoresByUserList.computeIfAbsent(userId, k -> new ArrayList<>())
+                            .add((int) Math.round(avgScore));
+                    }
+                }
+            }
+            
+            // 3단계: 사용자별로 모든 교육의 평균 점수들의 평균 계산
+            for (Map.Entry<UUID, List<Integer>> entry : avgScoresByUserList.entrySet()) {
+                UUID userId = entry.getKey();
+                List<Integer> avgScores = entry.getValue();
+                // 평균 점수가 있는 경우만 최종 평균 계산
+                if (!avgScores.isEmpty()) {
+                    double finalAvgScore = avgScores.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+                    scoresByUser.put(userId, (int) Math.round(finalAvgScore));
+                }
+            }
         }
 
-        // QuizAttempt에 저장된 부서 정보 사용
+        // 3. QuizAttempt에 저장된 부서 정보 사용
         Map<UUID, String> userDepartmentMap = new HashMap<>();
         for (QuizAttempt attempt : allAttempts) {
             UUID userId = attempt.getUserUuid();
@@ -705,16 +830,16 @@ public class QuizService {
                 userDepartmentMap.putIfAbsent(userId, dept);
             }
         }
-        // 부서 정보가 없는 사용자는 "기타"로 처리
-        for (UUID userId : bestScoresByUser.keySet()) {
+        // 4. 부서 정보가 없는 사용자는 "기타"로 처리
+        for (UUID userId : scoresByUser.keySet()) {
             userDepartmentMap.putIfAbsent(userId, "기타");
         }
 
-        // 부서별로 그룹화하여 통계 계산
+        // 5. 부서별로 그룹화하여 통계 계산
         Map<String, List<Integer>> scoresByDepartment = new HashMap<>();
         Map<String, Integer> participantCountByDepartment = new HashMap<>();
         
-        for (Map.Entry<UUID, Integer> entry : bestScoresByUser.entrySet()) {
+        for (Map.Entry<UUID, Integer> entry : scoresByUser.entrySet()) {
             UUID userId = entry.getKey();
             Integer score = entry.getValue();
             String department = userDepartmentMap.getOrDefault(userId, "기타");
@@ -723,9 +848,9 @@ public class QuizService {
             participantCountByDepartment.merge(department, 1, Integer::sum);
         }
 
-        // 부서별 평균 점수 및 진행률 계산
+        // 6. 부서별 평균 점수 및 진행률 계산
         List<DepartmentStatsItem> stats = new ArrayList<>();
-        int totalParticipants = bestScoresByUser.size();
+        int totalParticipants = scoresByUser.size();
         
         for (Map.Entry<String, List<Integer>> entry : scoresByDepartment.entrySet()) {
             String department = entry.getKey();
@@ -766,16 +891,18 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public RetryInfoResponse getRetryInfo(UUID educationId, UUID userUuid) {
+
+        // 1. 교육 정보 조회
         Education education = educationRepository.findById(educationId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
 
-        // 사용자의 해당 교육 퀴즈 응시 이력 조회
+        // 2. 사용자의 해당 교육 퀴즈 응시 이력 조회
         List<QuizAttempt> attempts = attemptRepository
             .findByUserUuidAndEducationIdAndSubmittedAtIsNotNullOrderByCreatedAtDesc(userUuid, educationId);
         
         int currentAttemptCount = attempts.size();
         
-        // 최고 점수 및 통과 여부 계산
+        // 3. 최고 점수 및 통과 여부 계산
         Integer bestScore = null;
         Boolean passed = null;
         Instant lastAttemptAt = null;
@@ -794,7 +921,7 @@ public class QuizService {
                 passed = bestAttempt.getPassed();
             }
             
-            // 마지막 응시 시각
+            // 3-1. 마지막 응시 시각
             QuizAttempt lastAttempt = attempts.get(0);
             lastAttemptAt = lastAttempt.getSubmittedAt();
         }
@@ -802,11 +929,11 @@ public class QuizService {
         // 최대 응시 횟수 (현재는 null = 무제한, 추후 정책 테이블에서 조회 가능)
         Integer maxAttempts = 2;
         
-        // 재응시 가능 여부 판단
+        // 4. 재응시 가능 여부 판단
         // - maxAttempts가 있으면 currentAttemptCount < maxAttempts일 때 재응시 가능
         boolean canRetry = maxAttempts == null || currentAttemptCount < maxAttempts;
         
-        // 남은 응시 횟수 계산
+        // 5. 남은 응시 횟수 계산
         Integer remainingAttempts = null;
         if (maxAttempts != null) {
             remainingAttempts = Math.max(0, maxAttempts - currentAttemptCount);
