@@ -1,8 +1,10 @@
 package com.ctrlf.education.video.dto;
 
+import com.ctrlf.common.constant.Department;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -242,8 +244,8 @@ public final class VideoDtos {
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
         @Schema(description = "상태") VideoStatus status,
-        @Schema(description = "대상 부서 코드") String targetDeptCode,
-        @Schema(description = "수강 가능 부서(JSON)") String departmentScope,
+        @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: ALL, GENERAL_AFFAIRS, PLANNING, MARKETING, HR, FINANCE, ENGINEERING, SALES, LEGAL)", 
+                example = "[\"HR\", \"ENGINEERING\"]") List<Department> departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex,
         @Schema(description = "생성시각 ISO8601") String createdAt
     ) {}
@@ -255,8 +257,9 @@ public final class VideoDtos {
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
         @Schema(description = "상태") VideoStatus status,
-        @Schema(description = "대상 부서 코드") String targetDeptCode,
-        @Schema(description = "수강 가능 부서(JSON)") String departmentScope,
+
+        @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: ALL, GENERAL_AFFAIRS, PLANNING, MARKETING, HR, FINANCE, ENGINEERING, SALES, LEGAL)", 
+                example = "[\"HR\", \"ENGINEERING\"]") List<Department> departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex
     ) {}
 
@@ -274,8 +277,9 @@ public final class VideoDtos {
         @NotBlank(message = "title은 필수입니다")
         String title,
 
-        @Schema(description = "수강 가능 부서(JSON)", example = "[\"HR\", \"IT\"]")
-        String departmentScope
+        @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: ALL, GENERAL_AFFAIRS, PLANNING, MARKETING, HR, FINANCE, ENGINEERING, SALES, LEGAL)", 
+                example = "[\"HR\", \"ENGINEERING\"]")
+        List<Department> departmentScope
     ) {}
 
     @Schema(description = "영상 컨텐츠 생성 응답")

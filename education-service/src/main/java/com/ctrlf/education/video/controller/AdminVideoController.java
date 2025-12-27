@@ -62,7 +62,7 @@ public class AdminVideoController {
         .body(videoService.createVideoContent(req));
   }
 
-  @Operation(summary = "검토 요청 (프론트 -> 백엔드)", description = "영상 생성 완료 후 검토자에게 검토를 요청합니다. (READY → REVIEW_REQUESTED)")
+  @Operation(summary = "검토 요청 (프론트 -> 백엔드)", description = "영상 생성 완료 후 검토자에게 검토를 요청합니다. 1차 검토 요청: SCRIPT_READY → SCRIPT_REVIEW_REQUESTED (스크립트 검토), 2차 검토 요청: READY → FINAL_REVIEW_REQUESTED (영상 검토)")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "성공",
       content = @Content(schema = @Schema(implementation = VideoStatusResponse.class))),
@@ -75,7 +75,7 @@ public class AdminVideoController {
     return ResponseEntity.ok(videoService.requestReview(videoId));
   }
 
-  @Operation(summary = "검토 승인 (프론트 -> 백엔드)", description = "검토자가 영상을 승인합니다. (REVIEW_REQUESTED → APPROVED)")
+  @Operation(summary = "검토 승인 (프론트 -> 백엔드)", description = "검토자가 영상을 승인합니다. 1차 승인: SCRIPT_REVIEW_REQUESTED → SCRIPT_APPROVED (스크립트 승인, 영상 생성 가능), 2차 승인: FINAL_REVIEW_REQUESTED → PUBLISHED (영상 승인 = 게시)")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "성공",
       content = @Content(schema = @Schema(implementation = VideoStatusResponse.class))),
@@ -88,7 +88,7 @@ public class AdminVideoController {
     return ResponseEntity.ok(videoService.approveVideo(videoId));
   }
 
-  @Operation(summary = "검토 반려 (프론트 -> 백엔드)", description = "검토자가 영상을 반려합니다. (REVIEW_REQUESTED → DRAFT)")
+  @Operation(summary = "검토 반려 (프론트 -> 백엔드)", description = "검토자가 영상을 반려합니다. 1차 반려: SCRIPT_REVIEW_REQUESTED → SCRIPT_READY (스크립트 검토 단계 반려), 2차 반려: FINAL_REVIEW_REQUESTED → READY (영상 검토 단계 반려). 반려 사유(reason)가 제공되면 EducationVideoReview 테이블에 저장됩니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "성공",
       content = @Content(schema = @Schema(implementation = VideoStatusResponse.class))),
@@ -106,7 +106,7 @@ public class AdminVideoController {
     return ResponseEntity.ok(videoService.rejectVideo(videoId, reason, reviewerUuid));
   }
 
-  @Operation(summary = "게시 (프론트 -> 백엔드)", description = "승인된 영상을 유저에게 노출합니다. (APPROVED → ACTIVE)")
+  @Operation(summary = "게시 (프론트 -> 백엔드) [Deprecated]", description = "[Deprecated] 게시는 2차 승인(approve) 시 자동으로 PUBLISHED 처리됩니다. 기존 API 호환을 위해 유지하되, PUBLISHED 상태가 아닌 경우 에러를 반환합니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "성공",
       content = @Content(schema = @Schema(implementation = VideoStatusResponse.class))),
@@ -117,6 +117,32 @@ public class AdminVideoController {
   public ResponseEntity<VideoStatusResponse> publishVideo(
       @Parameter(description = "영상 ID", required = true) @PathVariable UUID videoId) {
     return ResponseEntity.ok(videoService.publishVideo(videoId));
+  }
+
+  @Operation(summary = "영상 비활성화 (프론트 -> 백엔드)", description = "게시된 영상을 비활성화하여 유저에게 노출되지 않도록 합니다. (PUBLISHED → DISABLED)")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "성공",
+      content = @Content(schema = @Schema(implementation = VideoStatusResponse.class))),
+    @ApiResponse(responseCode = "400", description = "상태 변경 불가 (PUBLISHED 상태에서만 가능)", content = @Content),
+    @ApiResponse(responseCode = "404", description = "영상을 찾을 수 없음", content = @Content)
+  })
+  @PutMapping("/{videoId}/disable")
+  public ResponseEntity<VideoStatusResponse> disableVideo(
+      @Parameter(description = "영상 ID", required = true) @PathVariable UUID videoId) {
+    return ResponseEntity.ok(videoService.disableVideo(videoId));
+  }
+
+  @Operation(summary = "영상 활성화 (프론트 -> 백엔드)", description = "비활성화된 영상을 다시 활성화하여 유저에게 노출합니다. (DISABLED → PUBLISHED)")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "성공",
+      content = @Content(schema = @Schema(implementation = VideoStatusResponse.class))),
+    @ApiResponse(responseCode = "400", description = "상태 변경 불가 (DISABLED 상태에서만 가능)", content = @Content),
+    @ApiResponse(responseCode = "404", description = "영상을 찾을 수 없음", content = @Content)
+  })
+  @PutMapping("/{videoId}/enable")
+  public ResponseEntity<VideoStatusResponse> enableVideo(
+      @Parameter(description = "영상 ID", required = true) @PathVariable UUID videoId) {
+    return ResponseEntity.ok(videoService.enableVideo(videoId));
   }
 
   @Operation(summary = "영상 상태 강제 변경 (* 개발용)", 
@@ -149,7 +175,7 @@ public class AdminVideoController {
     return ResponseEntity.ok(videoService.listVideoContents(page, size));
   }
 
-  @Operation(summary = "영상 수정 (* 프론트 -> 백엔드)", description = "제목/파일 URL/버전/길이/상태/부서코드 등을 부분 업데이트합니다.")
+  @Operation(summary = "영상 수정 (* 프론트 -> 백엔드)", description = "제목/파일 URL/버전/길이/상태/부서 목록 등을 부분 업데이트합니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "성공",
       content = @Content(schema = @Schema(implementation = VideoMetaItem.class))),

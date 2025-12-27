@@ -282,14 +282,15 @@ Body: 없음
 
 ### Response
 
-| key          | 설명         | value 타입       | 옵션     | Nullable | 예시                   |
-| ------------ | ------------ | ---------------- | -------- | -------- | ---------------------- |
-| score        | 점수         | number           | required | false    | 85                     |
-| passed       | 통과 여부    | boolean          | required | false    | true                   |
-| correctCount | 정답 개수    | number           | required | false    | 17                     |
-| wrongCount   | 오답 개수    | number           | required | false    | 3                      |
-| totalCount   | 전체 문항 수 | number           | required | false    | 20                     |
-| finishedAt   | 완료 시각    | string(ISO-8601) | required | false    | "2025-12-24T10:15:00Z" |
+| key          | 설명           | value 타입       | 옵션     | Nullable | 예시                         |
+| ------------ | -------------- | ---------------- | -------- | -------- | ---------------------------- |
+| score        | 점수           | number           | required | false    | 85                           |
+| passed       | 통과 여부      | boolean          | required | false    | true                         |
+| passScore    | 통과 기준 점수 | number           | optional | true     | 80 (null이면 전체 정답 기준) |
+| correctCount | 정답 개수      | number           | required | false    | 17                           |
+| wrongCount   | 오답 개수      | number           | required | false    | 3                            |
+| totalCount   | 전체 문항 수   | number           | required | false    | 20                           |
+| finishedAt   | 완료 시각      | string(ISO-8601) | required | false    | "2025-12-24T10:15:00Z"       |
 
 ### Status
 

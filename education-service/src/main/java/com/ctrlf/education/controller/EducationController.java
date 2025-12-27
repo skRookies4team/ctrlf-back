@@ -86,10 +86,10 @@ public class EducationController {
                                 "  \"videos\": [\n" +
                                 "    {\n" +
                                 "      \"id\": \"3d3f8c7a-8a2c-4f3a-9d2b-222222222222\",\n" +
+                                "      \"title\": \"2024년 성희롱 예방 교육\",\n" +
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"targetDeptCode\": \"DEV\",\n" +
                                 "      \"departmentScope\": \"[\\\"개발팀\\\",\\\"인사팀\\\"]\",\n" +
                                 "      \"resumePosition\": 600,\n" +
                                 "      \"isCompleted\": false,\n" +
@@ -145,11 +145,11 @@ public class EducationController {
                                 "  \"videos\": [\n" +
                                 "    {\n" +
                                 "      \"id\": \"3d3f8c7a-8a2c-4f3a-9d2b-222222222222\",\n" +
+                                "      \"title\": \"2024년 성희롱 예방 교육\",\n" +
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"isMain\": true,\n" +
-                                "      \"targetDeptCode\": \"DEV\",\n" +
+                                "      \"departmentScope\": \"[\\\"개발팀\\\",\\\"인사팀\\\"]\",\n" +
                                 "      \"resumePosition\": 600,\n" +
                                 "      \"isCompleted\": false,\n" +
                                 "      \"totalWatchSeconds\": 600,\n" +
@@ -178,7 +178,7 @@ public class EducationController {
     }
 
     /**
-     * 영상 시청 진행률 업데이트.
+     * 영상 시청 진행률 업데이트. (교육의 모든 영상이 시청이 완료되면 자동으로 교육 시청 완료 처리됩니다.)
      *
      * @param educationId 교육 ID
      * @param videoId 영상 ID
@@ -189,7 +189,7 @@ public class EducationController {
     @PostMapping("/edu/{educationId}/video/{videoId}/progress")
     @Operation(
         summary = "영상 시청 진행률 업데이트 (프론트 -> 백엔드)",
-        description = "특정 교육의 특정 영상에 대한 사용자 시청 진행 정보를 업데이트합니다.",
+        description = "특정 교육의 특정 영상에 대한 사용자 시청 진행 정보를 업데이트합니다. 교육의 모든 영상이 시청이 완료되면 자동으로 교육 시청 완료 처리됩니다.",
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
             content = @Content(
@@ -250,7 +250,7 @@ public class EducationController {
      */
     @PostMapping("/edu/{id}/complete")
     @Operation(
-        summary = "교육 시청 완료 처리 (프론트 -> 백엔드)",
+        summary = "교육 시청 완료 처리 (프론트 -> 백엔드, 필요하면 사용하기)",
         description = "교육 시청 완료 처리를 수행합니다.",
         responses = {
             @ApiResponse(

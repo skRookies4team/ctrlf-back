@@ -460,6 +460,11 @@ public class SourceSetService {
                 sourceSet.setErrorCode("SCRIPT_SAVE_ERROR");
                 sourceSet.setFailReason("스크립트 저장 실패: " + e.getMessage());
                 sourceSetRepository.save(sourceSet);
+                // 스크립트 저장 실패 시 HTTP 에러 상태 코드 반환
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    String.format("스크립트 저장 실패: sourceSetId=%s, error=%s", sourceSetId, e.getMessage())
+                );
             }
         } else {
             log.error(
@@ -481,6 +486,14 @@ public class SourceSetService {
                 }
                 sourceSetRepository.save(sourceSet);
             }
+            
+            // 실패 상태일 때 HTTP 에러 상태 코드 반환
+            String errorMessage = callback.errorMessage() != null ? callback.errorMessage() : "소스셋 처리 실패";
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                String.format("소스셋 처리 실패: sourceSetId=%s, errorCode=%s, errorMessage=%s",
+                    sourceSetId, callback.errorCode(), errorMessage)
+            );
         }
 
         return new SourceSetCompleteResponse(true, scriptId);

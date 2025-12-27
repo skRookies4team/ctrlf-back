@@ -13,6 +13,7 @@ import com.ctrlf.education.script.repository.EducationScriptSceneRepository;
 import com.ctrlf.education.repository.EducationProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
+import com.ctrlf.education.video.repository.EducationVideoReviewRepository;
 import com.ctrlf.education.video.repository.SourceSetDocumentRepository;
 import com.ctrlf.education.video.repository.SourceSetRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
@@ -57,6 +58,7 @@ public class SeedDataRunner implements CommandLineRunner {
     private final EducationScriptSceneRepository sceneRepository;
     private final EducationVideoRepository educationVideoRepository;
     private final EducationVideoProgressRepository educationVideoProgressRepository;
+    private final EducationVideoReviewRepository educationVideoReviewRepository;
     private final EducationProgressRepository educationProgressRepository;
     private final VideoGenerationJobRepository videoGenerationJobRepository;
     private final SourceSetDocumentRepository sourceSetDocumentRepository;
@@ -76,6 +78,7 @@ public class SeedDataRunner implements CommandLineRunner {
         EducationScriptSceneRepository sceneRepository,
         EducationVideoRepository educationVideoRepository,
         EducationVideoProgressRepository educationVideoProgressRepository,
+        EducationVideoReviewRepository educationVideoReviewRepository,
         EducationProgressRepository educationProgressRepository,
         VideoGenerationJobRepository videoGenerationJobRepository,
         SourceSetDocumentRepository sourceSetDocumentRepository,
@@ -91,6 +94,7 @@ public class SeedDataRunner implements CommandLineRunner {
         this.sceneRepository = sceneRepository;
         this.educationVideoRepository = educationVideoRepository;
         this.educationVideoProgressRepository = educationVideoProgressRepository;
+        this.educationVideoReviewRepository = educationVideoReviewRepository;
         this.educationProgressRepository = educationProgressRepository;
         this.videoGenerationJobRepository = videoGenerationJobRepository;
         this.sourceSetDocumentRepository = sourceSetDocumentRepository;
@@ -145,31 +149,35 @@ public class SeedDataRunner implements CommandLineRunner {
         sourceSetRepository.deleteAll();
         log.info("소스셋 삭제 완료");
         
-        // 5. 영상 삭제
+        // 5. 영상 검토(리뷰) 삭제 (video_id FK 참조하므로 video보다 먼저 삭제)
+        educationVideoReviewRepository.deleteAll();
+        log.info("영상 검토 삭제 완료");
+        
+        // 6. 영상 삭제
         educationVideoRepository.deleteAll();
         log.info("교육 영상 삭제 완료");
         
-        // 6. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
+        // 7. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
         videoGenerationJobRepository.deleteAll();
         log.info("영상 생성 작업 삭제 완료");
         
-        // 7. 스크립트 씬 삭제
+        // 8. 스크립트 씬 삭제
         sceneRepository.deleteAll();
         log.info("스크립트 씬 삭제 완료");
         
-        // 8. 스크립트 챕터 삭제
+        // 9. 스크립트 챕터 삭제
         chapterRepository.deleteAll();
         log.info("스크립트 챕터 삭제 완료");
         
-        // 9. 스크립트 삭제
+        // 10. 스크립트 삭제
         scriptRepository.deleteAll();
         log.info("스크립트 삭제 완료");
         
-        // 10. 퀴즈 문항 삭제 (attempt_id FK 참조)
+        // 11. 퀴즈 문항 삭제 (attempt_id FK 참조)
         quizQuestionRepository.deleteAll();
         log.info("퀴즈 문항 삭제 완료");
         
-        // 11. 퀴즈 이탈 추적 삭제 (attempt_id FK 참조)
+        // 12. 퀴즈 이탈 추적 삭제 (attempt_id FK 참조)
         quizLeaveTrackingRepository.deleteAll();
         log.info("퀴즈 이탈 추적 삭제 완료");
         
@@ -318,7 +326,6 @@ public class SeedDataRunner implements CommandLineRunner {
                         titles[i],
                         urls[i],
                         durations[i],
-                        "ALL",
                         1,
                         "PUBLISHED"
                     );

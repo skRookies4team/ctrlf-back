@@ -269,6 +269,22 @@ public class ScriptService {
                 () ->
                     new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
+    
+    // 1. 스크립트 씬 삭제 (chapter_id를 참조하므로 chapter보다 먼저 삭제)
+    List<EducationScriptScene> scenes = sceneRepository.findByScriptIdOrderByChapterIdAscSceneIndexAsc(scriptId);
+    if (!scenes.isEmpty()) {
+      sceneRepository.deleteAll(scenes);
+      log.info("스크립트 씬 삭제 완료. scriptId={}, count={}", scriptId, scenes.size());
+    }
+    
+    // 2. 스크립트 챕터 삭제 (script_id를 참조하므로 script보다 먼저 삭제)
+    List<EducationScriptChapter> chapters = chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId);
+    if (!chapters.isEmpty()) {
+      chapterRepository.deleteAll(chapters);
+      log.info("스크립트 챕터 삭제 완료. scriptId={}, count={}", scriptId, chapters.size());
+    }
+    
+    // 3. 스크립트 삭제
     scriptRepository.delete(script);
     log.info("스크립트 삭제 완료. scriptId={}", scriptId);
   }

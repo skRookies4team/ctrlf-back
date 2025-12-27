@@ -69,10 +69,6 @@ public class EducationVideo {
     @Column(name = "status")
     private String status;
 
-    /** 대상 부서 코드 */
-    @Column(name = "target_dept_code")
-    private String targetDeptCode;
-
     /** 생성 시각 */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -98,7 +94,6 @@ public class EducationVideo {
         String title,
         String fileUrl,
         Integer duration,
-        String targetDeptCode,
         Integer version,
         String status
     ) {
@@ -107,7 +102,6 @@ public class EducationVideo {
         v.setTitle(title);
         v.setFileUrl(fileUrl);
         v.setDuration(duration);
-        v.setTargetDeptCode(targetDeptCode);
         v.setVersion(version);
         v.setStatus(status);
         v.setOrderIndex(0);

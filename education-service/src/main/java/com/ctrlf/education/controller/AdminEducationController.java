@@ -257,8 +257,7 @@ public class AdminEducationController {
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"isMain\": true,\n" +
-                                "      \"targetDeptCode\": \"DEV\"\n" +
+                                "      \"isMain\": true\n" +
                                 "    }\n" +
                                 "  ]\n" +
                                 "}]"
@@ -289,7 +288,6 @@ public class AdminEducationController {
                     v.getFileUrl(),
                     v.getDuration() != null ? v.getDuration() : 0,
                     v.getVersion() != null ? v.getVersion() : 1,
-                    v.getTargetDeptCode(),
                     v.getDepartmentScope(),
                     null, // resumePosition
                     null, // isCompleted

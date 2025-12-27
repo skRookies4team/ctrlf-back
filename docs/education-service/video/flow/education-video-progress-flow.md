@@ -65,9 +65,10 @@ Authorization: Bearer {token}
 Request Body:
 {
   "position": 120,      // 현재 재생 위치 (초)
-  "duration": 1800,     // 영상 총 길이 (초)
   "watchTime": 120      // 시청 시간 증가분 (초)
 }
+
+**참고**: `duration` 필드는 제거되었습니다. 백엔드에서 `EducationVideo` 엔티티의 `duration` 값을 자동으로 가져옵니다.
 
 Response: VideoProgressResponse
 {
@@ -81,22 +82,34 @@ Response: VideoProgressResponse
 ```
 
 **처리 로직**:
-1. `EducationVideoProgress` 엔티티 조회 또는 생성
-2. 마지막 재생 위치 업데이트 (`lastPositionSeconds`)
-3. 누적 시청 시간 업데이트 (`totalWatchSeconds += watchTime`)
-4. 진행률 계산: `progress = (position / duration) * 100`
-5. 영상 완료 여부 설정: `isCompleted = (progress >= 100)`
-6. 교육 전체 진행률 계산: 모든 영상의 진행률 평균
-7. 교육 전체 완료 여부 계산: 모든 영상이 완료되었는지 확인
+1. `EducationVideo` 엔티티 조회 및 검증 (`videoId`, `educationId` 확인)
+2. `Education` 엔티티 조회 (`passRatio` 가져오기, 기본값: 100)
+3. `EducationVideoProgress` 엔티티 조회 또는 생성
+4. 마지막 재생 위치 업데이트 (`lastPositionSeconds`)
+5. 누적 시청 시간 업데이트 (`totalWatchSeconds += watchTime`)
+6. 진행률 계산: `progress = (position / duration) * 100` (duration은 `EducationVideo`에서 가져옴)
+7. 영상 완료 여부 설정: `isCompleted = (progress >= passRatio)` (교육의 `passRatio` 기준)
+8. 교육 전체 진행률 계산: **PUBLISHED 상태의 영상들**의 진행률 평균
+9. 교육 전체 완료 여부 계산: 모든 **PUBLISHED 영상**이 완료되었는지 확인
+10. **자동 교육 이수 처리**: 모든 PUBLISHED 영상이 완료되면 `EducationProgress` 엔티티를 자동으로 완료 처리
+    - `EducationProgress` 조회 또는 생성
+    - `isCompleted = true`, `completedAt = 현재 시각`, `progress = 100` 설정
+    - 저장
 
 **호출 주기**:
 - 프론트엔드에서 주기적으로 호출 (예: 5-10초마다)
 - 영상 재생 위치가 변경될 때마다 호출
 - 영상이 끝났을 때 반드시 호출 (position >= duration)
 
-### 3단계: 교육 이수 처리
+### 3단계: 교육 이수 처리 (자동 또는 수동)
 
-#### 3-1. 교육 이수 완료 처리
+#### 3-1. 자동 교육 이수 처리 (권장)
+**`POST /edu/{educationId}/video/{videoId}/progress` API에서 자동 처리됩니다.**
+
+- 모든 PUBLISHED 영상이 완료되면 자동으로 `EducationProgress` 엔티티가 완료 처리됩니다.
+- 별도의 API 호출 없이 진행률 업데이트 API의 응답에서 `eduCompleted: true`를 확인하면 됩니다.
+
+#### 3-2. 수동 교육 이수 처리 (선택적)
 ```
 POST /edu/{id}/complete
 Authorization: Bearer {token}
@@ -104,9 +117,7 @@ Authorization: Bearer {token}
 Response: Map<String, Object>
 {
   "status": "COMPLETED",              // 또는 "FAILED"
-  "completedAt": "2025-12-26T10:00:00Z",
-  "progress": 100,
-  "message": "교육 이수가 완료되었습니다."
+  "completedAt": "2025-12-26T10:00:00Z"
 }
 ```
 
@@ -114,23 +125,24 @@ Response: Map<String, Object>
 ```json
 {
   "status": "FAILED",
-  "message": "모든 영상 시청이 완료되지 않았습니다."
+  "message": "PUBLISHED 상태의 영상 이수 조건 미충족"
 }
 ```
 
 **처리 로직**:
-1. 해당 교육의 모든 영상 진행률 확인
-2. 모든 영상이 완료 상태인지 검증
-3. `EducationProgress` 엔티티 조회 또는 생성
-4. 교육 이수 완료 처리:
+1. 해당 교육의 **PUBLISHED 상태의 영상 목록** 조회
+2. PUBLISHED 영상들의 진행 정보 조회
+3. 모든 **PUBLISHED 영상**이 완료 상태인지 검증 (`isCompleted == true`)
+4. 조건 충족 시 `EducationProgress` 엔티티 조회 또는 생성
+5. 교육 이수 완료 처리:
    - `isCompleted = true`
    - `completedAt = 현재 시각`
    - `progress = 100`
-5. 결과 반환
+6. 결과 반환 (실패 시: "PUBLISHED 상태의 영상 이수 조건 미충족")
 
-**호출 시점**:
-- 영상 시청 진행률 업데이트 API 응답에서 `eduCompleted = true`일 때
-- 또는 프론트엔드에서 모든 영상 완료를 확인했을 때
+**호출 시점** (선택적):
+- 자동 완료 처리가 실패했거나 재시도가 필요한 경우
+- 또는 프론트엔드에서 명시적으로 이수 처리를 확인하고 싶을 때
 
 ## 전체 플로우 다이어그램
 
@@ -155,10 +167,10 @@ Response: Map<String, Object>
     |                                      │
     v                                      │
 [5. 영상 완료 여부 확인]                  │
-    (progress >= 100)                     │
+    (progress >= passRatio)                     │
     |                                      │
     v                                      │
-[모든 영상 완료?]                         │
+[모든 PUBLISHED 영상 완료?]                         │
     |                                      │
     ├─ No ───────────────────────────────┘
     |
@@ -166,19 +178,22 @@ Response: Map<String, Object>
     Yes
     |
     v
-[6. 교육 이수 처리]
-    POST /edu/{id}/complete
+[6. 자동 교육 이수 처리]
+    (updateVideoProgress API 내부에서 자동 처리)
+    EducationProgress.isCompleted = true
     |
     v
 [7. 완료!]
+    (선택적: POST /edu/{id}/complete로 수동 확인 가능)
 ```
 
 ## 추가 고려사항
 
 ### 1. 진행률 계산 방식
-- **영상 진행률**: `(현재 재생 위치 / 영상 총 길이) * 100`
-- **교육 진행률**: `(모든 영상 진행률의 합) / (영상 개수)`
-- **완료 기준**: 각 영상의 진행률이 100% 이상
+- **영상 진행률**: `(현재 재생 위치 / 영상 총 길이) * 100` (최소 0, 최대 100)
+  - `duration`은 `EducationVideo` 엔티티에서 가져옴 (요청에서 제거됨)
+- **교육 진행률**: `(PUBLISHED 영상들의 진행률 합) / (PUBLISHED 영상 개수)`
+- **완료 기준**: 각 영상의 진행률이 `passRatio` 이상 (교육의 `passRatio` 필드 사용, 기본값: 100%)
 
 ### 2. passRatio (통과 기준 비율)
 - `Education` 엔티티의 `passRatio` 필드 사용
@@ -203,7 +218,8 @@ Response: Map<String, Object>
 
 ### ✅ 구현 완료
 - [x] 영상 시청 진행률 업데이트 API (`POST /edu/{id}/video/{videoId}/progress`)
-- [x] 교육 이수 처리 API (`POST /edu/{id}/complete`)
+- [x] **자동 교육 이수 처리** (진행률 업데이트 API에서 모든 영상 완료 시 자동 처리)
+- [x] 교육 이수 처리 API (`POST /edu/{id}/complete`) - 선택적 수동 호출
 - [x] 교육 목록 조회 API (PUBLISHED 영상만 포함)
 - [x] 영상 목록 조회 API (PUBLISHED 영상만 포함)
 - [x] 진행률 자동 계산 로직
@@ -212,6 +228,6 @@ Response: Map<String, Object>
 ### ⚠️ 주의사항
 - 영상 시청 진행률 업데이트는 **주기적으로 호출**해야 함
 - 영상이 끝났을 때 (position >= duration) 반드시 호출하여 완료 처리
-- 모든 영상이 완료되면 교육 이수 처리 API 호출 필요
-- `EducationProgress`는 교육 이수 처리 시에만 생성/업데이트됨
+- **모든 PUBLISHED 영상이 완료되면 자동으로 교육 이수가 처리됨** (`EducationProgress` 자동 업데이트)
+- `POST /edu/{id}/complete` API는 선택적으로만 호출 (자동 처리 실패 시 재시도용)
 

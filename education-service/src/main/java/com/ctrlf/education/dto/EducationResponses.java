@@ -90,8 +90,6 @@ public final class EducationResponses {
             private Integer duration;
             /** 영상 버전 */
             private Integer version;
-            /** 대상 부서 코드 */
-            private String targetDeptCode;
             /** 수강 가능한 부서 목록(JSON) */
             private String departmentScope;
             /** 사용자 이어보기 위치(초) */

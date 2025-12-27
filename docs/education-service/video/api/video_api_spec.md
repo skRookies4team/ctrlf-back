@@ -26,11 +26,11 @@ Body: 있음
 
 ### Request
 
-| key             | 설명                 | value 타입   | 옵션     | Nullable | 예시                                   |
-| --------------- | -------------------- | ------------ | -------- | -------- | -------------------------------------- |
-| educationId     | 교육 ID              | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title           | 영상 제목            | string       | required | false    | "2024년 성희롱 예방 교육"              |
-| departmentScope | 수강 가능 부서(JSON) | string       | optional | true     | "[\"HR\", \"IT\"]"                     |
+| key             | 설명                | value 타입    | 옵션     | Nullable | 예시                                   |
+| --------------- | ------------------- | ------------- | -------- | -------- | -------------------------------------- |
+| educationId     | 교육 ID             | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 영상 제목           | string        | required | false    | "2024년 성희롱 예방 교육"              |
+| departmentScope | 수강 가능 부서 목록 | array(string) | optional | true     | ["HR", "ENGINEERING"]                  |
 
 ### Query Parameter
 
@@ -82,21 +82,20 @@ Body: 없음
 
 array of object
 
-| key             | 설명                 | value 타입   | 옵션     | Nullable | 예시                                   |
-| --------------- | -------------------- | ------------ | -------- | -------- | -------------------------------------- |
-| id              | 영상 ID              | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| educationId     | 교육 ID              | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title           | 영상 제목            | string       | required | false    | "2024년 성희롱 예방 교육"              |
-| generationJobId | 생성 Job ID          | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
-| scriptId        | 스크립트 ID          | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
-| fileUrl         | 파일 URL             | string       | optional | true     | "https://cdn.com/video.mp4"            |
-| version         | 버전                 | number       | optional | true     | 1                                      |
-| duration        | 길이(초)             | number       | optional | true     | 720                                    |
-| status          | 상태                 | string       | required | false    | "DRAFT"                                |
-| targetDeptCode  | 대상 부서 코드       | string       | optional | true     | "DEV"                                  |
-| departmentScope | 수강 가능 부서(JSON) | string       | optional | true     | "[\"HR\", \"IT\"]"                     |
-| orderIndex      | 재생 순서(0-base)    | number       | optional | true     | 0                                      |
-| createdAt       | 생성시각 ISO8601     | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| key             | 설명                | value 타입    | 옵션     | Nullable | 예시                                   |
+| --------------- | ------------------- | ------------- | -------- | -------- | -------------------------------------- |
+| id              | 영상 ID             | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| educationId     | 교육 ID             | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 영상 제목           | string        | required | false    | "2024년 성희롱 예방 교육"              |
+| generationJobId | 생성 Job ID         | string(uuid)  | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
+| scriptId        | 스크립트 ID         | string(uuid)  | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
+| fileUrl         | 파일 URL            | string        | optional | true     | "https://cdn.com/video.mp4"            |
+| version         | 버전                | number        | optional | true     | 1                                      |
+| duration        | 길이(초)            | number        | optional | true     | 720                                    |
+| status          | 상태                | string        | required | false    | "DRAFT"                                |
+| departmentScope | 수강 가능 부서 목록 | array(string) | optional | true     | ["HR", "ENGINEERING"]                  |
+| orderIndex      | 재생 순서(0-base)   | number        | optional | true     | 0                                      |
+| createdAt       | 생성시각 ISO8601    | string        | required | false    | "2025-12-24T10:00:00Z"                 |
 
 ### Status
 
@@ -131,21 +130,20 @@ Body: 없음
 
 ### Response
 
-| key             | 설명                 | value 타입   | 옵션     | Nullable | 예시                                   |
-| --------------- | -------------------- | ------------ | -------- | -------- | -------------------------------------- |
-| id              | 영상 ID              | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| educationId     | 교육 ID              | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title           | 영상 제목            | string       | required | false    | "2024년 성희롱 예방 교육"              |
-| generationJobId | 생성 Job ID          | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
-| scriptId        | 스크립트 ID          | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
-| fileUrl         | 파일 URL             | string       | optional | true     | "https://cdn.com/video.mp4"            |
-| version         | 버전                 | number       | optional | true     | 1                                      |
-| duration        | 길이(초)             | number       | optional | true     | 720                                    |
-| status          | 상태                 | string       | required | false    | "DRAFT"                                |
-| targetDeptCode  | 대상 부서 코드       | string       | optional | true     | "DEV"                                  |
-| departmentScope | 수강 가능 부서(JSON) | string       | optional | true     | "[\"HR\", \"IT\"]"                     |
-| orderIndex      | 재생 순서(0-base)    | number       | optional | true     | 0                                      |
-| createdAt       | 생성시각 ISO8601     | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| key             | 설명                | value 타입    | 옵션     | Nullable | 예시                                   |
+| --------------- | ------------------- | ------------- | -------- | -------- | -------------------------------------- |
+| id              | 영상 ID             | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| educationId     | 교육 ID             | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 영상 제목           | string        | required | false    | "2024년 성희롱 예방 교육"              |
+| generationJobId | 생성 Job ID         | string(uuid)  | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
+| scriptId        | 스크립트 ID         | string(uuid)  | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
+| fileUrl         | 파일 URL            | string        | optional | true     | "https://cdn.com/video.mp4"            |
+| version         | 버전                | number        | optional | true     | 1                                      |
+| duration        | 길이(초)            | number        | optional | true     | 720                                    |
+| status          | 상태                | string        | required | false    | "DRAFT"                                |
+| departmentScope | 수강 가능 부서 목록 | array(string) | optional | true     | ["HR", "ENGINEERING"]                  |
+| orderIndex      | 재생 순서(0-base)   | number        | optional | true     | 0                                      |
+| createdAt       | 생성시각 ISO8601    | string        | required | false    | "2025-12-24T10:00:00Z"                 |
 
 ### Status
 
@@ -181,34 +179,32 @@ Body: 있음
 
 ### Request
 
-| key             | 설명                 | value 타입 | 옵션     | Nullable | 예시                             |
-| --------------- | -------------------- | ---------- | -------- | -------- | -------------------------------- |
-| title           | 영상 제목            | string     | optional | true     | "2024년 성희롱 예방 교육 (수정)" |
-| fileUrl         | 파일 URL             | string     | optional | true     | "https://cdn.com/video.mp4"      |
-| version         | 버전                 | number     | optional | true     | 2                                |
-| duration        | 길이(초)             | number     | optional | true     | 750                              |
-| status          | 상태                 | string     | optional | true     | "READY"                          |
-| targetDeptCode  | 대상 부서 코드       | string     | optional | true     | "DEV"                            |
-| departmentScope | 수강 가능 부서(JSON) | string     | optional | true     | "[\"HR\", \"IT\"]"               |
-| orderIndex      | 재생 순서(0-base)    | number     | optional | true     | 1                                |
+| key             | 설명                | value 타입    | 옵션     | Nullable | 예시                             |
+| --------------- | ------------------- | ------------- | -------- | -------- | -------------------------------- |
+| title           | 영상 제목           | string        | optional | true     | "2024년 성희롱 예방 교육 (수정)" |
+| fileUrl         | 파일 URL            | string        | optional | true     | "https://cdn.com/video.mp4"      |
+| version         | 버전                | number        | optional | true     | 2                                |
+| duration        | 길이(초)            | number        | optional | true     | 750                              |
+| status          | 상태                | string        | optional | true     | "READY"                          |
+| departmentScope | 수강 가능 부서 목록 | array(string) | optional | true     | ["HR", "ENGINEERING"]            |
+| orderIndex      | 재생 순서(0-base)   | number        | optional | true     | 1                                |
 
 ### Response
 
-| key             | 설명                 | value 타입   | 옵션     | Nullable | 예시                                   |
-| --------------- | -------------------- | ------------ | -------- | -------- | -------------------------------------- |
-| id              | 영상 ID              | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| educationId     | 교육 ID              | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title           | 영상 제목            | string       | required | false    | "2024년 성희롱 예방 교육 (수정)"       |
-| generationJobId | 생성 Job ID          | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
-| scriptId        | 스크립트 ID          | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
-| fileUrl         | 파일 URL             | string       | optional | true     | "https://cdn.com/video.mp4"            |
-| version         | 버전                 | number       | optional | true     | 2                                      |
-| duration        | 길이(초)             | number       | optional | true     | 750                                    |
-| status          | 상태                 | string       | required | false    | "READY"                                |
-| targetDeptCode  | 대상 부서 코드       | string       | optional | true     | "DEV"                                  |
-| departmentScope | 수강 가능 부서(JSON) | string       | optional | true     | "[\"HR\", \"IT\"]"                     |
-| orderIndex      | 재생 순서(0-base)    | number       | optional | true     | 1                                      |
-| createdAt       | 생성시각 ISO8601     | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| key             | 설명                | value 타입    | 옵션     | Nullable | 예시                                   |
+| --------------- | ------------------- | ------------- | -------- | -------- | -------------------------------------- |
+| id              | 영상 ID             | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| educationId     | 교육 ID             | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 영상 제목           | string        | required | false    | "2024년 성희롱 예방 교육 (수정)"       |
+| generationJobId | 생성 Job ID         | string(uuid)  | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
+| scriptId        | 스크립트 ID         | string(uuid)  | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
+| fileUrl         | 파일 URL            | string        | optional | true     | "https://cdn.com/video.mp4"            |
+| version         | 버전                | number        | optional | true     | 2                                      |
+| duration        | 길이(초)            | number        | optional | true     | 750                                    |
+| status          | 상태                | string        | required | false    | "READY"                                |
+| departmentScope | 수강 가능 부서 목록 | array(string) | optional | true     | ["HR", "ENGINEERING"]                  |
+| orderIndex      | 재생 순서(0-base)   | number        | optional | true     | 1                                      |
+| createdAt       | 생성시각 ISO8601    | string        | required | false    | "2025-12-24T10:00:00Z"                 |
 
 ### Status
 
@@ -265,7 +261,9 @@ Body: 없음
 ### ✔ 설명
 
 - 영상 생성 완료 후 검토자에게 검토를 요청합니다.
-- 상태 변경: `READY` → `REVIEW_REQUESTED` 또는 `SCRIPT_READY` → `SCRIPT_REVIEW_REQUESTED`
+- 상태 변경:
+  - 1차 검토 요청: `SCRIPT_READY` → `SCRIPT_REVIEW_REQUESTED` (스크립트 검토)
+  - 2차 검토 요청: `READY` → `FINAL_REVIEW_REQUESTED` (영상 검토)
 
 ### ✔ 권한
 
@@ -281,12 +279,12 @@ Body: 없음
 
 ### Response
 
-| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                   |
-| -------------- | --------- | ------------ | -------- | -------- | -------------------------------------- |
-| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| previousStatus | 이전 상태 | string       | required | false    | "READY"                                |
-| currentStatus  | 현재 상태 | string       | required | false    | "REVIEW_REQUESTED"                     |
-| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                                    |
+| -------------- | --------- | ------------ | -------- | -------- | ------------------------------------------------------- |
+| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001"                  |
+| previousStatus | 이전 상태 | string       | required | false    | "SCRIPT_READY" 또는 "READY"                             |
+| currentStatus  | 현재 상태 | string       | required | false    | "SCRIPT_REVIEW_REQUESTED" 또는 "FINAL_REVIEW_REQUESTED" |
+| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                                  |
 
 ### Status
 
@@ -308,7 +306,9 @@ Body: 없음
 ### ✔ 설명
 
 - 검토자가 영상을 승인합니다.
-- 상태 변경: `REVIEW_REQUESTED` → `APPROVED` 또는 `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_APPROVED`
+- 상태 변경:
+  - 1차 승인: `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_APPROVED` (스크립트 승인, 영상 생성 가능)
+  - 2차 승인: `FINAL_REVIEW_REQUESTED` → `PUBLISHED` (영상 승인 = 게시)
 
 ### ✔ 권한
 
@@ -324,12 +324,12 @@ Body: 없음
 
 ### Response
 
-| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                   |
-| -------------- | --------- | ------------ | -------- | -------- | -------------------------------------- |
-| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| previousStatus | 이전 상태 | string       | required | false    | "REVIEW_REQUESTED"                     |
-| currentStatus  | 현재 상태 | string       | required | false    | "APPROVED"                             |
-| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                                    |
+| -------------- | --------- | ------------ | -------- | -------- | ------------------------------------------------------- |
+| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001"                  |
+| previousStatus | 이전 상태 | string       | required | false    | "SCRIPT_REVIEW_REQUESTED" 또는 "FINAL_REVIEW_REQUESTED" |
+| currentStatus  | 현재 상태 | string       | required | false    | "SCRIPT_APPROVED" 또는 "PUBLISHED"                      |
+| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                                  |
 
 ### Status
 
@@ -351,7 +351,10 @@ Body: 없음
 ### ✔ 설명
 
 - 검토자가 영상을 반려합니다.
-- 상태 변경: `REVIEW_REQUESTED` → `DRAFT` 또는 `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_READY`
+- 상태 변경:
+  - 1차 반려: `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_READY` (스크립트 검토 단계 반려)
+  - 2차 반려: `FINAL_REVIEW_REQUESTED` → `READY` (영상 검토 단계 반려)
+- 반려 사유(reason)가 제공되면 `EducationVideoReview` 테이블에 저장됩니다. (반려 단계: SCRIPT 또는 VIDEO)
 
 ### ✔ 권한
 
@@ -373,12 +376,12 @@ Body: 있음 (선택)
 
 ### Response
 
-| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                   |
-| -------------- | --------- | ------------ | -------- | -------- | -------------------------------------- |
-| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| previousStatus | 이전 상태 | string       | required | false    | "REVIEW_REQUESTED"                     |
-| currentStatus  | 현재 상태 | string       | required | false    | "DRAFT"                                |
-| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                                    |
+| -------------- | --------- | ------------ | -------- | -------- | ------------------------------------------------------- |
+| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001"                  |
+| previousStatus | 이전 상태 | string       | required | false    | "SCRIPT_REVIEW_REQUESTED" 또는 "FINAL_REVIEW_REQUESTED" |
+| currentStatus  | 현재 상태 | string       | required | false    | "SCRIPT_READY" 또는 "READY"                             |
+| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                                  |
 
 ### Status
 
@@ -399,8 +402,52 @@ Body: 있음 (선택)
 
 ### ✔ 설명
 
-- 승인된 영상을 유저에게 노출합니다.
-- 상태 변경: `APPROVED` → `ACTIVE`
+- [Deprecated] 게시는 2차 승인(approve) 시 자동으로 `PUBLISHED` 처리됩니다.
+- 기존 API 호환을 위해 유지하되, `PUBLISHED` 상태가 아닌 경우 에러를 반환합니다.
+- 상태 변경: `APPROVED` → `ACTIVE` (사용하지 않음, `approve`에서 자동 처리)
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Path
+
+- videoId: UUID (영상 ID)
+
+### Response
+
+| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                                         |
+| -------------- | --------- | ------------ | -------- | -------- | ------------------------------------------------------------ |
+| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001"                       |
+| previousStatus | 이전 상태 | string       | required | false    | "PUBLISHED" (Deprecated API, 실제로는 approve에서 자동 처리) |
+| currentStatus  | 현재 상태 | string       | required | false    | "PUBLISHED" (Deprecated API, 실제로는 approve에서 자동 처리) |
+| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                                       |
+
+### Status
+
+| status          | response content    |
+| --------------- | ------------------- |
+| 200 OK          | 정상                |
+| 400 Bad Request | 상태 변경 불가      |
+| 404 Not Found   | 영상을 찾을 수 없음 |
+| 401/403         | 인증/권한 오류      |
+
+---
+
+## 1.10 영상 비활성화
+
+### ✔ URL
+
+- PUT /admin/videos/{videoId}/disable
+
+### ✔ 설명
+
+- 게시된 영상을 비활성화하여 유저에게 노출되지 않도록 합니다.
+- 상태 변경: `PUBLISHED` → `DISABLED`
 
 ### ✔ 권한
 
@@ -419,22 +466,65 @@ Body: 없음
 | key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                   |
 | -------------- | --------- | ------------ | -------- | -------- | -------------------------------------- |
 | videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| previousStatus | 이전 상태 | string       | required | false    | "APPROVED"                             |
-| currentStatus  | 현재 상태 | string       | required | false    | "ACTIVE"                               |
+| previousStatus | 이전 상태 | string       | required | false    | "PUBLISHED"                            |
+| currentStatus  | 현재 상태 | string       | required | false    | "DISABLED"                             |
 | updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                 |
 
 ### Status
 
-| status          | response content    |
-| --------------- | ------------------- |
-| 200 OK          | 정상                |
-| 400 Bad Request | 상태 변경 불가      |
-| 404 Not Found   | 영상을 찾을 수 없음 |
-| 401/403         | 인증/권한 오류      |
+| status          | response content                           |
+| --------------- | ------------------------------------------ |
+| 200 OK          | 정상                                       |
+| 400 Bad Request | 상태 변경 불가 (PUBLISHED 상태에서만 가능) |
+| 404 Not Found   | 영상을 찾을 수 없음                        |
+| 401/403         | 인증/권한 오류                             |
 
 ---
 
-## 1.10 영상 상태 강제 변경 (\* 개발용)
+## 1.11 영상 활성화
+
+### ✔ URL
+
+- PUT /admin/videos/{videoId}/enable
+
+### ✔ 설명
+
+- 비활성화된 영상을 다시 활성화하여 유저에게 노출합니다.
+- 상태 변경: `DISABLED` → `PUBLISHED`
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Path
+
+- videoId: UUID (영상 ID)
+
+### Response
+
+| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                   |
+| -------------- | --------- | ------------ | -------- | -------- | -------------------------------------- |
+| videoId        | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| previousStatus | 이전 상태 | string       | required | false    | "DISABLED"                             |
+| currentStatus  | 현재 상태 | string       | required | false    | "PUBLISHED"                            |
+| updatedAt      | 변경 시각 | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+
+### Status
+
+| status          | response content                          |
+| --------------- | ----------------------------------------- |
+| 200 OK          | 정상                                      |
+| 400 Bad Request | 상태 변경 불가 (DISABLED 상태에서만 가능) |
+| 404 Not Found   | 영상을 찾을 수 없음                       |
+| 401/403         | 인증/권한 오류                            |
+
+---
+
+## 1.12 영상 상태 강제 변경 (\* 개발용)
 
 ### ✔ URL
 
@@ -815,7 +905,9 @@ Body: 있음
 ## 주의사항
 
 1. **상태 전이**: 영상 상태는 다음 순서로 전이됩니다:
-   - `DRAFT` → `SCRIPT_READY` → `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_APPROVED` → `READY` → `REVIEW_REQUESTED` → `APPROVED` → `ACTIVE`
+   - `DRAFT` → `SCRIPT_READY` → `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_APPROVED` → `PROCESSING` → `READY` → `FINAL_REVIEW_REQUESTED` → `PUBLISHED` → `DISABLED` (비활성화 가능)
+   - 반려 시: `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_READY` (1차 반려), `FINAL_REVIEW_REQUESTED` → `READY` (2차 반려)
+   - 비활성화/활성화: `PUBLISHED` ↔ `DISABLED`
 2. **영상 생성**: 영상 생성 Job은 비동기로 처리되며, 완료까지 시간이 걸릴 수 있습니다.
 3. **Job 상태**: Job 상태는 `PENDING` → `PROCESSING` → `COMPLETED` 또는 `FAILED`로 변경됩니다.
 4. **재시도**: FAILED 상태의 Job만 재시도할 수 있습니다.

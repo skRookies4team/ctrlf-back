@@ -330,6 +330,7 @@ Body: 없음
 - 스크립트를 반려합니다.
 - 상태 변경: `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_READY`
 - 영상 상태도 함께 변경됩니다.
+- 반려 사유(reason)가 제공되면 `EducationVideoReview` 테이블에 저장됩니다. (반려 단계: SCRIPT)
 
 ### ✔ 권한
 

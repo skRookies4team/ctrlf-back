@@ -21,12 +21,17 @@ import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
 import com.ctrlf.education.video.entity.EducationVideoReview;
+import com.ctrlf.education.video.entity.RejectionStage;
 import com.ctrlf.education.video.entity.VideoGenerationJob;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
 import com.ctrlf.education.video.repository.EducationVideoReviewRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
+import com.ctrlf.common.constant.Department;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -65,6 +70,7 @@ public class VideoService {
     private final EducationVideoRepository videoRepository;
     private final EducationVideoReviewRepository reviewRepository;
     private final VideoAiClient videoAiClient;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     // ========================
     // 영상 생성 Job 관련 메서드
@@ -298,8 +304,9 @@ public class VideoService {
     @Transactional
     public VideoCreateResponse createVideoContent(VideoCreateRequest request) {
         EducationVideo video = EducationVideo.createDraft(request.educationId(), request.title());
-        if (request.departmentScope() != null) {
-            video.setDepartmentScope(request.departmentScope());
+        if (request.departmentScope() != null && !request.departmentScope().isEmpty()) {
+            String deptScopeJson = convertDepartmentsToJson(request.departmentScope());
+            video.setDepartmentScope(deptScopeJson);
         }
         video = videoRepository.save(video);
         log.info("영상 컨텐츠 생성. videoId={}, title={}, status={}", video.getId(), video.getTitle(), video.getStatus());
@@ -337,8 +344,10 @@ public class VideoService {
         if (request.version() != null) video.setVersion(request.version());
         if (request.duration() != null) video.setDuration(request.duration());
         if (request.status() != null) video.setStatus(request.status().name());
-        if (request.targetDeptCode() != null) video.setTargetDeptCode(request.targetDeptCode());
-        if (request.departmentScope() != null) video.setDepartmentScope(request.departmentScope());
+        if (request.departmentScope() != null) {
+            String deptScopeJson = convertDepartmentsToJson(request.departmentScope());
+            video.setDepartmentScope(deptScopeJson);
+        }
         if (request.orderIndex() != null) video.setOrderIndex(request.orderIndex());
         video = videoRepository.save(video);
         log.info("영상 컨텐츠 수정. videoId={}, status={}", video.getId(), video.getStatus());
@@ -441,13 +450,18 @@ public class VideoService {
         
         // 반려 사유 저장 (EducationVideoReview 테이블)
         if (reason != null && !reason.isBlank()) {
+            RejectionStage rejectionStage = 
+                "SCRIPT_REVIEW_REQUESTED".equals(prevStatus) 
+                    ? RejectionStage.SCRIPT 
+                    : RejectionStage.VIDEO;
             EducationVideoReview review = EducationVideoReview.createRejection(
                 videoId,
                 reason,
-                reviewerUuid
+                reviewerUuid,
+                rejectionStage
             );
             reviewRepository.save(review);
-            log.debug("반려 사유 저장 완료. videoId={}, reason={}, reviewerUuid={}", videoId, reason, reviewerUuid);
+            log.debug("반려 사유 저장 완료. videoId={}, reason={}, reviewerUuid={}, stage={}", videoId, reason, reviewerUuid, rejectionStage);
         }
         
         video.setStatus(newStatus);
@@ -518,7 +532,8 @@ public class VideoService {
             EducationVideoReview review = EducationVideoReview.createRejection(
                 video.getId(),
                 reason,
-                reviewerUuid
+                reviewerUuid,
+                RejectionStage.SCRIPT // 스크립트 검토 단계 반려
             );
             reviewRepository.save(review);
             log.debug("스크립트 반려 사유 저장 완료. videoId={}, reason={}, reviewerUuid={}", video.getId(), reason, reviewerUuid);
@@ -551,6 +566,52 @@ public class VideoService {
     }
 
     /**
+     * 영상 비활성화 (PUBLISHED → DISABLED).
+     * 게시된 영상을 비활성화하여 유저에게 노출되지 않도록 합니다.
+     */
+    @Transactional
+    public VideoStatusResponse disableVideo(UUID videoId) {
+        EducationVideo video = findVideoOrThrow(videoId);
+        String prevStatus = video.getStatus();
+        
+        if (!"PUBLISHED".equals(prevStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "비활성화는 PUBLISHED 상태에서만 가능합니다. 현재 상태: " + prevStatus);
+        }
+        
+        String newStatus = "DISABLED";
+        log.info("영상 비활성화. videoId={}, {} → {}", videoId, prevStatus, newStatus);
+        
+        video.setStatus(newStatus);
+        video = videoRepository.save(video);
+        
+        return new VideoStatusResponse(video.getId(), prevStatus, video.getStatus(), Instant.now().toString());
+    }
+
+    /**
+     * 영상 활성화 (DISABLED → PUBLISHED).
+     * 비활성화된 영상을 다시 활성화하여 유저에게 노출합니다.
+     */
+    @Transactional
+    public VideoStatusResponse enableVideo(UUID videoId) {
+        EducationVideo video = findVideoOrThrow(videoId);
+        String prevStatus = video.getStatus();
+        
+        if (!"DISABLED".equals(prevStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "활성화는 DISABLED 상태에서만 가능합니다. 현재 상태: " + prevStatus);
+        }
+        
+        String newStatus = "PUBLISHED";
+        log.info("영상 활성화. videoId={}, {} → {}", videoId, prevStatus, newStatus);
+        
+        video.setStatus(newStatus);
+        video = videoRepository.save(video);
+        
+        return new VideoStatusResponse(video.getId(), prevStatus, video.getStatus(), Instant.now().toString());
+    }
+
+    /**
      * [어드민 테스트용] 상태 강제 변경 (상태 검증 없음).
      */
     @Transactional
@@ -574,6 +635,52 @@ public class VideoService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "영상을 찾을 수 없습니다: " + videoId));
     }
 
+    /**
+     * List<Department>를 JSON 문자열로 변환합니다.
+     */
+    private String convertDepartmentsToJson(List<Department> departments) {
+        if (departments == null || departments.isEmpty()) {
+            return null;
+        }
+        try {
+            List<String> displayNames = departments.stream()
+                .map(Department::getDisplayName)
+                .collect(Collectors.toList());
+            return objectMapper.writeValueAsString(displayNames);
+        } catch (Exception e) {
+            log.error("부서 목록을 JSON으로 변환하는 중 오류 발생", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "부서 목록 변환 실패");
+        }
+    }
+
+    /**
+     * JSON 문자열을 List<Department>로 변환합니다.
+     */
+    private List<Department> convertJsonToDepartments(String deptScopeJson) {
+        if (deptScopeJson == null || deptScopeJson.isBlank()) {
+            return null;
+        }
+        try {
+            List<String> displayNames = objectMapper.readValue(deptScopeJson, new TypeReference<List<String>>() {});
+            if (displayNames == null || displayNames.isEmpty()) {
+                return null;
+            }
+            List<Department> departments = new ArrayList<>();
+            for (String displayName : displayNames) {
+                Department dept = Department.fromDisplayName(displayName);
+                if (dept != null) {
+                    departments.add(dept);
+                } else {
+                    log.warn("알 수 없는 부서명: {}", displayName);
+                }
+            }
+            return departments.isEmpty() ? null : departments;
+        } catch (Exception e) {
+            log.warn("부서 목록 JSON 파싱 실패: {}", deptScopeJson, e);
+            return null;
+        }
+    }
+
     private VideoMetaItem toVideoMetaItem(EducationVideo v) {
         VideoStatus status = null;
         if (v.getStatus() != null) {
@@ -583,6 +690,7 @@ public class VideoService {
                 log.warn("알 수 없는 영상 상태: {}, videoId={}", v.getStatus(), v.getId());
             }
         }
+        List<Department> departmentScope = convertJsonToDepartments(v.getDepartmentScope());
         return new VideoMetaItem(
             v.getId(),
             v.getEducationId(),
@@ -593,8 +701,7 @@ public class VideoService {
             v.getVersion(),
             v.getDuration(),
             status,
-            v.getTargetDeptCode(),
-            v.getDepartmentScope(),
+            departmentScope,
             v.getOrderIndex(),
             v.getCreatedAt() != null ? v.getCreatedAt().toString() : null
         );

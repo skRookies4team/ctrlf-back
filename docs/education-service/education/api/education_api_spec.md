@@ -80,13 +80,20 @@ Body: 없음
 
 ### Response
 
-| key         | 설명        | value 타입    | 옵션     | Nullable | 예시                                   |
-| ----------- | ----------- | ------------- | -------- | -------- | -------------------------------------- |
-| id          | 교육 ID     | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title       | 제목        | string        | required | false    | "산업안전 교육"                        |
-| description | 설명        | string        | optional | true     | "산업안전 수칙"                        |
-| duration    | 총 길이(초) | number        | required | false    | 3600                                   |
-| sections    | 섹션 목록   | array(object) | required | false    | 아래 표 참조                           |
+| key         | 설명              | value 타입       | 옵션     | Nullable | 예시                                   |
+| ----------- | ----------------- | ---------------- | -------- | -------- | -------------------------------------- |
+| id          | 교육 ID           | string(uuid)     | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title       | 제목              | string           | required | false    | "산업안전 교육"                        |
+| description | 설명              | string           | optional | true     | "산업안전 수칙"                        |
+| category    | 주제 카테고리     | string           | required | false    | "JOB_DUTY"                             |
+| eduType     | 교육 유형         | string           | optional | true     | "MANDATORY"                            |
+| require     | 필수 여부         | boolean          | optional | true     | true                                   |
+| passScore   | 통과 기준 점수    | number           | optional | true     | 80                                     |
+| passRatio   | 통과 기준 비율(%) | number           | optional | true     | 90                                     |
+| duration    | 총 길이(초)       | number           | required | false    | 3600                                   |
+| createdAt   | 생성 시각         | string(ISO-8601) | optional | true     | "2025-12-17T10:00:00Z"                 |
+| updatedAt   | 수정 시각         | string(ISO-8601) | optional | true     | "2025-12-17T10:00:00Z"                 |
+| sections    | 섹션 목록         | array(object)    | required | false    | 아래 표 참조                           |
 
 sections item
 
@@ -218,9 +225,9 @@ Body: 없음
 
 ### Query Parameter
 
-| key    | 설명           | value 타입 | 옵션     | Nullable | 예시    |
-| ------ | -------------- | ---------- | -------- | -------- | ------- |
-| status | 영상 상태 필터 | string     | optional | true     | "DRAFT" |
+| key    | 설명           | value 타입 | 옵션     | Nullable | 예시                                                                                                                                        |
+| ------ | -------------- | ---------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| status | 영상 상태 필터 | string     | optional | true     | "PUBLISHED" (DRAFT, SCRIPT_READY, SCRIPT_REVIEW_REQUESTED, SCRIPT_APPROVED, PROCESSING, READY, FINAL_REVIEW_REQUESTED, PUBLISHED, DISABLED) |
 
 ### Response
 
@@ -234,15 +241,14 @@ array of object
 
 videos item
 
-| key            | 설명      | value 타입   | 옵션     | Nullable | 예시                                   |
-| -------------- | --------- | ------------ | -------- | -------- | -------------------------------------- |
-| id             | 영상 ID   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| title          | 영상 제목 | string       | required | false    | "2024년 성희롱 예방 교육"              |
-| fileUrl        | 재생 URL  | string       | optional | true     | "https://cdn.example.com/video1.mp4"   |
-| duration       | 길이(초)  | number       | required | false    | 1800                                   |
-| version        | 버전      | number       | required | false    | 1                                      |
-| isMain         | 메인 여부 | boolean      | required | false    | true                                   |
-| targetDeptCode | 대상 부서 | string       | optional | true     | "DEV"                                  |
+| key             | 설명                              | value 타입   | 옵션     | Nullable | 예시                                           |
+| --------------- | --------------------------------- | ------------ | -------- | -------- | ---------------------------------------------- |
+| id              | 영상 ID                           | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001"         |
+| title           | 영상 제목                         | string       | required | false    | "2024년 성희롱 예방 교육"                      |
+| fileUrl         | 재생 URL                          | string       | optional | true     | "https://cdn.example.com/video1.mp4"           |
+| duration        | 길이(초)                          | number       | required | false    | 1800                                           |
+| version         | 버전                              | number       | required | false    | 1                                              |
+| departmentScope | 수강 가능 부서 목록 (JSON string) | string       | optional | true     | "[\"HR\", \"ENGINEERING\"]" (JSON 배열 문자열) |
 
 ### Status
 
@@ -277,44 +283,43 @@ Body: 없음
 
 ### Query Parameter
 
-| key       | 설명      | value 타입 | 옵션     | Nullable | 예시      |
-| --------- | --------- | ---------- | -------- | -------- | --------- |
-| completed | 이수 여부 | boolean    | optional | true     | true      |
-| category  | 카테고리  | string     | optional | true     | "JOB"     |
-| sort      | 정렬 기준 | string     | optional | true     | "UPDATED" |
+| key       | 설명                      | value 타입 | 옵션     | Nullable | 예시        |
+| --------- | ------------------------- | ---------- | -------- | -------- | ----------- |
+| completed | 이수 여부                 | boolean    | optional | true     | true        |
+| eduType   | 교육 유형 필터            | string     | optional | true     | "MANDATORY" |
+| sort      | 정렬 기준(UPDATED\|TITLE) | string     | optional | true     | "UPDATED"   |
 
 ### Response
 
 array of object
 
-| key               | 설명                                   | value 타입    | 옵션     | Nullable | 예시                                   |
-| ----------------- | -------------------------------------- | ------------- | -------- | -------- | -------------------------------------- |
-| id                | 교육 ID                                | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title             | 제목                                   | string        | required | false    | "산업안전 교육"                        |
-| description       | 설명                                   | string        | optional | true     | "산업안전 수칙"                        |
-| category          | 카테고리                               | string        | required | false    | "MANDATORY"                            |
-| required          | 필수 여부                              | boolean       | required | false    | true                                   |
-| status            | 상태(호환 필드)                        | string        | required | false    | "IN_PROGRESS"                          |
-| progressPercent   | 사용자 기준 교육 진행률(%)             | number        | required | false    | 60                                     |
-| watchStatus       | 교육 시청 상태(시청전/시청중/시청완료) | string        | required | false    | "시청중"                               |
-| targetDepartments | 대상부서                               | array(string) | optional | true     | ["HR"]                                 |
-| videos            | 교육에 포함된 영상 목록                | array(object) | required | false    | 아래 표 참조                           |
+| key             | 설명                                   | value 타입    | 옵션     | Nullable | 예시                                   |
+| --------------- | -------------------------------------- | ------------- | -------- | -------- | -------------------------------------- |
+| id              | 교육 ID                                | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 제목                                   | string        | required | false    | "산업안전 교육"                        |
+| description     | 설명                                   | string        | optional | true     | "산업안전 수칙"                        |
+| category        | 주제 카테고리                          | string        | required | false    | "JOB_DUTY"                             |
+| eduType         | 교육 유형                              | string        | optional | true     | "MANDATORY"                            |
+| required        | 필수 여부                              | boolean       | required | false    | true                                   |
+| progressPercent | 사용자 기준 교육 진행률(%)             | number        | required | false    | 60                                     |
+| watchStatus     | 교육 시청 상태(시청전/시청중/시청완료) | string        | required | false    | "시청중"                               |
+| videos          | 교육에 포함된 영상 목록(PUBLISHED만)   | array(object) | required | false    | 아래 표 참조                           |
 
 videos item
 
-| key               | 설명                              | value 타입   | 옵션     | Nullable | 예시                                   |
-| ----------------- | --------------------------------- | ------------ | -------- | -------- | -------------------------------------- |
-| id                | 영상 ID                           | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| fileUrl           | 영상 파일 URL                     | string       | required | false    | "https://cdn.example.com/video1.mp4"   |
-| duration          | 영상 길이(초)                     | number       | required | false    | 1800                                   |
-| version           | 영상 버전                         | number       | required | false    | 1                                      |
-| isMain            | 메인 영상 여부                    | boolean      | required | false    | false                                  |
-| targetDeptCode    | 대상 부서 코드                    | string       | optional | true     | "DEV"                                  |
-| resumePosition    | 사용자 이어보기 위치(초)          | number       | optional | true     | 120                                    |
-| isCompleted       | 사용자 영상 이수 여부             | boolean      | required | false    | false                                  |
-| totalWatchSeconds | 사용자 누적 시청 시간(초)         | number       | optional | true     | 300                                    |
-| progressPercent   | 진행률(%)                         | number       | required | false    | 65                                     |
-| watchStatus       | 시청 상태(시청전/시청중/시청완료) | string       | required | false    | "시청중"                               |
+| key               | 설명                              | value 타입   | 옵션     | Nullable | 예시                                           |
+| ----------------- | --------------------------------- | ------------ | -------- | -------- | ---------------------------------------------- |
+| id                | 영상 ID                           | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001"         |
+| title             | 영상 제목                         | string       | required | false    | "2024년 성희롱 예방 교육"                      |
+| fileUrl           | 영상 파일 URL                     | string       | required | false    | "https://cdn.example.com/video1.mp4"           |
+| duration          | 영상 길이(초)                     | number       | required | false    | 1800                                           |
+| version           | 영상 버전                         | number       | required | false    | 1                                              |
+| departmentScope   | 수강 가능 부서 목록 (JSON string) | string       | optional | true     | "[\"HR\", \"ENGINEERING\"]" (JSON 배열 문자열) |
+| resumePosition    | 사용자 이어보기 위치(초)          | number       | optional | true     | 120                                            |
+| isCompleted       | 사용자 영상 이수 여부             | boolean      | required | false    | false                                          |
+| totalWatchSeconds | 사용자 누적 시청 시간(초)         | number       | optional | true     | 300                                            |
+| progressPercent   | 진행률(%)                         | number       | required | false    | 65                                             |
+| watchStatus       | 시청 상태(시청전/시청중/시청완료) | string       | required | false    | "시청중"                                       |
 
 ### Status
 
@@ -334,6 +339,7 @@ videos item
 ### ✔ 설명
 
 - 교육에 포함된 영상 목록과 사용자별 진행 정보를 조회합니다.
+- **PUBLISHED 상태의 영상만** 반환됩니다.
 
 ### ✔ 권한
 
@@ -357,20 +363,19 @@ Body: 없음
 
 videos item
 
-| key               | 설명                              | value 타입   | 옵션     | Nullable | 예시                                   |
-| ----------------- | --------------------------------- | ------------ | -------- | -------- | -------------------------------------- |
-| id                | 영상 ID                           | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| title             | 영상 제목                         | string       | required | false    | "2024년 성희롱 예방 교육"              |
-| fileUrl           | 재생 URL                          | string       | optional | true     | "https://cdn.example.com/video1.mp4"   |
-| duration          | 길이(초)                          | number       | required | false    | 1800                                   |
-| version           | 버전                              | number       | required | false    | 1                                      |
-| isMain            | 메인 여부                         | boolean      | required | false    | true                                   |
-| targetDeptCode    | 대상 부서                         | string       | optional | true     | "DEV"                                  |
-| resumePosition    | 이어보기 위치                     | number       | optional | true     | 600                                    |
-| isCompleted       | 사용자 영상 이수                  | boolean      | optional | true     | false                                  |
-| totalWatchSeconds | 누적 시청시간                     | number       | optional | true     | 600                                    |
-| progressPercent   | 진행률(%)                         | number       | optional | true     | 33                                     |
-| watchStatus       | 시청 상태(시청전/시청중/시청완료) | string       | optional | true     | "시청중"                               |
+| key               | 설명                              | value 타입   | 옵션     | Nullable | 예시                                           |
+| ----------------- | --------------------------------- | ------------ | -------- | -------- | ---------------------------------------------- |
+| id                | 영상 ID                           | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001"         |
+| title             | 영상 제목                         | string       | required | false    | "2024년 성희롱 예방 교육"                      |
+| fileUrl           | 재생 URL                          | string       | optional | true     | "https://cdn.example.com/video1.mp4"           |
+| duration          | 길이(초)                          | number       | required | false    | 1800                                           |
+| version           | 버전                              | number       | required | false    | 1                                              |
+| departmentScope   | 수강 가능 부서 목록 (JSON string) | string       | optional | true     | "[\"HR\", \"ENGINEERING\"]" (JSON 배열 문자열) |
+| resumePosition    | 이어보기 위치                     | number       | optional | true     | 600                                            |
+| isCompleted       | 사용자 영상 이수                  | boolean      | optional | true     | false                                          |
+| totalWatchSeconds | 누적 시청시간                     | number       | optional | true     | 600                                            |
+| progressPercent   | 진행률(%)                         | number       | optional | true     | 33                                             |
+| watchStatus       | 시청 상태(시청전/시청중/시청완료) | string       | optional | true     | "시청중"                                       |
 
 ### Status
 
@@ -391,6 +396,10 @@ videos item
 ### ✔ 설명
 
 - 특정 교육의 특정 영상에 대한 사용자 시청 진행 정보를 업데이트합니다.
+- 영상의 `duration`은 백엔드에서 `EducationVideo` 엔티티에서 자동으로 가져옵니다.
+- 영상 완료 여부는 교육의 `passRatio` 기준으로 판단됩니다 (기본값: 100%).
+- 교육 전체 진행률은 **PUBLISHED 상태의 영상만** 기준으로 계산됩니다.
+- **교육의 모든 PUBLISHED 영상이 시청 완료되면 자동으로 교육 시청 완료 처리됩니다.** (`EducationProgress` 엔티티가 자동으로 업데이트됨)
 
 ### ✔ 권한
 
@@ -410,8 +419,9 @@ Body: 있음
 | key       | 설명              | value 타입 | 옵션     | Nullable | 예시 |
 | --------- | ----------------- | ---------- | -------- | -------- | ---- |
 | position  | 현재 위치(초)     | number     | optional | true     | 120  |
-| duration  | 영상 길이(초)     | number     | optional | true     | 1800 |
 | watchTime | 증가 시청시간(초) | number     | optional | true     | 120  |
+
+**참고**: `duration` 필드는 제거되었습니다. 백엔드에서 `EducationVideo` 엔티티의 `duration` 값을 사용합니다.
 
 ### Response
 
@@ -435,7 +445,7 @@ Body: 있음
 
 ---
 
-## 2.4 교육 이수 처리
+## 2.4 교육 이수 처리 (선택적)
 
 ### ✔ URL
 
@@ -444,6 +454,9 @@ Body: 있음
 ### ✔ 설명
 
 - 모든 영상 이수 여부를 확인하여 교육 이수 처리를 수행합니다.
+- **PUBLISHED 상태의 영상만** 기준으로 이수 여부를 판단합니다.
+- 모든 PUBLISHED 영상이 완료 상태여야 교육 이수가 완료됩니다.
+- **참고**: `POST /edu/{educationId}/video/{videoId}/progress` API에서 모든 영상이 완료되면 자동으로 교육 이수가 처리되므로, 이 API는 필요시에만 수동으로 호출하면 됩니다.
 
 ### ✔ 권한
 
@@ -468,10 +481,10 @@ Body: 없음
 
 실패 시 (400 Bad Request)
 
-| key     | 설명        | value 타입 | 옵션     | Nullable | 예시                    |
-| ------- | ----------- | ---------- | -------- | -------- | ----------------------- |
-| status  | 상태        | string     | required | false    | "FAILED"                |
-| message | 실패 메시지 | string     | required | false    | "영상 이수 조건 미충족" |
+| key     | 설명        | value 타입 | 옵션     | Nullable | 예시                                     |
+| ------- | ----------- | ---------- | -------- | -------- | ---------------------------------------- |
+| status  | 상태        | string     | required | false    | "FAILED"                                 |
+| message | 실패 메시지 | string     | required | false    | "PUBLISHED 상태의 영상 이수 조건 미충족" |
 
 ### Status
 
@@ -485,18 +498,25 @@ Body: 없음
 
 ## 주의사항
 
-1. **교육 카테고리**: 주제 카테고리는 다음 중 하나여야 합니다:
+1. **교육 카테고리 (category)**: 주제 카테고리는 다음 중 하나여야 합니다:
    - `JOB_DUTY` (직무)
    - `SEXUAL_HARASSMENT_PREVENTION` (성희롱 예방)
    - `PERSONAL_INFO_PROTECTION` (개인정보 보호)
    - `WORKPLACE_BULLYING` (직장 내 괴롭힘)
    - `DISABILITY_AWARENESS` (장애인 인식 개선)
-2. **교육 유형**: 교육 유형은 다음 중 하나입니다:
+2. **교육 유형 (eduType)**: 교육 유형은 다음 중 하나입니다:
    - `MANDATORY` (법정 필수)
    - `JOB` (직무)
    - `ETC` (기타)
-3. **진행률 계산**: 영상 진행률은 `(totalWatchSeconds / duration) * 100`으로 계산됩니다.
-4. **이수 조건**: 모든 영상을 이수해야 교육 이수가 완료됩니다.
+3. **진행률 계산**:
+   - 영상 진행률: `(position / duration) * 100` (최소 0, 최대 100)
+   - 교육 진행률: PUBLISHED 영상들의 진행률 평균
+4. **완료 기준**:
+   - 영상 완료: `progress >= passRatio` (교육의 `passRatio` 기준, 기본값: 100%)
+   - 교육 이수: 모든 **PUBLISHED 상태의 영상**이 완료 상태여야 함
+5. **영상 상태 필터링**:
+   - 사용자 API (`GET /edus/me`, `GET /edu/{id}/videos`)는 **PUBLISHED 상태의 영상만** 반환
+   - 진행률 업데이트 및 이수 처리도 **PUBLISHED 영상만** 기준으로 계산
 
 ---
 

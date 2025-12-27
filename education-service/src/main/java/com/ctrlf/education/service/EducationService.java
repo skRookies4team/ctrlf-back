@@ -176,7 +176,6 @@ public class EducationService {
                     v.getFileUrl(),
                     durationSec,
                     v.getVersion() != null ? v.getVersion() : 1,
-                    v.getTargetDeptCode(),
                     v.getDepartmentScope(),
                     resume,
                     completedV,
@@ -348,7 +347,6 @@ public class EducationService {
                 v.getFileUrl(),
                 durationSec,
                 v.getVersion() != null ? v.getVersion() : 1,
-                v.getTargetDeptCode(),
                 v.getDepartmentScope(),
                 resume,
                 completed,
@@ -480,6 +478,27 @@ public class EducationService {
             avg = sum / publishedVideos.size();
             allCompleted = completedCount == publishedVideos.size();
         }
+        
+        // 11. 모든 PUBLISHED 영상이 완료되면 EducationProgress 자동 완료 처리
+        if (allCompleted && !publishedVideos.isEmpty()) {
+            EducationProgress eduProgress = educationProgressRepository
+                .findByUserUuidAndEducationId(userUuid, educationId)
+                .orElseGet(() -> {
+                    EducationProgress newProgress = new EducationProgress();
+                    newProgress.setUserUuid(userUuid);
+                    newProgress.setEducationId(educationId);
+                    return newProgress;
+                });
+            
+            // 아직 완료 처리되지 않은 경우에만 업데이트
+            if (eduProgress.getIsCompleted() == null || !eduProgress.getIsCompleted()) {
+                eduProgress.setIsCompleted(true);
+                eduProgress.setCompletedAt(Instant.now());
+                eduProgress.setProgress(100);
+                educationProgressRepository.save(eduProgress);
+            }
+        }
+        
         // 응답 DTO 구성
         return VideoProgressResponse.builder()
             .updated(true)
