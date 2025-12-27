@@ -3,7 +3,7 @@
 ## 테스트 환경
 
 ```
-chat-service: http://localhost:9001
+chat-service: http://localhost:9005
 ai-server: http://localhost:8000
 ragflow: http://localhost:8080
 ```
@@ -24,7 +24,7 @@ export TOKEN="eyJhbGciOiJSUzI1NiIsInR5cCI6..."
 JWT 토큰에서 `sub` 클레임을 확인하거나, 기존 세션 목록에서 userUuid를 확인합니다.
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions' \
+curl -X GET 'http://localhost:9005/api/chat/sessions' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -51,7 +51,7 @@ curl -X GET 'http://localhost:8080/health'
 ### 📌 Step 1: 채팅 세션 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/api/chat/sessions' \
+curl -X POST 'http://localhost:9005/api/chat/sessions' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -96,7 +96,7 @@ export SESSION_ID="응답에서_받은_id"
 ### 📌 Step 2: 세션 단건 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
+curl -X GET 'http://localhost:9005/api/chat/sessions/'$SESSION_ID \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -123,7 +123,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
 ### 📌 Step 3: 세션 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions' \
+curl -X GET 'http://localhost:9005/api/chat/sessions' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -152,7 +152,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions' \
 ### 📌 Step 4: 세션 수정
 
 ```bash
-curl -X PUT 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
+curl -X PUT 'http://localhost:9005/api/chat/sessions/'$SESSION_ID \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -183,7 +183,7 @@ curl -X PUT 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
 ### 📌 Step 5: 메시지 전송 및 AI 응답 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/messages' \
+curl -X POST 'http://localhost:9005/chat/messages' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -226,7 +226,7 @@ export MESSAGE_ID="응답에서_받은_messageId"
 ### 📌 Step 6: 세션별 메시지 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/chat/sessions/'$SESSION_ID'/messages' \
+curl -X GET 'http://localhost:9005/chat/sessions/'$SESSION_ID'/messages' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -272,7 +272,7 @@ curl -X GET 'http://localhost:9001/chat/sessions/'$SESSION_ID'/messages' \
 ### 📌 Step 7: 세션 히스토리 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID'/history' \
+curl -X GET 'http://localhost:9005/api/chat/sessions/'$SESSION_ID'/history' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -311,7 +311,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID'/history' \
 ### 📌 Step 8: 메시지 재시도
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/sessions/'$SESSION_ID'/messages/'$MESSAGE_ID'/retry' \
+curl -X POST 'http://localhost:9005/chat/sessions/'$SESSION_ID'/messages/'$MESSAGE_ID'/retry' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -345,7 +345,7 @@ curl -X POST 'http://localhost:9001/chat/sessions/'$SESSION_ID'/messages/'$MESSA
 ### 📌 Step 9: 메시지 피드백 제출
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/sessions/'$SESSION_ID'/messages/'$MESSAGE_ID'/feedback' \
+curl -X POST 'http://localhost:9005/chat/sessions/'$SESSION_ID'/messages/'$MESSAGE_ID'/feedback' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -370,7 +370,7 @@ curl -X POST 'http://localhost:9001/chat/sessions/'$SESSION_ID'/messages/'$MESSA
 ### 📌 Step 10: 세션 피드백 제출
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/sessions/'$SESSION_ID'/feedback' \
+curl -X POST 'http://localhost:9005/chat/sessions/'$SESSION_ID'/feedback' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -393,7 +393,7 @@ curl -X POST 'http://localhost:9001/chat/sessions/'$SESSION_ID'/feedback' \
 
 ```bash
 # 메시지 전송 후 messageId 획득
-curl -X POST 'http://localhost:9001/chat/messages' \
+curl -X POST 'http://localhost:9005/chat/messages' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -415,7 +415,7 @@ curl -X POST 'http://localhost:9001/chat/messages' \
 ### 📌 Step 12: 세션 삭제 (Soft Delete)
 
 ```bash
-curl -X DELETE 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
+curl -X DELETE 'http://localhost:9005/api/chat/sessions/'$SESSION_ID \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -437,7 +437,7 @@ curl -X DELETE 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
 특정 세션의 상세 정보를 확인할 때 사용:
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
+curl -X GET 'http://localhost:9005/api/chat/sessions/'$SESSION_ID \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -446,7 +446,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID \
 세션의 전체 대화 내역을 확인할 때 사용:
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID'/history' \
+curl -X GET 'http://localhost:9005/api/chat/sessions/'$SESSION_ID'/history' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -457,7 +457,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/'$SESSION_ID'/history' \
 ### 1. 존재하지 않는 세션 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/00000000-0000-0000-0000-000000000000' \
+curl -X GET 'http://localhost:9005/api/chat/sessions/00000000-0000-0000-0000-000000000000' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -468,7 +468,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/00000000-0000-0000-0000-000
 ### 2. 잘못된 도메인으로 세션 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/api/chat/sessions' \
+curl -X POST 'http://localhost:9005/api/chat/sessions' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -487,7 +487,7 @@ curl -X POST 'http://localhost:9001/api/chat/sessions' \
 AI 서버가 다운된 상태에서 메시지 전송:
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/messages' \
+curl -X POST 'http://localhost:9005/chat/messages' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -555,7 +555,7 @@ TOKEN="YOUR_TOKEN_HERE"
 USER_UUID="YOUR_USER_UUID"
 
 # 1. 세션 생성
-SESSION_RESPONSE=$(curl -s -X POST 'http://localhost:9001/api/chat/sessions' \
+SESSION_RESPONSE=$(curl -s -X POST 'http://localhost:9005/api/chat/sessions' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -567,7 +567,7 @@ SESSION_ID=$(echo $SESSION_RESPONSE | jq -r '.id')
 echo "SESSION_ID: $SESSION_ID"
 
 # 2. 메시지 전송
-MESSAGE_RESPONSE=$(curl -s -X POST 'http://localhost:9001/chat/messages' \
+MESSAGE_RESPONSE=$(curl -s -X POST 'http://localhost:9005/chat/messages' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -578,11 +578,11 @@ MESSAGE_ID=$(echo $MESSAGE_RESPONSE | jq -r '.messageId')
 echo "MESSAGE_ID: $MESSAGE_ID"
 
 # 3. 세션 히스토리 조회
-curl -s -X GET "http://localhost:9001/api/chat/sessions/$SESSION_ID/history" \
+curl -s -X GET "http://localhost:9005/api/chat/sessions/$SESSION_ID/history" \
   -H "Authorization: Bearer $TOKEN" | jq
 
 # 4. 메시지 피드백 제출
-curl -s -X POST "http://localhost:9001/chat/sessions/$SESSION_ID/messages/$MESSAGE_ID/feedback" \
+curl -s -X POST "http://localhost:9005/chat/sessions/$SESSION_ID/messages/$MESSAGE_ID/feedback" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -591,7 +591,7 @@ curl -s -X POST "http://localhost:9001/chat/sessions/$SESSION_ID/messages/$MESSA
   }'
 
 # 5. 세션 피드백 제출
-curl -s -X POST "http://localhost:9001/chat/sessions/$SESSION_ID/feedback" \
+curl -s -X POST "http://localhost:9005/chat/sessions/$SESSION_ID/feedback" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{

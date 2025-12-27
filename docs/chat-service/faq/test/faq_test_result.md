@@ -1,7 +1,7 @@
 # FAQ 서비스 API 테스트 결과 리포트
 
 **테스트 일시**: 2025-12-24 11:01 KST  
-**테스트 환경**: Local (chat-service: 9001, ai-server: 8000, ragflow: 8080)  
+**테스트 환경**: Local (chat-service: 9005, ai-server: 8000, ragflow: 8080)  
 **테스트 계정**: user1 (일반 사용자)
 
 ---
@@ -43,7 +43,7 @@ curl -s -X POST 'http://localhost:8090/realms/ctrlf/protocol/openid-connect/toke
 #### Step 1: FAQ 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/faq' \
+curl -X POST 'http://localhost:9005/chat/faq' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -67,7 +67,7 @@ curl -X POST 'http://localhost:9001/chat/faq' \
 #### Step 2: FAQ 수정
 
 ```bash
-curl -X PATCH 'http://localhost:9001/chat/faq/46fe6591-dd5b-4251-b29b-efe3874f2807' \
+curl -X PATCH 'http://localhost:9005/chat/faq/46fe6591-dd5b-4251-b29b-efe3874f2807' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -88,7 +88,7 @@ curl -X PATCH 'http://localhost:9001/chat/faq/46fe6591-dd5b-4251-b29b-efe3874f28
 #### Step 3: FAQ 목록 조회 (관리자)
 
 ```bash
-curl -X GET 'http://localhost:9001/chat/faq' \
+curl -X GET 'http://localhost:9005/chat/faq' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -120,7 +120,7 @@ curl -X GET 'http://localhost:9001/chat/faq' \
 #### Step 4: FAQ 홈 조회 (사용자)
 
 ```bash
-curl -X GET 'http://localhost:9001/faq/home' \
+curl -X GET 'http://localhost:9005/faq/home' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -133,7 +133,7 @@ curl -X GET 'http://localhost:9001/faq/home' \
 #### Step 5: 도메인별 FAQ 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/faq?domain=SECURITY' \
+curl -X GET 'http://localhost:9005/faq?domain=SECURITY' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -156,7 +156,7 @@ curl -X GET 'http://localhost:9001/faq?domain=SECURITY' \
 #### Step 1: FAQ 후보 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/admin/faq/candidates' \
+curl -X POST 'http://localhost:9005/admin/faq/candidates' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -179,7 +179,7 @@ curl -X POST 'http://localhost:9001/admin/faq/candidates' \
 #### Step 2: FAQ 후보 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/admin/faq/candidates' \
+curl -X GET 'http://localhost:9005/admin/faq/candidates' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -192,7 +192,7 @@ curl -X GET 'http://localhost:9001/admin/faq/candidates' \
 #### Step 3: FAQ 초안 자동 생성 (AI + RAGFlow)
 
 ```bash
-curl -X POST 'http://localhost:9001/admin/faq/candidates/24454c70-0079-4c8b-9860-73a636a979b6/generate' \
+curl -X POST 'http://localhost:9005/admin/faq/candidates/24454c70-0079-4c8b-9860-73a636a979b6/generate' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -214,7 +214,7 @@ curl -X POST 'http://localhost:9001/admin/faq/candidates/24454c70-0079-4c8b-9860
 #### Step 4: FAQ Draft 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/admin/faq/drafts' \
+curl -X GET 'http://localhost:9005/admin/faq/drafts' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -240,7 +240,7 @@ curl -X GET 'http://localhost:9001/admin/faq/drafts' \
 $timestamp = Get-Date -Format 'yyyyMMddHHmmss'
 $uniqueSlug = "test-category-$timestamp"
 
-curl -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=076d9ad4-a3b8-4853-95fe-7c427c8bc529" \
+curl -X POST "http://localhost:9005/admin/faq/ui-categories?operatorId=076d9ad4-a3b8-4853-95fe-7c427c8bc529" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -261,7 +261,7 @@ curl -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=076d9ad4-
 #### Step 2: UI 카테고리 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/admin/faq/ui-categories' \
+curl -X GET 'http://localhost:9005/admin/faq/ui-categories' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -274,7 +274,7 @@ curl -X GET 'http://localhost:9001/admin/faq/ui-categories' \
 #### Step 3: UI 카테고리 수정
 
 ```bash
-curl -X PATCH "http://localhost:9001/admin/faq/ui-categories/c13db571-1359-498a-b6ab-cb2a5fd12d92?operatorId=076d9ad4-a3b8-4853-95fe-7c427c8bc529" \
+curl -X PATCH "http://localhost:9005/admin/faq/ui-categories/c13db571-1359-498a-b6ab-cb2a5fd12d92?operatorId=076d9ad4-a3b8-4853-95fe-7c427c8bc529" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -365,7 +365,7 @@ $answer = [System.Web.HttpUtility]::UrlEncode("승인할 답변")
 
 ### 7.1 필수 서비스
 
-- ✅ **chat-service** (9001): 정상 작동
+- ✅ **chat-service** (9005): 정상 작동
 - ✅ **ai-server** (8000): 정상 작동
 - ✅ **ragflow** (8080): 정상 작동
 

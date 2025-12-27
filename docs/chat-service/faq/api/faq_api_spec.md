@@ -4,7 +4,7 @@
 
 FAQ Service는 FAQ(자주 묻는 질문) 관리 및 조회 기능을 제공하는 서비스입니다.
 
-- **Base URL**: `http://localhost:9001`
+- **Base URL**: `http://localhost:9005`
 - **인증**: Bearer Token (JWT)
 
 ---

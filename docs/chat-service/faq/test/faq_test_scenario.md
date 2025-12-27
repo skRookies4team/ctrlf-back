@@ -3,7 +3,7 @@
 ## 테스트 환경
 
 ```
-chat-service: http://localhost:9001
+chat-service: http://localhost:9005
 ai-server: http://localhost:8000
 ragflow: http://localhost:8080
 ```
@@ -44,7 +44,7 @@ curl -X GET 'http://localhost:8080/health'
 ### 📌 Step 1: FAQ 수동 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/faq' \
+curl -X POST 'http://localhost:9005/chat/faq' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -82,7 +82,7 @@ export FAQ_ID="응답에서_받은_FAQ_ID"
 ### 📌 Step 2: FAQ 수정
 
 ```bash
-curl -X PATCH 'http://localhost:9001/chat/faq/'$FAQ_ID \
+curl -X PATCH 'http://localhost:9005/chat/faq/'$FAQ_ID \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -104,7 +104,7 @@ curl -X PATCH 'http://localhost:9001/chat/faq/'$FAQ_ID \
 ### 📌 Step 3: FAQ 목록 조회 (관리자)
 
 ```bash
-curl -X GET 'http://localhost:9001/chat/faq' \
+curl -X GET 'http://localhost:9005/chat/faq' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -135,7 +135,7 @@ curl -X GET 'http://localhost:9001/chat/faq' \
 ### 📌 Step 4: FAQ 홈 조회 (사용자)
 
 ```bash
-curl -X GET 'http://localhost:9001/faq/home' \
+curl -X GET 'http://localhost:9005/faq/home' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -163,7 +163,7 @@ curl -X GET 'http://localhost:9001/faq/home' \
 ### 📌 Step 5: 도메인별 FAQ 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/faq?domain=SECURITY' \
+curl -X GET 'http://localhost:9005/faq?domain=SECURITY' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -191,7 +191,7 @@ curl -X GET 'http://localhost:9001/faq?domain=SECURITY' \
 ### 📌 Step 6: FAQ 후보 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/admin/faq/candidates' \
+curl -X POST 'http://localhost:9005/admin/faq/candidates' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -222,7 +222,7 @@ export CANDIDATE_ID="응답에서_받은_CANDIDATE_ID"
 ### 📌 Step 7: FAQ 후보 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/admin/faq/candidates' \
+curl -X GET 'http://localhost:9005/admin/faq/candidates' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -256,7 +256,7 @@ curl -X GET 'http://localhost:9001/admin/faq/candidates' \
 ### 📌 Step 8: FAQ 초안 자동 생성 (AI + RAGFlow)
 
 ```bash
-curl -X POST 'http://localhost:9001/admin/faq/candidates/'$CANDIDATE_ID'/generate' \
+curl -X POST 'http://localhost:9005/admin/faq/candidates/'$CANDIDATE_ID'/generate' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -296,7 +296,7 @@ export DRAFT_ID="응답에서_받은_draftId"
 ### 📌 Step 9: FAQ Draft 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/admin/faq/drafts' \
+curl -X GET 'http://localhost:9005/admin/faq/drafts' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -331,7 +331,7 @@ curl -X GET 'http://localhost:9001/admin/faq/drafts' \
 $question = [System.Web.HttpUtility]::UrlEncode("승인할 질문")
 $answer = [System.Web.HttpUtility]::UrlEncode("승인할 답변")
 
-curl -X POST "http://localhost:9001/admin/faq/drafts/$DRAFT_ID/approve?reviewerId=$OPERATOR_ID&question=$question&answer=$answer" \
+curl -X POST "http://localhost:9005/admin/faq/drafts/$DRAFT_ID/approve?reviewerId=$OPERATOR_ID&question=$question&answer=$answer" \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -353,7 +353,7 @@ curl -X POST "http://localhost:9001/admin/faq/drafts/$DRAFT_ID/approve?reviewerI
 # URL 인코딩 예시 (PowerShell)
 $reason = [System.Web.HttpUtility]::UrlEncode("반려 사유")
 
-curl -X POST "http://localhost:9001/admin/faq/drafts/$DRAFT_ID/reject?reviewerId=$OPERATOR_ID&reason=$reason" \
+curl -X POST "http://localhost:9005/admin/faq/drafts/$DRAFT_ID/reject?reviewerId=$OPERATOR_ID&reason=$reason" \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -375,7 +375,7 @@ curl -X POST "http://localhost:9001/admin/faq/drafts/$DRAFT_ID/reject?reviewerId
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 UNIQUE_SLUG="test-category-$TIMESTAMP"
 
-curl -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
+curl -X POST "http://localhost:9005/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -411,7 +411,7 @@ export CATEGORY_ID="응답에서_받은_CATEGORY_ID"
 ### 📌 Step 13: UI 카테고리 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/admin/faq/ui-categories' \
+curl -X GET 'http://localhost:9005/admin/faq/ui-categories' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -440,7 +440,7 @@ curl -X GET 'http://localhost:9001/admin/faq/ui-categories' \
 ### 📌 Step 14: UI 카테고리 수정
 
 ```bash
-curl -X PATCH "http://localhost:9001/admin/faq/ui-categories/$CATEGORY_ID?operatorId=$OPERATOR_ID" \
+curl -X PATCH "http://localhost:9005/admin/faq/ui-categories/$CATEGORY_ID?operatorId=$OPERATOR_ID" \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -461,11 +461,11 @@ curl -X PATCH "http://localhost:9001/admin/faq/ui-categories/$CATEGORY_ID?operat
 
 ```bash
 # 전체 대시보드
-curl -X GET 'http://localhost:9001/faq/dashboard/home' \
+curl -X GET 'http://localhost:9005/faq/dashboard/home' \
   -H 'Authorization: Bearer '$TOKEN
 
 # 도메인별 대시보드
-curl -X GET 'http://localhost:9001/faq/dashboard/SECURITY' \
+curl -X GET 'http://localhost:9005/faq/dashboard/SECURITY' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -480,7 +480,7 @@ curl -X GET 'http://localhost:9001/faq/dashboard/SECURITY' \
 ### 1. 존재하지 않는 FAQ 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/chat/faq/00000000-0000-0000-0000-000000000000' \
+curl -X GET 'http://localhost:9005/chat/faq/00000000-0000-0000-0000-000000000000' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -491,7 +491,7 @@ curl -X GET 'http://localhost:9001/chat/faq/00000000-0000-0000-0000-000000000000
 ### 2. 잘못된 도메인으로 FAQ 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/faq' \
+curl -X POST 'http://localhost:9005/chat/faq' \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -509,7 +509,7 @@ curl -X POST 'http://localhost:9001/chat/faq' \
 ### 3. 중복된 slug로 UI 카테고리 생성
 
 ```bash
-curl -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
+curl -X POST "http://localhost:9005/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -519,7 +519,7 @@ curl -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=$OPERATOR
   }'
 
 # 동일한 slug로 다시 생성
-curl -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
+curl -X POST "http://localhost:9005/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
   -H 'Authorization: Bearer '$TOKEN \
   -H 'Content-Type: application/json' \
   -d '{
@@ -537,7 +537,7 @@ curl -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=$OPERATOR
 
 ```bash
 # PII가 감지된 후보 ID 사용
-curl -X POST 'http://localhost:9001/admin/faq/candidates/PII_CANDIDATE_ID/generate' \
+curl -X POST 'http://localhost:9005/admin/faq/candidates/PII_CANDIDATE_ID/generate' \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -548,7 +548,7 @@ curl -X POST 'http://localhost:9001/admin/faq/candidates/PII_CANDIDATE_ID/genera
 ### 5. 이미 승인된 Draft 재승인
 
 ```bash
-curl -X POST "http://localhost:9001/admin/faq/drafts/$DRAFT_ID/approve?reviewerId=$OPERATOR_ID&question=$question&answer=$answer" \
+curl -X POST "http://localhost:9005/admin/faq/drafts/$DRAFT_ID/approve?reviewerId=$OPERATOR_ID&question=$question&answer=$answer" \
   -H 'Authorization: Bearer '$TOKEN
 ```
 
@@ -565,7 +565,7 @@ curl -X POST "http://localhost:9001/admin/faq/drafts/$DRAFT_ID/approve?reviewerI
 특정 FAQ의 상세 정보를 확인할 때 사용:
 
 ```bash
-curl -X GET 'http://localhost:9001/chat/faq' \
+curl -X GET 'http://localhost:9005/chat/faq' \
   -H 'Authorization: Bearer '$TOKEN | jq '.[] | select(.id == "'$FAQ_ID'")'
 ```
 
@@ -574,7 +574,7 @@ curl -X GET 'http://localhost:9001/chat/faq' \
 특정 Draft의 상세 정보를 확인할 때 사용:
 
 ```bash
-curl -X GET 'http://localhost:9001/admin/faq/drafts' \
+curl -X GET 'http://localhost:9005/admin/faq/drafts' \
   -H 'Authorization: Bearer '$TOKEN | jq '.[] | select(.id == "'$DRAFT_ID'")'
 ```
 
@@ -678,7 +678,7 @@ TOKEN="YOUR_TOKEN_HERE"
 OPERATOR_ID="YOUR_OPERATOR_ID"
 
 # 1. FAQ 생성
-FAQ_RESPONSE=$(curl -s -X POST 'http://localhost:9001/chat/faq' \
+FAQ_RESPONSE=$(curl -s -X POST 'http://localhost:9005/chat/faq' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -691,11 +691,11 @@ FAQ_ID=$(echo $FAQ_RESPONSE | tr -d '"')
 echo "FAQ_ID: $FAQ_ID"
 
 # 2. FAQ 조회
-curl -s -X GET "http://localhost:9001/chat/faq" \
+curl -s -X GET "http://localhost:9005/chat/faq" \
   -H "Authorization: Bearer $TOKEN" | jq
 
 # 3. FAQ 후보 생성
-CANDIDATE_RESPONSE=$(curl -s -X POST 'http://localhost:9001/admin/faq/candidates' \
+CANDIDATE_RESPONSE=$(curl -s -X POST 'http://localhost:9005/admin/faq/candidates' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -709,7 +709,7 @@ echo "CANDIDATE_ID: $CANDIDATE_ID"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 UNIQUE_SLUG="test-category-$TIMESTAMP"
 
-CATEGORY_RESPONSE=$(curl -s -X POST "http://localhost:9001/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
+CATEGORY_RESPONSE=$(curl -s -X POST "http://localhost:9005/admin/faq/ui-categories?operatorId=$OPERATOR_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{

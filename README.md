@@ -6,7 +6,7 @@
 
 | 서비스            | 포트 | 설명           |
 | ----------------- | ---- | -------------- |
-| chat-service      | 9001 | 챗봇 서비스    |
+| chat-service      | 9005 | 챗봇 서비스    |
 | education-service | 9002 | 교육 서비스    |
 | infra-service     | 9003 | 인프라 서비스  |
 | quiz-service      | 9004 | 퀴즈 서비스    |
@@ -74,7 +74,7 @@ AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun --args='--spring.prof
 
 | 서비스    | Swagger UI                            | OpenAPI                           |
 | --------- | ------------------------------------- | --------------------------------- |
-| Chat      | http://localhost:9001/swagger-ui.html | http://localhost:9001/v3/api-docs |
+| Chat      | http://localhost:9005/swagger-ui.html | http://localhost:9005/v3/api-docs |
 | Education | http://localhost:9002/swagger-ui.html | http://localhost:9002/v3/api-docs |
 | Infra     | http://localhost:9003/swagger-ui.html | http://localhost:9003/v3/api-docs |
 | Quiz      | http://localhost:9004/swagger-ui.html | http://localhost:9004/v3/api-docs |
@@ -125,7 +125,7 @@ curl -s -X POST 'http://localhost:8090/realms/ctrlf/protocol/openid-connect/toke
 
 | 문제                  | 해결 방법                                                                  |
 | --------------------- | -------------------------------------------------------------------------- |
-| 포트 충돌             | 5432/8090/9001~9004 사용 중인 프로세스가 없는지 확인                       |
+| 포트 충돌             | 5432/8090/9002~9005 사용 중인 프로세스가 없는지 확인                       |
 | DB 연결 실패          | `docker compose ps`로 Postgres 상태 확인, healthcheck 통과 여부 확인       |
 | 마이그레이션 오류     | Flyway `validate` 오류는 스키마 불일치. 초기화 필요 시 볼륨 삭제 후 재기동 |
 | Keycloak realm 미적용 | Keycloak 로그에 `--import-realm` 수행 여부 확인. 필요 시 컨테이너 재기동   |

@@ -1,7 +1,7 @@
 # 채팅 서비스 API 테스트 결과 리포트
 
 **테스트 일시**: 2025-12-24 11:01 KST  
-**테스트 환경**: Local (chat-service: 9001, ai-server: 8000, ragflow: 8080)  
+**테스트 환경**: Local (chat-service: 9005, ai-server: 8000, ragflow: 8080)  
 **테스트 계정**: user1 (일반 사용자)
 
 ---
@@ -43,7 +43,7 @@ curl -s -X POST 'http://localhost:8090/realms/ctrlf/protocol/openid-connect/toke
 #### Step 1: 세션 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/api/chat/sessions' \
+curl -X POST 'http://localhost:9005/api/chat/sessions' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -73,7 +73,7 @@ curl -X POST 'http://localhost:9001/api/chat/sessions' \
 #### Step 2: 세션 단건 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0' \
+curl -X GET 'http://localhost:9005/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -97,7 +97,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8
 #### Step 3: 세션 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions' \
+curl -X GET 'http://localhost:9005/api/chat/sessions' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -110,7 +110,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions' \
 #### Step 4: 세션 수정
 
 ```bash
-curl -X PUT 'http://localhost:9001/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0' \
+curl -X PUT 'http://localhost:9005/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -138,7 +138,7 @@ curl -X PUT 'http://localhost:9001/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8
 #### Step 5: 메시지 전송 및 AI 응답 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/messages' \
+curl -X POST 'http://localhost:9005/chat/messages' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -165,7 +165,7 @@ curl -X POST 'http://localhost:9001/chat/messages' \
 #### Step 6: 세션별 메시지 목록 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/messages' \
+curl -X GET 'http://localhost:9005/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/messages' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -207,7 +207,7 @@ curl -X GET 'http://localhost:9001/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac51
 #### Step 7: 세션 히스토리 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/history' \
+curl -X GET 'http://localhost:9005/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/history' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -249,7 +249,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/087dcade-71d2-47a0-87f5-4f8
 #### Step 8: 메시지 피드백 제출
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/messages/f31a9995-9a66-497b-b87c-31347c6b7876/feedback' \
+curl -X POST 'http://localhost:9005/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/messages/f31a9995-9a66-497b-b87c-31347c6b7876/feedback' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -267,7 +267,7 @@ curl -X POST 'http://localhost:9001/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac5
 #### Step 9: 세션 피드백 제출
 
 ```bash
-curl -X POST 'http://localhost:9001/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/feedback' \
+curl -X POST 'http://localhost:9005/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac511bda0/feedback' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -287,7 +287,7 @@ curl -X POST 'http://localhost:9001/chat/sessions/087dcade-71d2-47a0-87f5-4f8ac5
 ### 3.1 존재하지 않는 세션 조회
 
 ```bash
-curl -X GET 'http://localhost:9001/api/chat/sessions/00000000-0000-0000-0000-000000000000' \
+curl -X GET 'http://localhost:9005/api/chat/sessions/00000000-0000-0000-0000-000000000000' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -300,7 +300,7 @@ curl -X GET 'http://localhost:9001/api/chat/sessions/00000000-0000-0000-0000-000
 ### 3.2 잘못된 도메인으로 세션 생성
 
 ```bash
-curl -X POST 'http://localhost:9001/api/chat/sessions' \
+curl -X POST 'http://localhost:9005/api/chat/sessions' \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -348,7 +348,7 @@ curl -X POST 'http://localhost:9001/api/chat/sessions' \
 
 ### 6.1 필수 서비스
 
-- ✅ **chat-service** (9001): 정상 작동
+- ✅ **chat-service** (9005): 정상 작동
 - ✅ **ai-server** (8000): 정상 작동
 - ✅ **ragflow** (8080): 정상 작동
 

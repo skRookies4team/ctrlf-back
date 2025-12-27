@@ -15,7 +15,7 @@ spring:
     gateway:
       routes:
         - id: chat-route
-          uri: http://localhost:9001
+          uri: http://localhost:9005
           predicates:
             - Path=/api/chat/**
           filters:

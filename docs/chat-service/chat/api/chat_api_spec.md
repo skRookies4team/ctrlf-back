@@ -4,7 +4,7 @@
 
 Chat Service는 사용자와 AI 간의 채팅 세션 및 메시지 관리를 담당하는 서비스입니다.
 
-- **Base URL**: `http://localhost:9001`
+- **Base URL**: `http://localhost:9005`
 - **인증**: Bearer Token (JWT)
 
 ---
