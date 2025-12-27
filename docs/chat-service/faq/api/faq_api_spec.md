@@ -4,7 +4,7 @@
 
 FAQ Service는 FAQ(자주 묻는 질문) 관리 및 조회 기능을 제공하는 서비스입니다.
 
-- **Base URL**: `http://localhost:9001`
+- **Base URL**: `http://localhost:9005`
 - **인증**: Bearer Token (JWT)
 
 ---
@@ -262,9 +262,10 @@ FAQ 후보를 기반으로 AI를 사용하여 FAQ 초안을 생성합니다.
 }
 ```
 
-**참고**: 
-- RAG 검색 결과를 포함하여 AI 서비스에 요청을 보냅니다.
-- AI 서비스가 FAQ 초안을 생성하고 반환합니다.
+**참고**:
+- AI 서버가 RAGFlow를 직접 호출하여 FAQ 초안을 생성합니다.
+- RAGFlow 서버가 실행 중이 아니면 Draft 생성이 실패할 수 있습니다.
+- PII가 감지되었거나 의도 신뢰도가 0.7 미만인 후보는 Draft 생성이 불가능합니다.
 
 ---
 
@@ -278,7 +279,7 @@ FAQ 초안 목록을 조회합니다.
 
 **Query Parameters**:
 - `domain` (String, 선택): 도메인 필터
-- `status` (String, 선택): 상태 필터 (DRAFT, REVIEW_REQUESTED, APPROVED, REJECTED, PUBLISHED)
+- `status` (String, 선택): 상태 필터 (DRAFT, PUBLISHED, REJECTED 또는 PENDING)
 
 **Response** (200 OK):
 ```json
@@ -288,7 +289,7 @@ FAQ 초안 목록을 조회합니다.
     "domain": "SECURITY",
     "question": "비밀번호를 잊어버렸어요",
     "summary": "비밀번호 재설정 방법에 대한 FAQ 초안",
-    "status": "REVIEW_REQUESTED",
+    "status": "DRAFT",
     "createdAt": "2025-12-19T22:00:00"
   }
 ]
@@ -296,10 +297,9 @@ FAQ 초안 목록을 조회합니다.
 
 **상태 설명**:
 - `DRAFT`: 초안 상태
-- `REVIEW_REQUESTED`: 검토 요청됨
-- `APPROVED`: 승인됨
+- `PUBLISHED`: 게시됨 (승인 후 FAQ로 생성됨)
 - `REJECTED`: 반려됨
-- `PUBLISHED`: 게시됨
+- `PENDING`: 요청 시 `DRAFT`로 자동 매핑됩니다.
 
 ---
 
@@ -314,13 +314,14 @@ FAQ 초안을 승인하여 새로운 FAQ를 생성합니다.
 
 **Query Parameters**:
 - `reviewerId` (UUID, 필수): 승인자 ID
-- `question` (String, 필수): 승인할 질문 내용
-- `answer` (String, 필수): 승인할 답변 내용
+- `question` (String, 필수): 승인할 질문 내용 (URL 인코딩 필요)
+- `answer` (String, 필수): 승인할 답변 내용 (URL 인코딩 필요)
 
 **Response** (200 OK): No Content
 
-**참고**: 
+**참고**:
 - Draft를 승인하면 새로운 FAQ가 생성되고 Draft 상태가 `PUBLISHED`로 변경됩니다.
+- Query Parameter의 `question`과 `answer`는 URL 인코딩이 필요합니다.
 
 ---
 
@@ -335,12 +336,13 @@ FAQ 초안을 반려합니다.
 
 **Query Parameters**:
 - `reviewerId` (UUID, 필수): 반려자 ID
-- `reason` (String, 필수): 반려 사유
+- `reason` (String, 필수): 반려 사유 (URL 인코딩 필요)
 
 **Response** (200 OK): No Content
 
-**참고**: 
+**참고**:
 - Draft 상태가 `REJECTED`로 변경됩니다.
+- Query Parameter의 `reason`은 URL 인코딩이 필요합니다.
 
 ---
 
@@ -360,7 +362,7 @@ FAQ 후보를 기반으로 AI를 사용하여 FAQ 초안을 생성합니다. (Ad
 "350d0429-b517-4897-beb0-bd1f699999db"
 ```
 
-**참고**: 
+**참고**:
 - `AdminFaqCandidateController`의 `/admin/faq/candidates/{candidateId}/generate`와 동일한 기능입니다.
 
 ---
@@ -376,13 +378,14 @@ FAQ 초안을 승인하여 새로운 FAQ를 생성합니다. (AdminFaqController
 
 **Query Parameters**:
 - `reviewerId` (UUID, 필수): 승인자 ID
-- `question` (String, 필수): 승인할 질문 내용
-- `answer` (String, 필수): 승인할 답변 내용
+- `question` (String, 필수): 승인할 질문 내용 (URL 인코딩 필요)
+- `answer` (String, 필수): 승인할 답변 내용 (URL 인코딩 필요)
 
 **Response** (200 OK): No Content
 
-**참고**: 
+**참고**:
 - `AdminFaqDraftController`의 `/admin/faq/drafts/{draftId}/approve`와 동일한 기능입니다.
+- Query Parameter의 `question`과 `answer`는 URL 인코딩이 필요합니다.
 
 ---
 
@@ -397,12 +400,13 @@ FAQ 초안을 반려합니다. (AdminFaqController)
 
 **Query Parameters**:
 - `reviewerId` (UUID, 필수): 반려자 ID
-- `reason` (String, 필수): 반려 사유
+- `reason` (String, 필수): 반려 사유 (URL 인코딩 필요)
 
 **Response** (200 OK): No Content
 
-**참고**: 
+**참고**:
 - `AdminFaqDraftController`의 `/admin/faq/drafts/{draftId}/reject`와 동일한 기능입니다.
+- Query Parameter의 `reason`은 URL 인코딩이 필요합니다.
 
 ---
 
@@ -519,7 +523,7 @@ FAQ 초기 데이터를 CSV 파일로 업로드합니다.
 
 **Response** (200 OK): No Content
 
-**참고**: 
+**참고**:
 - CSV 파일 형식은 서비스 구현에 따라 다를 수 있습니다.
 
 ---
@@ -556,3 +560,6 @@ FAQ 초기 데이터를 CSV 파일로 업로드합니다.
 - FAQ 후보는 사용자 질문을 분석하여 자동으로 생성될 수 있습니다.
 - FAQ Draft는 AI 서비스를 통해 자동 생성되며, 관리자가 검토 후 승인/반려할 수 있습니다.
 - FAQ는 승인된 Draft를 기반으로 생성됩니다.
+- Draft 생성 시 AI 서버가 RAGFlow를 직접 호출합니다. RAGFlow 서버가 실행 중이 아니면 Draft 생성이 실패할 수 있습니다.
+- Draft 목록 조회 시 `status=PENDING`을 사용하면 자동으로 `DRAFT`로 매핑됩니다.
+- Query Parameter에 한글이 포함된 경우 URL 인코딩이 필요합니다 (예: `question`, `answer`, `reason`).

@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 // import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -227,7 +228,8 @@ public class AdminEducationController {
     @GetMapping("/edus/with-videos")
     @Operation(
         summary = "전체 교육 + 영상 목록 조회 (프론트 -> 백)",
-        description = "모든 교육을 조회하고 각 교육에 포함된 영상 목록을 함께 반환합니다(사용자 진행 정보 제외).",
+        description = "모든 교육을 조회하고 각 교육에 포함된 영상 목록을 함께 반환합니다(사용자 진행 정보 제외). " +
+                      "status 파라미터로 특정 상태의 영상만 필터링할 수 있습니다.",
         responses = {
             @ApiResponse(
                 responseCode = "200",
@@ -255,11 +257,20 @@ public class AdminEducationController {
             )
         }
     )
-    public ResponseEntity<List<EducationVideosResponse>> getAllEducationsWithVideos() {
+    public ResponseEntity<List<EducationVideosResponse>> getAllEducationsWithVideos(
+            @RequestParam(value = "status", required = false) String status) {
         List<Education> edus = educationRepository.findAll();
         List<EducationVideosResponse> result = new ArrayList<>();
         for (Education e : edus) {
-            List<EducationVideo> videos = educationVideoRepository.findByEducationIdOrderByOrderIndexAscCreatedAtAsc(e.getId());
+            List<EducationVideo> videos;
+            if (status != null && !status.isBlank()) {
+                // status 필터 적용
+                videos = educationVideoRepository.findByEducationIdAndStatusOrderByOrderIndexAscCreatedAtAsc(
+                    e.getId(), status.toUpperCase());
+            } else {
+                // 모든 영상 조회
+                videos = educationVideoRepository.findByEducationIdOrderByOrderIndexAscCreatedAtAsc(e.getId());
+            }
             List<EducationVideosResponse.VideoItem> items = new ArrayList<>();
             for (EducationVideo v : videos) {
                 items.add(new EducationVideosResponse.VideoItem(

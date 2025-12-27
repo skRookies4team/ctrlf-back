@@ -118,6 +118,148 @@ public class ScriptService {
     return list;
   }
 
+  /**
+   * videoId 또는 educationId로 스크립트 ID 조회.
+   * 둘 다 제공된 경우 videoId 우선.
+   *
+   * @param videoId 영상 ID (선택)
+   * @param educationId 교육 ID (선택)
+   * @return 스크립트 조회 응답
+   */
+  @Transactional(readOnly = true)
+  public com.ctrlf.education.script.dto.EducationScriptDto.ScriptLookupResponse findScriptId(
+      UUID videoId, UUID educationId) {
+    
+    // 1. videoId로 조회 (우선)
+    if (videoId != null) {
+      EducationVideo video = videoRepository.findById(videoId)
+          .orElseThrow(() -> new ResponseStatusException(
+              HttpStatus.NOT_FOUND, "영상을 찾을 수 없습니다: " + videoId));
+      
+      if (video.getScriptId() == null) {
+        throw new ResponseStatusException(
+            HttpStatus.NOT_FOUND, "해당 영상에 연결된 스크립트가 없습니다: " + videoId);
+      }
+      
+      EducationScript script = scriptRepository.findById(video.getScriptId())
+          .orElseThrow(() -> new ResponseStatusException(
+              HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + video.getScriptId()));
+      
+      return new com.ctrlf.education.script.dto.EducationScriptDto.ScriptLookupResponse(
+          script.getId(),
+          script.getEducationId(),
+          videoId,
+          script.getTitle(),
+          script.getVersion(),
+          script.getStatus()
+      );
+    }
+    
+    // 2. educationId로 조회
+    if (educationId != null) {
+      List<EducationScript> scripts = scriptRepository
+          .findByEducationIdAndDeletedAtIsNullOrderByVersionDesc(educationId);
+      
+      if (scripts.isEmpty()) {
+        throw new ResponseStatusException(
+            HttpStatus.NOT_FOUND, "해당 교육에 연결된 스크립트가 없습니다: " + educationId);
+      }
+      
+      EducationScript latestScript = scripts.get(0); // 최신 버전
+      
+      // videoId 찾기 (있으면)
+      UUID foundVideoId = videoRepository.findAll().stream()
+          .filter(v -> latestScript.getId().equals(v.getScriptId()))
+          .map(EducationVideo::getId)
+          .findFirst()
+          .orElse(null);
+      
+      return new com.ctrlf.education.script.dto.EducationScriptDto.ScriptLookupResponse(
+          latestScript.getId(),
+          latestScript.getEducationId(),
+          foundVideoId,
+          latestScript.getTitle(),
+          latestScript.getVersion(),
+          latestScript.getStatus()
+      );
+    }
+    
+    throw new ResponseStatusException(
+        HttpStatus.BAD_REQUEST, "videoId 또는 educationId 중 하나는 필수입니다");
+  }
+
+  /**
+   * 스크립트의 렌더 스펙 조회 (AI 서버 내부 API용).
+   * 스크립트의 챕터/씬 정보를 렌더링에 필요한 형태로 변환합니다.
+   *
+   * @param scriptId 스크립트 ID
+   * @return 렌더 스펙 응답
+   */
+  @Transactional(readOnly = true)
+  public com.ctrlf.education.script.dto.EducationScriptDto.RenderSpecResponse getRenderSpec(UUID scriptId) {
+    EducationScript script = scriptRepository.findById(scriptId)
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
+
+    // videoId 찾기 (sourceSetId 통해 또는 직접 연결)
+    String videoIdStr = null;
+    if (script.getSourceSetId() != null) {
+      videoIdStr = videoRepository.findAll().stream()
+          .filter(v -> script.getId().equals(v.getScriptId()))
+          .map(v -> v.getId().toString())
+          .findFirst()
+          .orElse(null);
+    }
+    if (videoIdStr == null) {
+      // scriptId로 직접 연결된 video 찾기
+      videoIdStr = videoRepository.findByScriptId(scriptId).stream()
+          .findFirst()
+          .map(v -> v.getId().toString())
+          .orElse("");
+    }
+
+    // 챕터/씬 조회 및 렌더 스펙으로 변환
+    List<EducationScriptChapter> chapters = 
+        chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId);
+    
+    List<com.ctrlf.education.script.dto.EducationScriptDto.RenderSceneItem> scenes = new ArrayList<>();
+    int sceneOrder = 1;
+    
+    for (EducationScriptChapter chapter : chapters) {
+      List<EducationScriptScene> chapterScenes = 
+          sceneRepository.findByChapterIdOrderBySceneIndexAsc(chapter.getId());
+      
+      for (EducationScriptScene scene : chapterScenes) {
+        // visual 필드를 VisualSpec으로 변환
+        com.ctrlf.education.script.dto.EducationScriptDto.RenderVisualSpec visualSpec = 
+            new com.ctrlf.education.script.dto.EducationScriptDto.RenderVisualSpec(
+                "TEXT_HIGHLIGHT",
+                scene.getVisual(),
+                new ArrayList<>()
+            );
+        
+        scenes.add(new com.ctrlf.education.script.dto.EducationScriptDto.RenderSceneItem(
+            scene.getId().toString(),
+            sceneOrder++,
+            chapter.getTitle(),
+            scene.getPurpose(),
+            scene.getNarration(),
+            scene.getCaption(),
+            scene.getDurationSec() != null ? scene.getDurationSec().doubleValue() : 0.0,
+            visualSpec
+        ));
+      }
+    }
+
+    return new com.ctrlf.education.script.dto.EducationScriptDto.RenderSpecResponse(
+        scriptId.toString(),
+        videoIdStr,
+        script.getTitle(),
+        script.getTotalDurationSec() != null ? script.getTotalDurationSec().doubleValue() : 0.0,
+        scenes
+    );
+  }
+
   @Transactional
   public void deleteScript(UUID scriptId) {
     EducationScript script =
