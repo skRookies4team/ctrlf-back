@@ -4,6 +4,9 @@ import static com.ctrlf.education.quiz.dto.QuizRequest.*;
 import static com.ctrlf.education.quiz.dto.QuizResponse.*;
 import com.ctrlf.education.quiz.dto.QuizResponse.DepartmentStatsItem;
 import com.ctrlf.education.quiz.dto.QuizResponse.RetryInfoResponse;
+import com.ctrlf.education.quiz.dto.QuizResponse.DashboardSummaryResponse;
+import com.ctrlf.education.quiz.dto.QuizResponse.DepartmentScoreResponse;
+import com.ctrlf.education.quiz.dto.QuizResponse.QuizStatsResponse;
 
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationProgress;
@@ -27,6 +30,7 @@ import com.ctrlf.education.video.repository.SourceSetRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1001,6 +1006,226 @@ public class QuizService {
         } catch (Exception e) {
             return "[]";
         }
+    }
+
+    // ========================
+    // 관리자 대시보드 통계 관련 메서드
+    // ========================
+
+    /**
+     * 기간 필터에 따른 시작 날짜 계산.
+     */
+    private Instant calculateStartDate(Integer periodDays) {
+        if (periodDays == null || periodDays <= 0) {
+            periodDays = 30; // 기본값: 30일
+        }
+        return Instant.now().minus(periodDays, ChronoUnit.DAYS);
+    }
+
+    /**
+     * 대시보드 요약 통계 조회.
+     */
+    public DashboardSummaryResponse getDashboardSummary(Integer periodDays, String department) {
+        Instant startDate = calculateStartDate(periodDays);
+        
+        // 모든 제출 완료된 퀴즈 시도 조회 (기간 필터)
+        List<QuizAttempt> allAttempts = attemptRepository.findAll().stream()
+            .filter(a -> a.getSubmittedAt() != null && a.getSubmittedAt().isAfter(startDate))
+            .filter(a -> a.getDeletedAt() == null)
+            .collect(Collectors.toList());
+
+        // 부서 필터 적용
+        if (department != null && !department.isBlank()) {
+            allAttempts = allAttempts.stream()
+                .filter(a -> department.equals(a.getDepartment()))
+                .collect(Collectors.toList());
+        }
+
+        if (allAttempts.isEmpty()) {
+            return new DashboardSummaryResponse(0.0, 0L, 0.0, 0.0);
+        }
+
+        // 전체 평균 점수 계산
+        double overallAverage = allAttempts.stream()
+            .filter(a -> a.getScore() != null)
+            .mapToInt(QuizAttempt::getScore)
+            .average()
+            .orElse(0.0);
+
+        // 응시자 수 (고유 사용자 수)
+        long participantCount = allAttempts.stream()
+            .map(QuizAttempt::getUserUuid)
+            .distinct()
+            .count();
+
+        // 통과율 계산 (80점 이상)
+        long passedCount = allAttempts.stream()
+            .filter(a -> a.getScore() != null && a.getScore() >= 80)
+            .count();
+        double passRate = allAttempts.size() > 0 ? (double) passedCount / allAttempts.size() * 100 : 0.0;
+
+        // 응시율 계산 (전체 사용자 대비 응시자 비율)
+        // TODO: 전체 사용자 수는 infra-service에서 조회 필요 (현재는 응시자 수 기준으로 계산)
+        // 임시로 응시자 수를 기준으로 계산 (실제로는 전체 사용자 수가 필요)
+        double participationRate = 100.0; // TODO: 전체 사용자 수 조회 후 계산
+
+        return new DashboardSummaryResponse(
+            overallAverage,
+            participantCount,
+            passRate,
+            participationRate
+        );
+    }
+
+    /**
+     * 부서별 평균 점수 조회.
+     */
+    public DepartmentScoreResponse getDepartmentScores(Integer periodDays, String department) {
+        Instant startDate = calculateStartDate(periodDays);
+        
+        // 모든 제출 완료된 퀴즈 시도 조회 (기간 필터)
+        List<QuizAttempt> allAttempts = attemptRepository.findAll().stream()
+            .filter(a -> a.getSubmittedAt() != null && a.getSubmittedAt().isAfter(startDate))
+            .filter(a -> a.getDeletedAt() == null)
+            .filter(a -> a.getDepartment() != null && !a.getDepartment().isBlank())
+            .collect(Collectors.toList());
+
+        // 부서 필터 적용
+        if (department != null && !department.isBlank()) {
+            allAttempts = allAttempts.stream()
+                .filter(a -> department.equals(a.getDepartment()))
+                .collect(Collectors.toList());
+        }
+
+        // 부서별로 그룹화
+        Map<String, List<QuizAttempt>> deptAttemptsMap = allAttempts.stream()
+            .collect(Collectors.groupingBy(QuizAttempt::getDepartment));
+
+        List<DepartmentScoreItem> items = new ArrayList<>();
+
+        for (Map.Entry<String, List<QuizAttempt>> entry : deptAttemptsMap.entrySet()) {
+            String dept = entry.getKey();
+            List<QuizAttempt> deptAttempts = entry.getValue();
+
+            // 평균 점수 계산
+            double avgScore = deptAttempts.stream()
+                .filter(a -> a.getScore() != null)
+                .mapToInt(QuizAttempt::getScore)
+                .average()
+                .orElse(0.0);
+
+            // 응시자 수 (고유 사용자 수)
+            long participantCount = deptAttempts.stream()
+                .map(QuizAttempt::getUserUuid)
+                .distinct()
+                .count();
+
+            items.add(new DepartmentScoreItem(
+                dept,
+                avgScore,
+                participantCount
+            ));
+        }
+
+        // 평균 점수 기준으로 내림차순 정렬
+        items.sort((a, b) -> Double.compare(b.getAverageScore(), a.getAverageScore()));
+
+        return new DepartmentScoreResponse(items);
+    }
+
+    /**
+     * 퀴즈별 통계 조회.
+     */
+    public QuizStatsResponse getQuizStats(Integer periodDays, String department) {
+        Instant startDate = calculateStartDate(periodDays);
+        
+        // 모든 제출 완료된 퀴즈 시도 조회 (기간 필터)
+        List<QuizAttempt> allAttempts = attemptRepository.findAll().stream()
+            .filter(a -> a.getSubmittedAt() != null && a.getSubmittedAt().isAfter(startDate))
+            .filter(a -> a.getDeletedAt() == null)
+            .collect(Collectors.toList());
+
+        // 부서 필터 적용
+        if (department != null && !department.isBlank()) {
+            allAttempts = allAttempts.stream()
+                .filter(a -> department.equals(a.getDepartment()))
+                .collect(Collectors.toList());
+        }
+
+        // 교육 정보 조회
+        Set<UUID> educationIds = allAttempts.stream()
+            .map(QuizAttempt::getEducationId)
+            .filter(id -> id != null)
+            .collect(Collectors.toSet());
+
+        Map<UUID, Education> educationMap = new HashMap<>();
+        for (UUID eduId : educationIds) {
+            educationRepository.findById(eduId).ifPresent(edu -> {
+                if (edu.getDeletedAt() == null) {
+                    educationMap.put(eduId, edu);
+                }
+            });
+        }
+
+        // 교육별, 회차별로 그룹화
+        Map<String, List<QuizAttempt>> groupedAttempts = new HashMap<>();
+        for (QuizAttempt attempt : allAttempts) {
+            UUID eduId = attempt.getEducationId();
+            if (eduId == null || !educationMap.containsKey(eduId)) {
+                continue;
+            }
+            Integer attemptNo = attempt.getAttemptNo() != null ? attempt.getAttemptNo() : 1;
+            String key = eduId.toString() + "_" + attemptNo;
+            groupedAttempts.computeIfAbsent(key, k -> new ArrayList<>()).add(attempt);
+        }
+
+        List<QuizStatsItem> items = new ArrayList<>();
+
+        for (Map.Entry<String, List<QuizAttempt>> entry : groupedAttempts.entrySet()) {
+            List<QuizAttempt> attempts = entry.getValue();
+            if (attempts.isEmpty()) {
+                continue;
+            }
+
+            QuizAttempt firstAttempt = attempts.get(0);
+            UUID educationId = firstAttempt.getEducationId();
+            Education education = educationMap.get(educationId);
+            if (education == null) {
+                continue;
+            }
+
+            Integer attemptNo = firstAttempt.getAttemptNo() != null ? firstAttempt.getAttemptNo() : 1;
+
+            // 평균 점수 계산
+            double avgScore = attempts.stream()
+                .filter(a -> a.getScore() != null)
+                .mapToInt(QuizAttempt::getScore)
+                .average()
+                .orElse(0.0);
+
+            // 응시 수
+            long attemptCount = attempts.size();
+
+            // 통과율 계산 (80점 이상)
+            long passedCount = attempts.stream()
+                .filter(a -> a.getScore() != null && a.getScore() >= 80)
+                .count();
+            double passRate = attempts.size() > 0 ? (double) passedCount / attempts.size() * 100 : 0.0;
+
+            items.add(new QuizStatsItem(
+                educationId,
+                education.getTitle() != null ? education.getTitle() : "",
+                attemptNo,
+                avgScore,
+                attemptCount,
+                passRate
+            ));
+        }
+
+        // 평균 점수 기준으로 내림차순 정렬
+        items.sort((a, b) -> Double.compare(b.getAverageScore(), a.getAverageScore()));
+
+        return new QuizStatsResponse(items);
     }
 }
 

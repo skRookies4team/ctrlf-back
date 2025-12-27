@@ -534,6 +534,147 @@ array of object
 
 ---
 
+# 2. Quiz Dashboard Statistics (Admin)
+
+## 2.1 대시보드 요약 통계 조회
+
+### ✔ URL
+
+- GET /admin/dashboard/quiz/summary
+
+### ✔ 설명
+
+- 전체 평균 점수, 응시자 수, 통과율(80점↑), 퀴즈 응시율을 조회합니다.
+- 기간 필터(period)와 부서 필터(department)를 지원합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
+| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
+| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
+| department | 부서 필터               | string     | optional | true     | "총무팀" |
+
+### Response
+
+| key                | 설명                | value 타입 | 옵션     | Nullable | 예시  |
+| ------------------ | ------------------- | ---------- | -------- | -------- | ----- |
+| overallAverageScore | 전체 평균 점수      | number     | required | false    | 84.0   |
+| participantCount   | 응시자 수           | number     | required | false    | 176    |
+| passRate           | 통과율 (80점↑) (%)  | number     | required | false    | 78.0   |
+| participationRate  | 퀴즈 응시율 (%)     | number     | required | false    | 73.0   |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
+## 2.2 부서별 평균 점수 조회
+
+### ✔ URL
+
+- GET /admin/dashboard/quiz/department-scores
+
+### ✔ 설명
+
+- 부서별 평균 점수와 응시자 수를 조회합니다.
+- 기간 필터(period)와 부서 필터(department)를 지원합니다.
+- 평균 점수 기준으로 내림차순 정렬됩니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
+| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
+| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
+| department | 부서 필터               | string     | optional | true     | "총무팀" |
+
+### Response
+
+array of object
+
+| key              | 설명          | value 타입 | 옵션     | Nullable | 예시   |
+| ---------------- | ------------- | ---------- | -------- | -------- | ------ |
+| department       | 부서명        | string     | required | false    | "인사팀" |
+| averageScore     | 평균 점수     | number     | required | false    | 89.0   |
+| participantCount | 응시자 수     | number     | required | false    | 13     |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
+## 2.3 퀴즈별 통계 조회
+
+### ✔ URL
+
+- GET /admin/dashboard/quiz/quiz-stats
+
+### ✔ 설명
+
+- 퀴즈 제목, 회차, 평균 점수, 응시 수, 통과율을 조회합니다.
+- 기간 필터(period)와 부서 필터(department)를 지원합니다.
+- 평균 점수 기준으로 내림차순 정렬됩니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
+| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
+| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
+| department | 부서 필터               | string     | optional | true     | "총무팀" |
+
+### Response
+
+array of object
+
+| key          | 설명           | value 타입   | 옵션     | Nullable | 예시                                   |
+| ------------ | -------------- | ------------ | -------- | -------- | -------------------------------------- |
+| educationId  | 교육 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| quizTitle    | 퀴즈 제목      | string       | required | false    | "개인정보보호 퀴즈"                     |
+| attemptNo    | 회차           | number       | required | false    | 1                                      |
+| averageScore | 평균 점수      | number       | required | false    | 86.0                                   |
+| attemptCount | 응시 수        | number       | required | false    | 57                                     |
+| passRate     | 통과율 (%)     | number       | required | false    | 81.0                                   |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
 ## 주의사항
 
 1. **시간 제한**: 새 퀴즈 시도 생성 시 기본 시간 제한은 15분(900초)입니다. 단, 시간 제한은 타이머 정보 조회용이며, 백엔드에서 제출을 강제하지는 않습니다. 프론트엔드에서 타이머를 표시하고 만료 시 제출을 막을 수 있습니다.

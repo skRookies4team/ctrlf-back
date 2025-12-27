@@ -320,6 +320,8 @@ public class SeedDataRunner implements CommandLineRunner {
                     edu.getTitle() + " - 종합편"
                 };
                 int[] durations = new int[] { 1200, 900, 1100, 1000, 950 };
+                // 제작자 UUID는 사용자 목록에서 랜덤 선택 (사용자가 있으면)
+                UUID creatorUuid = users.isEmpty() ? null : users.get(random.nextInt(users.size())).userUuid;
                 for (int i = 0; i < urls.length; i++) {
                     var v = com.ctrlf.education.video.entity.EducationVideo.create(
                         edu.getId(),
@@ -330,6 +332,7 @@ public class SeedDataRunner implements CommandLineRunner {
                         "PUBLISHED"
                     );
                     v.setOrderIndex(i);
+                    v.setCreatorUuid(creatorUuid);
                     seeds.add(v);
                 }
                 educationVideoRepository.saveAll(seeds);
@@ -533,7 +536,9 @@ public class SeedDataRunner implements CommandLineRunner {
                     attempt.setAttemptNo(attemptNo);
                     attempt.setTimeLimit(900); // 15분
                     attempt.setDepartment(user.department);
-                    attempt.setCreatedAt(Instant.now().minusSeconds(random.nextInt(86400 * 7))); // 최근 7일 내
+                    // 최근 90일 내 랜덤 시간으로 생성 (다양한 기간 필터 테스트를 위해)
+                    Instant createdAt = Instant.now().minusSeconds(random.nextInt(86400 * 90));
+                    attempt.setCreatedAt(createdAt);
                     
                     // 제출 완료된 시도만 점수 설정
                     boolean submitted = random.nextDouble() > 0.2; // 80% 확률로 제출 완료
@@ -543,7 +548,13 @@ public class SeedDataRunner implements CommandLineRunner {
                         
                         attempt.setScore(score);
                         attempt.setPassed(passed);
-                        attempt.setSubmittedAt(attempt.getCreatedAt().plusSeconds(300 + random.nextInt(600))); // 시작 후 5~15분 후 제출
+                        // submittedAt은 createdAt보다 나중이지만, 최근 90일 내로 제한
+                        Instant submittedAt = createdAt.plusSeconds(300 + random.nextInt(600)); // 시작 후 5~15분 후 제출
+                        // submittedAt이 현재보다 미래인 경우 현재 시간으로 제한
+                        if (submittedAt.isAfter(Instant.now())) {
+                            submittedAt = Instant.now();
+                        }
+                        attempt.setSubmittedAt(submittedAt);
                         
                         // 퀴즈 문항 생성 (5개)
                         List<QuizQuestion> questions = createQuizQuestions(attempt.getId(), edu);

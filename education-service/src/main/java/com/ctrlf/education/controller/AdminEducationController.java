@@ -3,6 +3,7 @@ package com.ctrlf.education.controller;
 import com.ctrlf.common.dto.MutationResponse;
 import com.ctrlf.education.dto.EducationRequests.CreateEducationRequest;
 import com.ctrlf.education.dto.EducationRequests.UpdateEducationRequest;
+import com.ctrlf.education.dto.EducationResponses;
 import com.ctrlf.education.dto.EducationResponses.EducationDetailResponse;
 import com.ctrlf.education.dto.EducationResponses.EducationVideosResponse;
 import com.ctrlf.education.service.EducationService;
@@ -12,6 +13,7 @@ import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
 import com.ctrlf.education.video.entity.EducationVideo;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -303,6 +305,76 @@ public class AdminEducationController {
                 .build());
         }
         return ResponseEntity.ok(result);
+    }
+
+    // ========================
+    // 대시보드 통계 API
+    // ========================
+
+    @GetMapping("/dashboard/education/summary")
+    @Operation(
+        summary = "대시보드 요약 통계 조회",
+        description = "전체 평균 이수율, 미이수자 수, 4대 의무교육 평균, 직무교육 평균을 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = EducationResponses.DashboardSummaryResponse.class)))
+    })
+    public ResponseEntity<EducationResponses.DashboardSummaryResponse> getDashboardSummary(
+        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
+        @RequestParam(value = "period", required = false) Integer period,
+        @Parameter(description = "부서 필터", example = "총무팀")
+        @RequestParam(value = "department", required = false) String department) {
+        return ResponseEntity.ok(educationService.getDashboardSummary(period, department));
+    }
+
+    @GetMapping("/dashboard/education/mandatory-completion")
+    @Operation(
+        summary = "4대 의무교육 이수율 조회",
+        description = "성희롱 예방교육, 개인정보보호 교육, 직장 내 괴롭힘 예방, 장애인 인식개선 교육의 이수율을 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = EducationResponses.MandatoryCompletionResponse.class)))
+    })
+    public ResponseEntity<EducationResponses.MandatoryCompletionResponse> getMandatoryCompletion(
+        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
+        @RequestParam(value = "period", required = false) Integer period,
+        @Parameter(description = "부서 필터", example = "총무팀")
+        @RequestParam(value = "department", required = false) String department) {
+        return ResponseEntity.ok(educationService.getMandatoryCompletion(period, department));
+    }
+
+    @GetMapping("/dashboard/education/job-completion")
+    @Operation(
+        summary = "직무교육 이수 현황 조회",
+        description = "직무교육별 상태(진행 중/이수 완료)와 학습자 수를 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = EducationResponses.JobEducationCompletionResponse.class)))
+    })
+    public ResponseEntity<EducationResponses.JobEducationCompletionResponse> getJobEducationCompletion(
+        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
+        @RequestParam(value = "period", required = false) Integer period,
+        @Parameter(description = "부서 필터", example = "총무팀")
+        @RequestParam(value = "department", required = false) String department) {
+        return ResponseEntity.ok(educationService.getJobEducationCompletion(period, department));
+    }
+
+    @GetMapping("/dashboard/education/department-completion")
+    @Operation(
+        summary = "부서별 이수율 현황 조회",
+        description = "부서별 대상자 수, 이수자 수, 이수율, 미이수자 수를 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = EducationResponses.DepartmentCompletionResponse.class)))
+    })
+    public ResponseEntity<EducationResponses.DepartmentCompletionResponse> getDepartmentCompletion(
+        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
+        @RequestParam(value = "period", required = false) Integer period) {
+        return ResponseEntity.ok(educationService.getDepartmentCompletion(period));
     }
 }
 

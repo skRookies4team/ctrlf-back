@@ -902,6 +902,223 @@ Body: 있음
 
 ---
 
+# 4. Video Review (Admin)
+
+## 4.1 검토 목록 조회
+
+### ✔ URL
+
+- GET /admin/videos/review-queue
+
+### ✔ 설명
+
+- 검토 대기/승인됨/반려됨 영상 목록을 조회합니다.
+- 필터링, 정렬, 페이징을 지원합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key              | 설명                                                      | value 타입 | 옵션     | Nullable | 예시     |
+| ---------------- | --------------------------------------------------------- | ---------- | -------- | -------- | -------- |
+| page             | 페이지 번호 (0-base)                                      | number     | optional | false    | 0        |
+| size             | 페이지 크기                                               | number     | optional | false    | 30       |
+| search           | 검색어 (제목/교육 제목/부서/제작자)                      | string     | optional | true     | "성희롱" |
+| myProcessingOnly | 내 처리만 (현재 사용자가 검토한 영상만)                   | boolean    | optional | true     | false    |
+| status           | 상태 필터 (pending: 검토 대기, approved: 승인됨, rejected: 반려됨) | string     | optional | true     | "pending" |
+| reviewStage      | 검토 단계 필터 (first: 1차, second: 2차, document: 문서, all: 전체) | string     | optional | true     | "first"   |
+| sort             | 정렬 옵션 (latest: 최신순, oldest: 오래된순, title: 제목순) | string     | optional | true     | "latest" |
+
+### Response
+
+| key              | 설명                | value 타입    | 옵션     | Nullable | 예시 |
+| ---------------- | ------------------- | ------------- | -------- | -------- | ---- |
+| items            | 검토 목록           | array(object) | required | false    | 아래 표 참조 |
+| totalCount       | 전체 개수           | number        | required | false    | 100  |
+| page             | 현재 페이지 (0-base) | number        | required | false    | 0    |
+| size             | 페이지 크기         | number        | required | false    | 30   |
+| totalPages       | 전체 페이지 수      | number        | required | false    | 4    |
+| firstRoundCount  | 1차 검토 대기 개수  | number        | required | false    | 8    |
+| secondRoundCount | 2차 검토 대기 개수  | number        | required | false    | 19   |
+| documentCount    | 문서 타입 개수      | number        | required | false    | 36   |
+
+items item
+
+| key              | 설명           | value 타입   | 옵션     | Nullable | 예시                                   |
+| ---------------- | -------------- | ------------ | -------- | -------- | -------------------------------------- |
+| videoId          | 영상 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| educationId      | 교육 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| educationTitle   | 교육 제목      | string       | required | false    | "성희롱 예방 교육"                     |
+| videoTitle       | 영상 제목      | string       | required | false    | "2024년 성희롱 예방 교육"              |
+| status           | 상태           | string       | required | false    | "SCRIPT_REVIEW_REQUESTED"              |
+| reviewStage      | 검토 단계      | string       | required | false    | "1차 검토"                             |
+| creatorDepartment | 제작자 부서    | string       | optional | true     | "총무팀"                               |
+| creatorName      | 제작자 이름    | string       | optional | true     | "홍길동"                               |
+| creatorUuid      | 제작자 UUID    | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
+| submittedAt      | 제출 시각      | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| category         | 카테고리       | string       | optional | true     | "SEXUAL_HARASSMENT_PREVENTION"         |
+| eduType          | 교육 유형      | string       | optional | true     | "MANDATORY"                            |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
+## 4.2 검토 통계 조회
+
+### ✔ URL
+
+- GET /admin/videos/review-stats
+
+### ✔ 설명
+
+- 검토 대기, 승인됨, 반려됨, 내 활동 개수를 조회합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+없음
+
+### Response
+
+| key            | 설명          | value 타입 | 옵션     | Nullable | 예시 |
+| -------------- | ------------- | ---------- | -------- | -------- | ---- |
+| pendingCount   | 검토 대기 개수 | number     | required | false    | 27   |
+| approvedCount  | 승인됨 개수   | number     | required | false    | 150  |
+| rejectedCount  | 반려됨 개수   | number     | required | false    | 5    |
+| myActivityCount | 내 활동 개수 | number     | required | false    | 12   |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
+## 4.3 영상 감사 이력 조회
+
+### ✔ URL
+
+- GET /admin/videos/{videoId}/review-history
+
+### ✔ 설명
+
+- 특정 영상의 감사 이력(생성, 검토 요청, 승인, 반려 등)을 조회합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Path
+
+- videoId: UUID (영상 ID)
+
+### Response
+
+| key         | 설명          | value 타입    | 옵션     | Nullable | 예시                                   |
+| ----------- | ------------- | ------------- | -------- | -------- | -------------------------------------- |
+| videoId     | 영상 ID       | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| videoTitle  | 영상 제목     | string        | required | false    | "2024년 성희롱 예방 교육"              |
+| history     | 감사 이력 목록 | array(object) | required | false    | 아래 표 참조                           |
+
+history item
+
+| key             | 설명                | value 타입   | 옵션     | Nullable | 예시                      |
+| --------------- | ------------------- | ------------ | -------- | -------- | ------------------------- |
+| eventType       | 이벤트 타입         | string       | required | false    | "CREATED", "REJECTED"     |
+| description     | 이벤트 설명         | string       | required | false    | "영상 생성", "검토 반려"  |
+| timestamp       | 발생 시각           | string       | required | false    | "2025-12-24T10:00:00Z"    |
+| actorName       | 처리자 이름         | string       | required | false    | "홍길동", "SYSTEM"         |
+| actorUuid       | 처리자 UUID         | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
+| rejectionReason | 반려 사유 (반려인 경우) | string       | optional | true     | "스크립트 내용 수정 필요" |
+| rejectionStage  | 반려 단계 (반려인 경우) | string       | optional | true     | "SCRIPT", "VIDEO"         |
+
+### Status
+
+| status        | response content    |
+| ------------- | ------------------- |
+| 200 OK        | 정상                |
+| 404 Not Found | 영상을 찾을 수 없음 |
+| 401/403       | 인증/권한 오류      |
+
+---
+
+## 4.4 검토 상세 정보 조회
+
+### ✔ URL
+
+- GET /admin/videos/{videoId}/review-detail
+
+### ✔ 설명
+
+- 검토 화면에서 필요한 영상의 상세 정보를 조회합니다.
+- 영상 정보, 제작자 정보, 스크립트 정보 등을 포함합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Path
+
+- videoId: UUID (영상 ID)
+
+### Response
+
+| key              | 설명           | value 타입   | 옵션     | Nullable | 예시                                   |
+| ---------------- | -------------- | ------------ | -------- | -------- | -------------------------------------- |
+| videoId          | 영상 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| educationId      | 교육 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| educationTitle   | 교육 제목      | string       | required | false    | "성희롱 예방 교육"                     |
+| videoTitle       | 영상 제목      | string       | required | false    | "2024년 성희롱 예방 교육"              |
+| status           | 상태           | string       | required | false    | "SCRIPT_REVIEW_REQUESTED"              |
+| reviewStage      | 검토 단계      | string       | required | false    | "1차 검토"                             |
+| creatorDepartment | 제작자 부서    | string       | optional | true     | "총무팀"                               |
+| creatorName      | 제작자 이름    | string       | optional | true     | "홍길동"                               |
+| creatorUuid      | 제작자 UUID    | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
+| submittedAt      | 제출 시각      | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| updatedAt        | 업데이트 시각  | string       | required | false    | "2025-12-24T11:00:00Z"                 |
+| category         | 카테고리       | string       | optional | true     | "SEXUAL_HARASSMENT_PREVENTION"          |
+| eduType          | 교육 유형      | string       | optional | true     | "MANDATORY"                             |
+| scriptId         | 스크립트 ID    | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
+| scriptVersion    | 스크립트 버전  | number       | optional | true     | 1                                      |
+
+### Status
+
+| status        | response content    |
+| ------------- | ------------------- |
+| 200 OK        | 정상                |
+| 404 Not Found | 영상을 찾을 수 없음 |
+| 401/403       | 인증/권한 오류      |
+
+---
+
 ## 주의사항
 
 1. **상태 전이**: 영상 상태는 다음 순서로 전이됩니다:

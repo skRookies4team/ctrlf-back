@@ -1,5 +1,7 @@
 package com.ctrlf.education.video.service;
 
+import com.ctrlf.education.entity.Education;
+import com.ctrlf.education.repository.EducationRepository;
 import com.ctrlf.education.script.entity.EducationScript;
 import com.ctrlf.education.script.repository.EducationScriptRepository;
 import com.ctrlf.education.video.client.VideoAiClient;
@@ -17,6 +19,12 @@ import com.ctrlf.education.video.dto.VideoDtos.VideoJobUpdateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoMetaItem;
 import com.ctrlf.education.video.dto.VideoDtos.VideoMetaUpdateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoRetryResponse;
+import com.ctrlf.education.video.dto.VideoDtos.AuditHistoryItem;
+import com.ctrlf.education.video.dto.VideoDtos.AuditHistoryResponse;
+import com.ctrlf.education.video.dto.VideoDtos.ReviewDetailResponse;
+import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueItem;
+import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueResponse;
+import com.ctrlf.education.video.dto.VideoDtos.ReviewStatsResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
@@ -30,18 +38,22 @@ import com.ctrlf.common.constant.Department;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -69,8 +81,59 @@ public class VideoService {
     private final VideoGenerationJobRepository jobRepository;
     private final EducationVideoRepository videoRepository;
     private final EducationVideoReviewRepository reviewRepository;
+    private final EducationRepository educationRepository;
     private final VideoAiClient videoAiClient;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Value("${ctrlf.infra.base-url:http://localhost:9003}")
+    private String infraBaseUrl;
+
+    /**
+     * infra-service에서 사용자 정보 조회 (제작자 정보용).
+     * 
+     * @param userId 사용자 UUID
+     * @return [부서명, 사용자명] 또는 [null, null] (조회 실패 시)
+     */
+    private String[] fetchUserInfoFromInfraService(UUID userId) {
+        if (userId == null) {
+            return new String[]{null, null};
+        }
+        
+        try {
+            RestClient restClient = RestClient.builder()
+                .baseUrl(infraBaseUrl.endsWith("/") ? infraBaseUrl.substring(0, infraBaseUrl.length() - 1) : infraBaseUrl)
+                .build();
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> userMap = restClient.get()
+                .uri("/admin/users/{userId}", userId.toString())
+                .retrieve()
+                .body(Map.class);
+            
+            if (userMap == null) {
+                return new String[]{null, null};
+            }
+            
+            String username = (String) userMap.get("username");
+            
+            // attributes에서 department 추출
+            @SuppressWarnings("unchecked")
+            Map<String, Object> attributes = (Map<String, Object>) userMap.get("attributes");
+            String department = null;
+            if (attributes != null) {
+                @SuppressWarnings("unchecked")
+                List<String> deptList = (List<String>) attributes.get("department");
+                if (deptList != null && !deptList.isEmpty()) {
+                    department = deptList.get(0);
+                }
+            }
+            
+            return new String[]{department, username};
+        } catch (Exception e) {
+            log.warn("infra-service에서 사용자 정보 조회 실패: userId={}, error={}", userId, e.getMessage());
+            return new String[]{null, null};
+        }
+    }
 
     // ========================
     // 영상 생성 Job 관련 메서드
@@ -302,14 +365,14 @@ public class VideoService {
      * DRAFT 상태의 새 영상 컨텐츠를 생성합니다.
      */
     @Transactional
-    public VideoCreateResponse createVideoContent(VideoCreateRequest request) {
-        EducationVideo video = EducationVideo.createDraft(request.educationId(), request.title());
+    public VideoCreateResponse createVideoContent(VideoCreateRequest request, UUID creatorUuid) {
+        EducationVideo video = EducationVideo.createDraft(request.educationId(), request.title(), creatorUuid);
         if (request.departmentScope() != null && !request.departmentScope().isEmpty()) {
             String deptScopeJson = convertDepartmentsToJson(request.departmentScope());
             video.setDepartmentScope(deptScopeJson);
         }
         video = videoRepository.save(video);
-        log.info("영상 컨텐츠 생성. videoId={}, title={}, status={}", video.getId(), video.getTitle(), video.getStatus());
+        log.info("영상 컨텐츠 생성. videoId={}, title={}, status={}, creatorUuid={}", video.getId(), video.getTitle(), video.getStatus(), creatorUuid);
         return new VideoCreateResponse(video.getId(), video.getStatus());
     }
 
@@ -704,6 +767,390 @@ public class VideoService {
             departmentScope,
             v.getOrderIndex(),
             v.getCreatedAt() != null ? v.getCreatedAt().toString() : null
+        );
+    }
+
+    // ========================
+    // 검토(Review) 관련 메서드
+    // ========================
+
+    /**
+     * 검토 목록 조회 (필터링, 정렬, 페이징).
+     * 
+     * @param statusFilter "pending" (검토 대기), "approved" (승인됨), "rejected" (반려됨), null (전체)
+     * @param reviewStage "first" (1차), "second" (2차), "document" (문서), null (전체)
+     * @param sort "latest" (최신순), "oldest" (오래된순), "title" (제목순), null (최신순 기본값)
+     */
+    public ReviewQueueResponse getReviewQueue(
+        int page,
+        int size,
+        String search,
+        Boolean myProcessingOnly,
+        String statusFilter,
+        String reviewStage,
+        String sort,
+        UUID reviewerUuid
+    ) {
+        // 상태별 영상 조회
+        List<EducationVideo> allVideos;
+        if ("approved".equals(statusFilter)) {
+            // 승인됨 (PUBLISHED)
+            allVideos = videoRepository.findApprovedVideos();
+        } else if ("rejected".equals(statusFilter)) {
+            // 반려됨 (EducationVideoReview가 있는 영상)
+            allVideos = videoRepository.findRejectedVideos();
+        } else {
+            // 검토 대기 (기본값, SCRIPT_REVIEW_REQUESTED, FINAL_REVIEW_REQUESTED)
+            allVideos = videoRepository.findPendingReviewVideos();
+        }
+
+        // 필터링
+        final String reviewStageFilter = reviewStage; // 람다 내부에서 사용하기 위해 final 변수로 복사
+        List<EducationVideo> filteredVideos = allVideos.stream()
+            .filter(v -> {
+                // 검토 단계 필터 (1차/2차/문서)
+                if (reviewStageFilter != null && !reviewStageFilter.isBlank()) {
+                    if ("first".equals(reviewStageFilter)) {
+                        // 1차 검토만
+                        if (!"SCRIPT_REVIEW_REQUESTED".equals(v.getStatus())) {
+                            return false;
+                        }
+                    } else if ("second".equals(reviewStageFilter)) {
+                        // 2차 검토만
+                        if (!"FINAL_REVIEW_REQUESTED".equals(v.getStatus())) {
+                            return false;
+                        }
+                    } else if ("document".equals(reviewStageFilter)) {
+                        // 문서 타입 (현재는 모든 영상을 문서로 간주, 추후 확장 가능)
+                        // TODO: 문서 타입 구분 로직 추가 필요
+                    }
+                }
+                
+                // 검색 필터 (제목, 부서, 제작자)
+                if (search != null && !search.isBlank()) {
+                    String lowerSearch = search.toLowerCase();
+                    Education education = educationRepository.findById(v.getEducationId()).orElse(null);
+                    boolean matchesTitle = v.getTitle() != null && v.getTitle().toLowerCase().contains(lowerSearch);
+                    boolean matchesEducationTitle = education != null && education.getTitle() != null && 
+                        education.getTitle().toLowerCase().contains(lowerSearch);
+                    
+                    // 제작자 정보 검색
+                    boolean matchesCreator = false;
+                    if (v.getCreatorUuid() != null) {
+                        try {
+                            String[] userInfo = fetchUserInfoFromInfraService(v.getCreatorUuid());
+                            String creatorName = userInfo[1];
+                            String creatorDepartment = userInfo[0];
+                            if (creatorName != null && creatorName.toLowerCase().contains(lowerSearch)) {
+                                matchesCreator = true;
+                            } else if (creatorDepartment != null && creatorDepartment.toLowerCase().contains(lowerSearch)) {
+                                matchesCreator = true;
+                            }
+                        } catch (Exception e) {
+                            log.debug("제작자 정보 조회 실패 (검색 필터): videoId={}, creatorUuid={}, error={}", 
+                                v.getId(), v.getCreatorUuid(), e.getMessage());
+                        }
+                    }
+                    
+                    if (!matchesTitle && !matchesEducationTitle && !matchesCreator) {
+                        return false;
+                    }
+                }
+
+                // 내 처리만 필터
+                if (Boolean.TRUE.equals(myProcessingOnly) && reviewerUuid != null) {
+                    List<EducationVideoReview> reviews = reviewRepository.findByVideoIdOrderByCreatedAtDesc(v.getId());
+                    boolean hasMyReview = reviews.stream()
+                        .anyMatch(r -> reviewerUuid.equals(r.getReviewerUuid()));
+                    if (!hasMyReview) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            .sorted((v1, v2) -> {
+                // 정렬 옵션
+                if ("oldest".equals(sort)) {
+                    // 오래된순
+                    Instant t1 = v1.getCreatedAt() != null ? v1.getCreatedAt() : Instant.EPOCH;
+                    Instant t2 = v2.getCreatedAt() != null ? v2.getCreatedAt() : Instant.EPOCH;
+                    return t1.compareTo(t2);
+                } else if ("title".equals(sort)) {
+                    // 제목순
+                    String title1 = v1.getTitle() != null ? v1.getTitle() : "";
+                    String title2 = v2.getTitle() != null ? v2.getTitle() : "";
+                    return title1.compareToIgnoreCase(title2);
+                } else {
+                    // 최신순 (기본값)
+                    Instant t1 = v1.getCreatedAt() != null ? v1.getCreatedAt() : Instant.EPOCH;
+                    Instant t2 = v2.getCreatedAt() != null ? v2.getCreatedAt() : Instant.EPOCH;
+                    return t2.compareTo(t1);
+                }
+            })
+            .collect(Collectors.toList());
+
+        // 페이징
+        int totalCount = filteredVideos.size();
+        int totalPages = (int) Math.ceil((double) totalCount / size);
+        int fromIndex = page * size;
+        int toIndex = Math.min(fromIndex + size, totalCount);
+        List<EducationVideo> pagedVideos = fromIndex < totalCount 
+            ? filteredVideos.subList(fromIndex, toIndex)
+            : Collections.emptyList();
+
+        // Education 정보 조회 (한 번에)
+        Map<UUID, Education> educationMap = educationRepository.findAllById(
+            pagedVideos.stream().map(EducationVideo::getEducationId).distinct().collect(Collectors.toList())
+        ).stream().collect(Collectors.toMap(Education::getId, e -> e));
+
+        // DTO 변환
+        List<ReviewQueueItem> items = pagedVideos.stream()
+            .map(v -> {
+                Education education = educationMap.get(v.getEducationId());
+                VideoStatus status = null;
+                try {
+                    status = VideoStatus.valueOf(v.getStatus());
+                } catch (IllegalArgumentException e) {
+                    log.warn("알 수 없는 영상 상태: {}", v.getStatus());
+                }
+
+                String reviewStageLabel = null;
+                if ("SCRIPT_REVIEW_REQUESTED".equals(v.getStatus())) {
+                    reviewStageLabel = "1차";
+                } else if ("FINAL_REVIEW_REQUESTED".equals(v.getStatus())) {
+                    reviewStageLabel = "2차";
+                } else if ("PUBLISHED".equals(v.getStatus())) {
+                    reviewStageLabel = "승인됨";
+                } else {
+                    // 반려됨인 경우 리뷰에서 단계 확인
+                    List<EducationVideoReview> reviews = reviewRepository.findByVideoIdOrderByCreatedAtDesc(v.getId());
+                    if (!reviews.isEmpty()) {
+                        EducationVideoReview latestReview = reviews.get(0);
+                        if (latestReview.getRejectionStage() != null) {
+                            reviewStageLabel = latestReview.getRejectionStage() == RejectionStage.SCRIPT ? "1차 반려" : "2차 반려";
+                        } else {
+                            reviewStageLabel = "반려됨";
+                        }
+                    }
+                }
+                
+                // 제작자 정보 조회 (infra-service)
+                UUID creatorUuid = v.getCreatorUuid();
+                String creatorDepartment = null;
+                String creatorName = null;
+                if (creatorUuid != null) {
+                    String[] userInfo = fetchUserInfoFromInfraService(creatorUuid);
+                    creatorDepartment = userInfo[0];
+                    creatorName = userInfo[1];
+                }
+
+                return new ReviewQueueItem(
+                    v.getId(),
+                    v.getEducationId(),
+                    education != null ? education.getTitle() : "",
+                    v.getTitle(),
+                    status,
+                    reviewStageLabel,
+                    creatorDepartment,
+                    creatorName,
+                    creatorUuid,
+                    v.getCreatedAt() != null ? v.getCreatedAt().toString() : "",
+                    education != null && education.getCategory() != null ? education.getCategory().name() : "",
+                    education != null && education.getEduType() != null ? education.getEduType().name() : ""
+                );
+            })
+            .collect(Collectors.toList());
+
+        // 통계 계산 (검토 대기 상태일 때만)
+        long firstRoundCount = 0;
+        long secondRoundCount = 0;
+        long documentCount = allVideos.size();
+        
+        if (statusFilter == null || "pending".equals(statusFilter)) {
+            firstRoundCount = allVideos.stream()
+                .filter(v -> "SCRIPT_REVIEW_REQUESTED".equals(v.getStatus()))
+                .count();
+            secondRoundCount = allVideos.stream()
+                .filter(v -> "FINAL_REVIEW_REQUESTED".equals(v.getStatus()))
+                .count();
+        }
+
+        return new ReviewQueueResponse(
+            items,
+            (long) totalCount,
+            page,
+            size,
+            totalPages,
+            firstRoundCount,
+            secondRoundCount,
+            documentCount
+        );
+    }
+
+    /**
+     * 검토 통계 조회.
+     */
+    public ReviewStatsResponse getReviewStats(UUID reviewerUuid) {
+        // 검토 대기 개수
+        long pendingCount = videoRepository.findPendingReviewVideos().size();
+
+        // 승인됨 개수
+        Long approvedCount = videoRepository.countApprovedVideos();
+
+        // 반려됨 개수
+        Long rejectedCount = videoRepository.countRejectedVideos();
+
+        // 내 활동 개수
+        Long myActivityCount = reviewerUuid != null 
+            ? videoRepository.countMyActivityVideos(reviewerUuid)
+            : 0L;
+
+        return new ReviewStatsResponse(
+            pendingCount,
+            approvedCount != null ? approvedCount : 0L,
+            rejectedCount != null ? rejectedCount : 0L,
+            myActivityCount != null ? myActivityCount : 0L
+        );
+    }
+
+    /**
+     * 영상 감사 이력 조회.
+     */
+    public AuditHistoryResponse getAuditHistory(UUID videoId) {
+        EducationVideo video = findVideoOrThrow(videoId);
+        List<EducationVideoReview> reviews = reviewRepository.findByVideoIdOrderByCreatedAtDesc(videoId);
+
+        List<AuditHistoryItem> history = new ArrayList<>();
+
+        // 영상 생성 이벤트
+        if (video.getCreatedAt() != null) {
+            String creatorName = "SYSTEM";
+            UUID creatorUuid = video.getCreatorUuid();
+            if (creatorUuid != null) {
+                try {
+                    String[] userInfo = fetchUserInfoFromInfraService(creatorUuid);
+                    String name = userInfo[1];
+                    if (name != null && !name.isBlank()) {
+                        creatorName = name;
+                    }
+                } catch (Exception e) {
+                    log.debug("제작자 정보 조회 실패 (감사 이력): videoId={}, creatorUuid={}, error={}", 
+                        videoId, creatorUuid, e.getMessage());
+                }
+            }
+            history.add(new AuditHistoryItem(
+                "CREATED",
+                "영상 생성",
+                video.getCreatedAt().toString(),
+                creatorName,
+                creatorUuid,
+                null,
+                null
+            ));
+        }
+
+        // 반려 이벤트
+        for (EducationVideoReview review : reviews) {
+            String reviewerName = "REVIEWER";
+            UUID reviewerUuid = review.getReviewerUuid();
+            if (reviewerUuid != null) {
+                try {
+                    String[] userInfo = fetchUserInfoFromInfraService(reviewerUuid);
+                    String name = userInfo[1];
+                    if (name != null && !name.isBlank()) {
+                        reviewerName = name;
+                    }
+                } catch (Exception e) {
+                    log.debug("리뷰어 정보 조회 실패 (감사 이력): videoId={}, reviewerUuid={}, error={}", 
+                        videoId, reviewerUuid, e.getMessage());
+                }
+            }
+            history.add(new AuditHistoryItem(
+                "REJECTED",
+                "검토 반려",
+                review.getCreatedAt() != null ? review.getCreatedAt().toString() : "",
+                reviewerName,
+                reviewerUuid,
+                review.getComment(),
+                review.getRejectionStage() != null ? review.getRejectionStage().name() : null
+            ));
+        }
+
+        // 자동 점검 이벤트
+        history.add(new AuditHistoryItem(
+            "AUTO_CHECKED",
+            "PII/금칙어/품질 점검",
+            video.getCreatedAt() != null ? video.getCreatedAt().toString() : "",
+            "SYSTEM",
+            null,
+            null,
+            null
+        ));
+
+        // 시간순 정렬 (최신순)
+        history.sort((h1, h2) -> h2.timestamp().compareTo(h1.timestamp()));
+
+        return new AuditHistoryResponse(
+            videoId,
+            video.getTitle(),
+            history
+        );
+    }
+
+    /**
+     * 검토 상세 정보 조회.
+     */
+    public ReviewDetailResponse getReviewDetail(UUID videoId) {
+        EducationVideo video = findVideoOrThrow(videoId);
+        Education education = educationRepository.findById(video.getEducationId())
+            .orElse(null);
+
+        VideoStatus status = null;
+        try {
+            status = VideoStatus.valueOf(video.getStatus());
+        } catch (IllegalArgumentException e) {
+            log.warn("알 수 없는 영상 상태: {}", video.getStatus());
+        }
+
+        String reviewStage = "SCRIPT_REVIEW_REQUESTED".equals(video.getStatus()) ? "1차" : 
+            "FINAL_REVIEW_REQUESTED".equals(video.getStatus()) ? "2차" : "";
+
+        // 제작자 정보 조회 (infra-service)
+        UUID creatorUuid = video.getCreatorUuid();
+        String creatorDepartment = null;
+        String creatorName = null;
+        if (creatorUuid != null) {
+            String[] userInfo = fetchUserInfoFromInfraService(creatorUuid);
+            creatorDepartment = userInfo[0];
+            creatorName = userInfo[1];
+        }
+
+        // 스크립트 버전 조회
+        Integer scriptVersion = null;
+        if (video.getScriptId() != null) {
+            EducationScript script = scriptRepository.findById(video.getScriptId()).orElse(null);
+            if (script != null) {
+                scriptVersion = script.getVersion();
+            }
+        }
+
+        return new ReviewDetailResponse(
+            videoId,
+            video.getEducationId(),
+            education != null ? education.getTitle() : "",
+            video.getTitle(),
+            status,
+            reviewStage,
+            creatorDepartment,
+            creatorName,
+            creatorUuid,
+            video.getCreatedAt() != null ? video.getCreatedAt().toString() : "",
+            video.getUpdatedAt() != null ? video.getUpdatedAt().toString() : "",
+            education != null && education.getCategory() != null ? education.getCategory().name() : "",
+            education != null && education.getEduType() != null ? education.getEduType().name() : "",
+            video.getScriptId(),
+            scriptVersion
         );
     }
 }

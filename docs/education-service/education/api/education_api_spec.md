@@ -520,6 +520,189 @@ Body: 없음
 
 ---
 
+# 3. Dashboard Statistics (Admin)
+
+## 3.1 대시보드 요약 통계 조회
+
+### ✔ URL
+
+- GET /admin/dashboard/education/summary
+
+### ✔ 설명
+
+- 전체 평균 이수율, 미이수자 수, 4대 의무교육 평균, 직무교육 평균을 조회합니다.
+- 기간 필터(period)와 부서 필터(department)를 지원합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
+| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
+| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
+| department | 부서 필터               | string     | optional | true     | "총무팀" |
+
+### Response
+
+| key                           | 설명                    | value 타입 | 옵션     | Nullable | 예시  |
+| ----------------------------- | ----------------------- | ---------- | -------- | -------- | ----- |
+| overallAverageCompletionRate  | 전체 평균 이수율(%)     | number     | required | false    | 85.5   |
+| nonCompleterCount             | 미이수자 수             | number     | required | false    | 15     |
+| mandatoryEducationAverage      | 4대 의무교육 평균 이수율(%) | number     | required | false    | 90.2   |
+| jobEducationAverage           | 직무교육 평균 이수율(%) | number     | required | false    | 78.3   |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
+## 3.2 4대 의무교육 이수율 조회
+
+### ✔ URL
+
+- GET /admin/dashboard/education/mandatory-completion
+
+### ✔ 설명
+
+- 성희롱 예방교육, 개인정보보호 교육, 직장 내 괴롭힘 예방, 장애인 인식개선 교육의 이수율을 조회합니다.
+- 기간 필터(period)와 부서 필터(department)를 지원합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
+| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
+| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
+| department | 부서 필터               | string     | optional | true     | "총무팀" |
+
+### Response
+
+| key                        | 설명                      | value 타입 | 옵션     | Nullable | 예시  |
+| -------------------------- | ------------------------- | ---------- | -------- | -------- | ----- |
+| sexualHarassmentPrevention | 성희롱 예방교육 이수율(%) | number     | required | false    | 95.0   |
+| personalInfoProtection     | 개인정보보호 교육 이수율(%) | number     | required | false    | 92.5   |
+| workplaceBullying          | 직장 내 괴롭힘 예방 이수율(%) | number     | required | false    | 88.3   |
+| disabilityAwareness        | 장애인 인식개선 이수율(%) | number     | required | false    | 90.1   |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
+## 3.3 직무교육 이수 현황 조회
+
+### ✔ URL
+
+- GET /admin/dashboard/education/job-completion
+
+### ✔ 설명
+
+- 직무교육별 상태(진행 중/이수 완료)와 학습자 수를 조회합니다.
+- 기간 필터(period)와 부서 필터(department)를 지원합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
+| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
+| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
+| department | 부서 필터               | string     | optional | true     | "총무팀" |
+
+### Response
+
+array of object
+
+| key          | 설명                      | value 타입   | 옵션     | Nullable | 예시                                   |
+| ------------ | ------------------------- | ------------ | -------- | -------- | -------------------------------------- |
+| educationId  | 교육 ID                   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title        | 교육 제목                 | string       | required | false    | "신입사원 온보딩 교육"                 |
+| status       | 상태 (진행 중/이수 완료)  | string       | required | false    | "진행 중"                              |
+| learnerCount | 학습자 수                 | number       | required | false    | 25                                     |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
+## 3.4 부서별 이수율 현황 조회
+
+### ✔ URL
+
+- GET /admin/dashboard/education/department-completion
+
+### ✔ 설명
+
+- 부서별 대상자 수, 이수자 수, 이수율, 미이수자 수를 조회합니다.
+- 이수율 기준으로 내림차순 정렬됩니다.
+- 기간 필터(period)를 지원합니다.
+
+### ✔ 권한
+
+`ROLE_ADMIN`
+
+### ✔ 요청
+
+Body: 없음
+
+### Query Parameter
+
+| key    | 설명                    | value 타입 | 옵션     | Nullable | 예시 |
+| ------ | ----------------------- | ---------- | -------- | -------- | ---- |
+| period | 기간 (일수, 7/30/90)    | number     | optional | true     | 30   |
+
+### Response
+
+array of object
+
+| key             | 설명          | value 타입 | 옵션     | Nullable | 예시   |
+| --------------- | ------------- | ---------- | -------- | -------- | ------ |
+| department      | 부서명        | string     | required | false    | "총무팀" |
+| targetCount     | 대상자 수     | number     | required | false    | 50     |
+| completerCount  | 이수자 수     | number     | required | false    | 45     |
+| completionRate  | 이수율(%)     | number     | required | false    | 90.0   |
+| nonCompleterCount | 미이수자 수 | number     | required | false    | 5      |
+
+### Status
+
+| status  | response content |
+| ------- | ---------------- |
+| 200 OK  | 정상             |
+| 401/403 | 인증/권한 오류   |
+
+---
+
 ## 관련 문서
 
 - [Video API 명세](../video/api/video_api_spec.md)

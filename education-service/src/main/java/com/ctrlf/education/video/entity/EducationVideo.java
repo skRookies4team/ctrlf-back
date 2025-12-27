@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * 교육 영상(컨텐츠) 엔티티.
@@ -74,6 +75,11 @@ public class EducationVideo {
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
+    /** 최근 수정 시각 */
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
     /** 재생/표시 순서를 위한 인덱스 (교육 내 0-base) */
     @Column(name = "order_index")
     private Integer orderIndex;
@@ -85,6 +91,10 @@ public class EducationVideo {
     /** 수강 가능한 부서 목록(JSON) */
     @Column(name = "department_scope", columnDefinition = "text")
     private String departmentScope;
+
+    /** 제작자 UUID */
+    @Column(name = "creator_uuid", columnDefinition = "uuid")
+    private UUID creatorUuid;
 
     /**
      * 시드/유틸용 생성 팩토리.
@@ -112,13 +122,14 @@ public class EducationVideo {
      * DRAFT 상태의 새 교육 컨텐츠 생성.
      * 영상 생성 전 초기 상태로 생성합니다.
      */
-    public static EducationVideo createDraft(UUID educationId, String title) {
+    public static EducationVideo createDraft(UUID educationId, String title, UUID creatorUuid) {
         EducationVideo v = new EducationVideo();
         v.setEducationId(educationId);
         v.setTitle(title);
         v.setStatus("DRAFT");
         v.setVersion(1);
         v.setOrderIndex(0);
+        v.setCreatorUuid(creatorUuid);
         return v;
     }
 }

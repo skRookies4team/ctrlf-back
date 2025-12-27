@@ -145,5 +145,93 @@ public final class EducationResponses {
         /** 해당 교육 모든 영상 이수 여부 */
         private boolean eduCompleted;
     }
+
+    // ========================
+    // 대시보드 통계 관련 DTOs
+    // ========================
+
+    /**
+     * 대시보드 요약 통계 응답.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DashboardSummaryResponse {
+        /** 전체 평균 이수율(%) */
+        private Double overallAverageCompletionRate;
+        /** 미이수자 수 */
+        private Long nonCompleterCount;
+        /** 4대 의무교육 평균 이수율(%) */
+        private Double mandatoryEducationAverage;
+        /** 직무교육 평균 이수율(%) */
+        private Double jobEducationAverage;
+    }
+
+    /**
+     * 4대 의무교육 이수율 응답.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class MandatoryCompletionResponse {
+        /** 성희롱 예방교육 이수율(%) */
+        private Double sexualHarassmentPrevention;
+        /** 개인정보보호 교육 이수율(%) */
+        private Double personalInfoProtection;
+        /** 직장 내 괴롭힘 예방 이수율(%) */
+        private Double workplaceBullying;
+        /** 장애인 인식개선 이수율(%) */
+        private Double disabilityAwareness;
+    }
+
+    /**
+     * 직무교육 이수 현황 항목.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class JobEducationCompletionItem {
+        /** 교육 ID */
+        private UUID educationId;
+        /** 교육 제목 */
+        private String title;
+        /** 상태 (진행 중/이수 완료) */
+        private String status;
+        /** 학습자 수 */
+        private Long learnerCount;
+    }
+
+    /**
+     * 직무교육 이수 현황 응답.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class JobEducationCompletionResponse {
+        private List<JobEducationCompletionItem> items;
+    }
+
+    /**
+     * 부서별 이수율 현황 항목.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DepartmentCompletionItem {
+        /** 부서명 */
+        private String department;
+        /** 대상자 수 */
+        private Long targetCount;
+        /** 이수자 수 */
+        private Long completerCount;
+        /** 이수율(%) */
+        private Double completionRate;
+        /** 미이수자 수 */
+        private Long nonCompleterCount;
+    }
+
+    /**
+     * 부서별 이수율 현황 응답.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DepartmentCompletionResponse {
+        private List<DepartmentCompletionItem> items;
+    }
 }
 
