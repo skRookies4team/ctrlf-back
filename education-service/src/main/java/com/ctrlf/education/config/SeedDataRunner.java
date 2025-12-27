@@ -320,7 +320,7 @@ public class SeedDataRunner implements CommandLineRunner {
                         durations[i],
                         "ALL",
                         1,
-                        "ACTIVE"
+                        "PUBLISHED"
                     );
                     v.setOrderIndex(i);
                     seeds.add(v);
@@ -348,6 +348,8 @@ public class SeedDataRunner implements CommandLineRunner {
             }
             
             // 진행률 더미: 각 유저별로 랜덤하게 진행률 생성
+            // passRatio 기준으로 완료 여부 판단
+            Integer passRatio = edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             for (UserInfo user : users) {
                 for (int i = 0; i < videos.size(); i++) {
                     var v = videos.get(i);
@@ -363,7 +365,8 @@ public class SeedDataRunner implements CommandLineRunner {
                     p.setLastPositionSeconds(watchedSeconds);
                     p.setTotalWatchSeconds(watchedSeconds);
                     p.setProgress(progress);
-                    p.setIsCompleted(progress >= 100);
+                    // passRatio 기준으로 완료 여부 판단
+                    p.setIsCompleted(progress >= passRatio);
                     educationVideoProgressRepository.save(p);
                 }
             }

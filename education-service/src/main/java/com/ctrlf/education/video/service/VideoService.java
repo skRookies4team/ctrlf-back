@@ -17,6 +17,7 @@ import com.ctrlf.education.video.dto.VideoDtos.VideoJobUpdateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoMetaItem;
 import com.ctrlf.education.video.dto.VideoDtos.VideoMetaUpdateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoRetryResponse;
+import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
 import com.ctrlf.education.video.entity.EducationVideoReview;
@@ -335,7 +336,7 @@ public class VideoService {
         if (request.fileUrl() != null) video.setFileUrl(request.fileUrl());
         if (request.version() != null) video.setVersion(request.version());
         if (request.duration() != null) video.setDuration(request.duration());
-        if (request.status() != null) video.setStatus(request.status());
+        if (request.status() != null) video.setStatus(request.status().name());
         if (request.targetDeptCode() != null) video.setTargetDeptCode(request.targetDeptCode());
         if (request.departmentScope() != null) video.setDepartmentScope(request.departmentScope());
         if (request.orderIndex() != null) video.setOrderIndex(request.orderIndex());
@@ -574,6 +575,14 @@ public class VideoService {
     }
 
     private VideoMetaItem toVideoMetaItem(EducationVideo v) {
+        VideoStatus status = null;
+        if (v.getStatus() != null) {
+            try {
+                status = VideoStatus.valueOf(v.getStatus());
+            } catch (IllegalArgumentException e) {
+                log.warn("알 수 없는 영상 상태: {}, videoId={}", v.getStatus(), v.getId());
+            }
+        }
         return new VideoMetaItem(
             v.getId(),
             v.getEducationId(),
@@ -583,7 +592,7 @@ public class VideoService {
             v.getFileUrl(),
             v.getVersion(),
             v.getDuration(),
-            v.getStatus(),
+            status,
             v.getTargetDeptCode(),
             v.getDepartmentScope(),
             v.getOrderIndex(),

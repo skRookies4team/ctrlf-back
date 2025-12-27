@@ -1,5 +1,8 @@
 package com.ctrlf.education.dto;
 
+import com.ctrlf.education.entity.EducationCategory;
+import com.ctrlf.education.entity.EducationTopic;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -42,8 +45,15 @@ public final class EducationResponses {
         private UUID id;
         private String title;
         private String description;
+        private EducationTopic category;
+        private EducationCategory eduType;
+        private Boolean require;
+        private Integer passScore;
+        private Integer passRatio;
         /** 교육 전체 길이(초 단위). 섹션 합산 기준 */
         private Integer duration;
+        private Instant createdAt;
+        private Instant updatedAt;
         private List<Section> sections;
 
         /** 교육 섹션(차시) 요약. */
@@ -107,7 +117,8 @@ public final class EducationResponses {
         private UUID id;
         private String title;
         private String description;
-        private String category;
+        private EducationTopic category;
+        private EducationCategory eduType;
         private boolean required;
         /** 사용자 기준 교육 진행률(%) */
         private int progressPercent;

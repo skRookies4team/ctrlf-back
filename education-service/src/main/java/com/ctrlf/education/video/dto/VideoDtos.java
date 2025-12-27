@@ -241,7 +241,7 @@ public final class VideoDtos {
         @Schema(description = "파일 URL") String fileUrl,
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
-        @Schema(description = "상태") String status,
+        @Schema(description = "상태") VideoStatus status,
         @Schema(description = "대상 부서 코드") String targetDeptCode,
         @Schema(description = "수강 가능 부서(JSON)") String departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex,
@@ -254,7 +254,7 @@ public final class VideoDtos {
         @Schema(description = "파일 URL") String fileUrl,
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
-        @Schema(description = "상태") String status,
+        @Schema(description = "상태") VideoStatus status,
         @Schema(description = "대상 부서 코드") String targetDeptCode,
         @Schema(description = "수강 가능 부서(JSON)") String departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex
@@ -312,7 +312,8 @@ public final class VideoDtos {
         PROCESSING,                 // 영상 생성 중
         READY,                      // 영상 생성 완료
         FINAL_REVIEW_REQUESTED,     // 2차 검토 요청 (영상)
-        PUBLISHED                   // 최종 승인/게시 (유저 노출)
+        PUBLISHED,                  // 최종 승인/게시 (유저 노출)
+        DISABLED                    // 비활성화 (유저 노출 중지)
     }
 
     @Schema(description = "영상 상태 강제 변경 요청 (어드민 테스트용)")

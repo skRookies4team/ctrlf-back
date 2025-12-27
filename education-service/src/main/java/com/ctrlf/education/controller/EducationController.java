@@ -78,7 +78,8 @@ public class EducationController {
                                 "  \"id\": \"2c2f8c7a-8a2c-4f3a-9d2b-111111111111\",\n" +
                                 "  \"title\": \"산업안전 교육\",\n" +
                                 "  \"description\": \"산업안전 수칙\",\n" +
-                                "  \"category\": \"MANDATORY\",\n" +
+                                "  \"category\": \"JOB_DUTY\",\n" +
+                                "  \"eduType\": \"MANDATORY\",\n" +
                                 "  \"required\": true,\n" +
                                 "  \"progressPercent\": 60,\n" +
                                 "  \"watchStatus\": \"시청중\",\n" +
@@ -108,13 +109,13 @@ public class EducationController {
     })
     public ResponseEntity<List<EducationResponses.EducationListItem>> getEducationsMe(
         @Parameter(description = "이수 여부 필터") @RequestParam(name = "completed", required = false) Boolean completed,
-        @Parameter(description = "카테고리 필터(MANDATORY/JOB/ETC)") @RequestParam(name = "category", required = false) String category,
+        @Parameter(description = "교육 유형 필터(MANDATORY/JOB/ETC)") @RequestParam(name = "eduType", required = false) String eduType,
         @Parameter(description = "정렬 기준(UPDATED|TITLE)") @RequestParam(name = "sort", required = false, defaultValue = "UPDATED") String sort,
         @AuthenticationPrincipal Jwt jwt
     ) {
         Optional<UUID> userUuid = SecurityUtils.extractUserUuid(jwt);
         List<EducationResponses.EducationListItem> res =
-            educationService.getEducationsMe(completed, category, sort, userUuid);
+            educationService.getEducationsMe(completed, eduType, sort, userUuid);
         return ResponseEntity.ok(res);
     }
 
@@ -197,7 +198,6 @@ public class EducationController {
                 examples = @ExampleObject(
                     value = "{\n" +
                             "  \"position\": 120,\n" +
-                            "  \"duration\": 1800,\n" +
                             "  \"watchTime\": 120\n" +
                             "}"
                 )
@@ -242,16 +242,16 @@ public class EducationController {
     }
 
     /**
-     * 교육 이수 처리.
+     * 교육 시청 완료 처리.
      *
      * @param id 교육 ID
      * @param jwt 인증 토큰(사용자 UUID 파싱)
-     * @return 이수 처리 결과
+     * @return 교육 시청완료 처리 결과
      */
     @PostMapping("/edu/{id}/complete")
     @Operation(
-        summary = "교육 이수 처리 (프론트 -> 백엔드)",
-        description = "모든 영상 이수 여부를 확인하여 교육 이수 처리를 수행합니다.",
+        summary = "교육 시청 완료 처리 (프론트 -> 백엔드)",
+        description = "교육 시청 완료 처리를 수행합니다.",
         responses = {
             @ApiResponse(
                 responseCode = "200",
