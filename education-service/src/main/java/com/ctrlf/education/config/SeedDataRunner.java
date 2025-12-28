@@ -419,6 +419,7 @@ public class SeedDataRunner implements CommandLineRunner {
 
     private UUID insertScript(UUID eduId, UUID materialId, String content, Integer version, String title) {
         EducationScript s = new EducationScript();
+        s.setId(UUID.randomUUID()); // UUID 수동 생성
         s.setEducationId(eduId);
         // Note: sourceDocId는 제거되었으며, 이제 SourceSet을 통해 문서와 연결됩니다.
         s.setTitle(title);
