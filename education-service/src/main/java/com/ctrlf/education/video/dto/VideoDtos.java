@@ -102,7 +102,7 @@ public final class VideoDtos {
         @NotNull(message = "eduId는 필수입니다")
         UUID eduId,
 
-        @Schema(description = "S3 파일 URL", example = "s3://bucket/docs/file.pdf")
+        @Schema(description = "S3 파일 URL", example = "s3://ctrl-s3/docs/file.pdf")
         @NotBlank(message = "fileUrl은 필수입니다")
         String fileUrl
     ) {}

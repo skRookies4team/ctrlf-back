@@ -235,14 +235,14 @@ POST /admin/videos
 
 5. POST /infra/files/presign/upload [파일 업로드]
    → S3에 파일 업로드 presigned url 받고 s3에 프론트가 직접 업로드 (presigned URL 사용 또는 직접 업로드)
-   → 파일 URL 획득 (예: "s3://bucket/docs/hr_safety_v3.pdf")
+   → 파일 URL 획득 (예: "s3://ctrl-s3/docs/hr_safety_v3.pdf")
 
 6. POST /rag/documents/upload
    → 문서 업로드 메타 등록 (infra-service)
    → Request: {
    title: "문서 제목",
    domain: "HR" | "EDUCATION" | ...,
-   fileUrl: "s3://bucket/docs/hr_safety_v3.pdf"
+   fileUrl: "s3://ctrl-s3/docs/hr_safety_v3.pdf"
    }
    → Response: {
    documentId: "문서 ID",
