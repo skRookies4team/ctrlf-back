@@ -120,6 +120,67 @@ curl -s -X POST 'http://localhost:8090/realms/ctrlf/protocol/openid-connect/toke
   -d 'password=44444' | jq -r '.access_token'
 ```
 
+### Service Account 권한 확인
+
+권한이 정상적으로 설정되었는지 확인하는 방법:
+
+**방법 1: 확인 스크립트 사용 (권장)**
+
+**Linux/macOS:**
+
+```bash
+./scripts/verify-keycloak-permissions.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\scripts\verify-keycloak-permissions.ps1
+```
+
+필수 역할(`view-users`, `manage-users`, `view-realm`)이 모두 할당되었는지 자동으로 확인합니다.
+
+**방법 2: infra-service 엔드포인트 사용**
+
+**Linux/macOS:**
+
+```bash
+# infra-service가 실행 중이어야 함
+curl http://localhost:9003/admin/users/token/decode | jq
+```
+
+**Windows (PowerShell):**
+
+```powershell
+# infra-service가 실행 중이어야 함
+Invoke-RestMethod http://localhost:9003/admin/users/token/decode | ConvertTo-Json
+```
+
+응답에서 `resource_access.realm-management.roles` 배열에 다음 역할이 포함되어 있는지 확인:
+
+- `view-users`
+- `manage-users`
+- `view-realm`
+
+**방법 3: 실제 API 호출 테스트**
+
+**Linux/macOS:**
+
+```bash
+# 사용자 목록 조회 API 테스트
+curl http://localhost:9003/admin/users?page=0&size=10
+```
+
+**Windows (PowerShell):**
+
+```powershell
+# 사용자 목록 조회 API 테스트
+Invoke-RestMethod http://localhost:9003/admin/users?page=0&size=10
+```
+
+- 200 OK 응답이 오면 권한이 정상적으로 설정된 것입니다
+- 403 Forbidden이 오면 권한이 없거나 설정이 안 된 것입니다
+
 ## 빌드/테스트/포맷
 
 - 포매터: Eclipse(Java) 4칸 들여쓰기, 불필요 import 제거, import 정렬.
