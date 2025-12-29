@@ -84,8 +84,8 @@
       "protocol": "openid-connect",
       "publicClient": true,
       "standardFlowEnabled": true,
-      "redirectUris": ["http://localhost:5173/*"],
-      "webOrigins": ["http://localhost:5173"],
+      "redirectUris": ["http://front-service:5173/*"],
+      "webOrigins": ["http://front-service:5173"],
       "protocolMappers": [
         {
           "name": "employeeNo",
