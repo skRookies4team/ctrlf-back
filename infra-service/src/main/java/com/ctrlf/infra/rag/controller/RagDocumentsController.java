@@ -55,7 +55,7 @@ public class RagDocumentsController {
 
     @PostMapping("/upload")
     @Operation(
-        summary = "RAG 문서 업로드 메타 등록",
+        summary = "RAG 문서 업로드 메타 등록 (Frontend -> Backend API)",
         description = "S3에 업로드 완료된 문서의 메타 정보를 저장하고, 초기 상태(QUEUED)를 반환합니다.",
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
