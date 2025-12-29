@@ -2,7 +2,7 @@ name: CI Quiz Service
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "feature/infra" ]
     paths:
       - 'quiz-service/**'
       - 'build.gradle'

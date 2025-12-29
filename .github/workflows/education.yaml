@@ -2,7 +2,7 @@ name: CI Education Service
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "feature/infra" ]
     paths:
       - 'education-service/**'
       - 'build.gradle'

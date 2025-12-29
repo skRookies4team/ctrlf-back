@@ -1,6 +1,7 @@
 {
   "realm": "ctrlf",
   "enabled": true,
+  "sslRequired": "none",
   "displayName": "CTRL-F",
   "loginTheme": "ctrlf-theme",
 
@@ -84,8 +85,11 @@
       "protocol": "openid-connect",
       "publicClient": true,
       "standardFlowEnabled": true,
-      "redirectUris": ["http://10.0.147.41:5173/*"],
-      "webOrigins": ["http://10.0.147.41:5173"],
+      "redirectUris": ["http://58.127.241.84:5173/*",
+              "http://k8s-argocd-fronting-526db1f734-1347346656.ap-northeast-2.elb.amazonaws.com/*"],
+
+      "webOrigins": ["http://58.127.241.84:5173/*",
+              "http://k8s-argocd-fronting-526db1f734-1347346656.ap-northeast-2.elb.amazonaws.com/*"],
       "protocolMappers": [
         {
           "name": "employeeNo",
