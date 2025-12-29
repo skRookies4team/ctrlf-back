@@ -1,5 +1,6 @@
 package com.ctrlf.education.script.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,8 +23,6 @@ public final class EducationScriptDto {
       UUID scriptId,
       @Schema(description = "교육 ID", example = "550e8400-e29b-41d4-a716-446655440001")
       UUID educationId,
-      @Schema(description = "자료 ID", example = "550e8400-e29b-41d4-a716-446655440002")
-      UUID materialId,
       @Schema(description = "스크립트 내용", example = "교육 영상 스크립트 내용...")
       String script,
       @Schema(description = "스크립트 버전", example = "1")
@@ -33,7 +32,7 @@ public final class EducationScriptDto {
   public record ScriptDetailResponse(
       @Schema(description = "스크립트 ID") UUID scriptId,
       @Schema(description = "교육 ID") UUID educationId,
-      @Schema(description = "자료 ID") UUID materialId,
+      @Schema(description = "영상 ID") UUID videoId,
       @Schema(description = "제목") String title,
       @Schema(description = "총 길이(초)") Integer totalDurationSec,
       @Schema(description = "스크립트 버전") Integer version,
@@ -119,16 +118,51 @@ public final class EducationScriptDto {
       UUID scriptId) {}
 
   // ========================
-  // 스크립트 자동생성 요청
+  // 스크립트 ID 조회
   // ========================
 
-  @Schema(description = "스크립트 자동생성 요청")
-  public record ScriptGenerateRequest(
-      @Schema(description = "교육 ID", example = "550e8400-e29b-41d4-a716-446655440000")
-      @NotNull(message = "eduId는 필수입니다")
-      UUID eduId,
-      @Schema(description = "영상 컨텐츠 ID", example = "550e8400-e29b-41d4-a716-446655440003")
-      @NotNull(message = "videoId는 필수입니다")
-      UUID videoId
-  ){}
+  @Schema(description = "스크립트 ID 조회 응답 (videoId 또는 educationId로 조회)")
+  public record ScriptLookupResponse(
+      @Schema(description = "스크립트 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+      UUID scriptId,
+      @Schema(description = "교육 ID", example = "550e8400-e29b-41d4-a716-446655440001")
+      UUID educationId,
+      @Schema(description = "영상 ID", example = "550e8400-e29b-41d4-a716-446655440002")
+      UUID videoId,
+      @Schema(description = "스크립트 제목")
+      String title,
+      @Schema(description = "스크립트 버전", example = "1")
+      Integer version,
+      @Schema(description = "스크립트 상태 (DRAFT, REVIEW_REQUESTED, APPROVED, REJECTED)")
+      String status) {}
+
+  // ========================
+  // 렌더 스펙 (AI 서버용 내부 API)
+  // ========================
+
+  @Schema(description = "렌더 스펙 응답 (AI 서버 → 백엔드 내부 API)")
+  public record RenderSpecResponse(
+      @JsonProperty("script_id") @Schema(description = "스크립트 ID") String scriptId,
+      @JsonProperty("video_id") @Schema(description = "영상 ID") String videoId,
+      @JsonProperty("title") @Schema(description = "영상 제목") String title,
+      @JsonProperty("total_duration_sec") @Schema(description = "총 영상 길이 (초)") Double totalDurationSec,
+      @JsonProperty("scenes") @Schema(description = "씬 목록") java.util.List<RenderSceneItem> scenes) {}
+
+  @Schema(description = "렌더 씬 정보")
+  public record RenderSceneItem(
+      @JsonProperty("scene_id") @Schema(description = "씬 ID") String sceneId,
+      @JsonProperty("scene_order") @Schema(description = "씬 순서 (1부터 시작)") Integer sceneOrder,
+      @JsonProperty("chapter_title") @Schema(description = "챕터 제목") String chapterTitle,
+      @JsonProperty("purpose") @Schema(description = "씬 목적 (hook, explanation, example, summary 등)") String purpose,
+      @JsonProperty("narration") @Schema(description = "나레이션 텍스트") String narration,
+      @JsonProperty("caption") @Schema(description = "화면 캡션") String caption,
+      @JsonProperty("duration_sec") @Schema(description = "씬 지속 시간 (초)") Double durationSec,
+      @JsonProperty("visual_spec") @Schema(description = "시각 사양") RenderVisualSpec visualSpec) {}
+
+  @Schema(description = "시각 사양")
+  public record RenderVisualSpec(
+      @JsonProperty("type") @Schema(description = "시각 타입", example = "TEXT_HIGHLIGHT") String type,
+      @JsonProperty("text") @Schema(description = "표시 텍스트") String text,
+      @JsonProperty("highlight_terms") @Schema(description = "강조 용어 목록") java.util.List<String> highlightTerms) {}
+
 }

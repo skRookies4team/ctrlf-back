@@ -49,6 +49,7 @@ public final class RagDtos {
     /**
      * 문서 업로드 메타 등록 요청 DTO.
      * presign을 이용해 S3 업로드가 끝난 후 메타 정보를 저장할 때 사용합니다.
+     * uploaderUuid는 JWT 토큰에서 자동으로 추출되므로 요청에 포함하지 않습니다.
      */
     @Getter
     @NoArgsConstructor
@@ -62,11 +63,7 @@ public final class RagDtos {
         private String domain;
 
         @NotBlank
-        @Schema(example = "c13c91f2-fb1a-4d42-b381-72847a52fb99")
-        private String uploaderUuid;
-
-        @NotBlank
-        @Schema(example = "s3://bucket/docs/file.pdf")
+        @Schema(example = "s3://ctrl-s3/docs/file.pdf")
         private String fileUrl;
     }
 
@@ -103,7 +100,7 @@ public final class RagDtos {
         private String title;
         @Schema(example = "HR", nullable = true)
         private String domain;
-        @Schema(example = "s3://bucket/docs/file_v4.pdf", nullable = true)
+        @Schema(example = "s3://ctrl-s3/docs/file_v4.pdf", nullable = true)
         private String fileUrl;
     }
 
@@ -132,7 +129,7 @@ public final class RagDtos {
         private String title;
         @Schema(example = "HR", nullable = true)
         private String domain;
-        @Schema(example = "s3://bucket/docs/new.pdf", nullable = true)
+        @Schema(example = "s3://ctrl-s3/docs/new.pdf", nullable = true)
         private String fileUrl;
         @Schema(example = "c13c91f2-fb1a-4d42-b381-72847a52fb99", nullable = true)
         private String requestedBy;
@@ -170,6 +167,91 @@ public final class RagDtos {
     public static class DocumentTextResponse {
         private String documentId;
         private String text;        // 추출된 원문 텍스트
+    }
+
+    // ---------- Document Info ----------
+    /**
+     * 문서 정보 조회 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DocumentInfoResponse {
+        private String id;
+        private String title;
+        private String domain;
+        private String sourceUrl;   // fileUrl
+        private String status;
+    }
+
+    // ---------- Internal API: Chunks Bulk Upsert ----------
+    /**
+     * 문서 청크 Bulk Upsert 요청 (내부 API - FastAPI → Spring).
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class ChunksBulkUpsertRequest {
+        @Schema(description = "청크 리스트", required = true)
+        @jakarta.validation.constraints.NotNull
+        private java.util.List<ChunkItem> chunks;
+
+        @Schema(description = "멱등 키")
+        private String requestId;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class ChunkItem {
+        @Schema(description = "청크 번호", required = true)
+        @jakarta.validation.constraints.NotNull
+        private Integer chunkIndex;
+
+        @Schema(description = "청크 텍스트", required = true)
+        @NotBlank
+        private String chunkText;
+
+        @Schema(description = "메타데이터 (권장)")
+        private Object chunkMeta;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class ChunksBulkUpsertResponse {
+        private boolean saved;
+        private int savedCount;
+    }
+
+    // ---------- Internal API: Fail Chunks Bulk Upsert ----------
+    /**
+     * 임베딩 실패 로그 Bulk Upsert 요청 (내부 API - FastAPI → Spring).
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class FailChunksBulkUpsertRequest {
+        @Schema(description = "실패 청크 리스트", required = true)
+        @jakarta.validation.constraints.NotNull
+        private java.util.List<FailChunkItem> fails;
+
+        @Schema(description = "멱등 키")
+        private String requestId;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class FailChunkItem {
+        @Schema(description = "청크 번호", required = true)
+        @jakarta.validation.constraints.NotNull
+        private Integer chunkIndex;
+
+        @Schema(description = "실패 사유", required = true)
+        @NotBlank
+        private String failReason;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class FailChunksBulkUpsertResponse {
+        private boolean saved;
+        private int savedCount;
     }
 }
 

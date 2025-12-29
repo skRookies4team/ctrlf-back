@@ -48,6 +48,7 @@ public final class QuizResponse {
     public static class ResultResponse {
         private int score;
         private boolean passed;
+        private Integer passScore; // 통과 기준 점수
         private int correctCount;
         private int wrongCount;
         private int totalCount;
@@ -124,6 +125,105 @@ public final class QuizResponse {
         private Integer attemptNo;
         private Instant submittedAt;
         private Boolean isBestScore; // 교육별 최고 점수 여부
+    }
+
+    // ---------- Department Stats (GET /quiz/department-stats) ----------
+    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DepartmentStatsItem {
+        private String departmentName; // 부서명 (예: "인사팀", "총무팀")
+        private Integer averageScore; // 부서 평균 점수
+        private Integer progressPercent; // 부서 전체 진행률 (%)
+        private Integer participantCount; // 참여자 수
+    }
+
+    // ---------- Retry Info (GET /quiz/{eduId}/retry-info) ----------
+    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class RetryInfoResponse {
+        private UUID educationId;
+        private String educationTitle;
+        private Boolean canRetry; // 재응시 가능 여부
+        private Integer currentAttemptCount; // 현재 응시 횟수
+        private Integer maxAttempts; // 최대 응시 횟수 (null이면 무제한)
+        private Integer remainingAttempts; // 남은 응시 횟수 (null이면 무제한)
+        private Integer bestScore; // 최고 점수 (응시한 경우)
+        private Boolean passed; // 통과 여부 (최고 점수 시도 기준)
+        private Instant lastAttemptAt; // 마지막 응시 시각
+    }
+
+    // ========================
+    // 관리자 대시보드 통계 관련 DTOs
+    // ========================
+
+    /**
+     * 대시보드 요약 통계 응답.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DashboardSummaryResponse {
+        /** 전체 평균 점수 */
+        private Double overallAverageScore;
+        /** 응시자 수 */
+        private Long participantCount;
+        /** 통과율 (80점↑) (%) */
+        private Double passRate;
+        /** 퀴즈 응시율 (%) */
+        private Double participationRate;
+    }
+
+    /**
+     * 부서별 평균 점수 항목.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DepartmentScoreItem {
+        /** 부서명 */
+        private String department;
+        /** 평균 점수 */
+        private Double averageScore;
+        /** 응시자 수 */
+        private Long participantCount;
+    }
+
+    /**
+     * 부서별 평균 점수 응답.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class DepartmentScoreResponse {
+        private List<DepartmentScoreItem> items;
+    }
+
+    /**
+     * 퀴즈별 통계 항목.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class QuizStatsItem {
+        /** 교육 ID */
+        private UUID educationId;
+        /** 퀴즈 제목 (교육 제목) */
+        private String quizTitle;
+        /** 회차 */
+        private Integer attemptNo;
+        /** 평균 점수 */
+        private Double averageScore;
+        /** 응시 수 */
+        private Long attemptCount;
+        /** 통과율 (%) */
+        private Double passRate;
+    }
+
+    /**
+     * 퀴즈별 통계 응답.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class QuizStatsResponse {
+        private List<QuizStatsItem> items;
     }
 }
 

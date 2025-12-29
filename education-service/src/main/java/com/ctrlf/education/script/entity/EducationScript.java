@@ -2,8 +2,6 @@ package com.ctrlf.education.script.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -26,17 +24,12 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor
 public class EducationScript {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id", columnDefinition = "uuid")
     private UUID id;
 
     /** 대상 교육 ID */
     @Column(name = "education_id", columnDefinition = "uuid")
     private UUID educationId;
-
-    /** 연계된 원본 자료 ID */
-    @Column(name = "source_doc_id", columnDefinition = "uuid")
-    private UUID sourceDocId;
 
     /** 교육 영상 전체 제목 (LLM 생성) */
     @Column(name = "title")
@@ -79,6 +72,14 @@ public class EducationScript {
     /** 수강 가능한 부서 목록(JSON) */
     @Column(name = "department_scope", columnDefinition = "text")
     private String departmentScope;
+
+    /** 연결된 소스셋 ID (멀티문서 지원) */
+    @Column(name = "source_set_id", columnDefinition = "uuid")
+    private UUID sourceSetId;
+
+    /** 스크립트 상태 (DRAFT, REVIEW_REQUESTED, APPROVED, REJECTED) */
+    @Column(name = "status", length = 20)
+    private String status;
 }
 
 

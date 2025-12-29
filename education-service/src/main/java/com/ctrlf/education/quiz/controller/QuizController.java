@@ -3,12 +3,14 @@ package com.ctrlf.education.quiz.controller;
 import static com.ctrlf.education.quiz.dto.QuizRequest.*;
 import static com.ctrlf.education.quiz.dto.QuizResponse.*;
 import com.ctrlf.education.quiz.dto.QuizResponse.AvailableEducationItem;
+import com.ctrlf.education.quiz.dto.QuizResponse.DepartmentStatsItem;
 import com.ctrlf.education.quiz.dto.QuizResponse.MyAttemptItem;
+import com.ctrlf.education.quiz.dto.QuizResponse.RetryInfoResponse;
 
 import com.ctrlf.common.security.SecurityUtils;
+import java.util.List;
 import com.ctrlf.education.quiz.service.QuizService;
 import io.swagger.v3.oas.annotations.Operation;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +50,10 @@ public class QuizController {
     ) {
         UUID userUuid = SecurityUtils.extractUserUuid(jwt)
             .orElseThrow(() -> new IllegalArgumentException("사용자 UUID를 추출할 수 없습니다."));
-        return ResponseEntity.ok(quizService.submit(attemptId, userUuid, req));
+        // JWT에서 부서 정보 추출 (첫 번째 부서 사용)
+        List<String> departments = SecurityUtils.extractDepartments(jwt);
+        String department = departments.isEmpty() ? null : departments.get(0);
+        return ResponseEntity.ok(quizService.submit(attemptId, userUuid, department, req));
     }
 
     @GetMapping("/attempt/{attemptId}/result")
@@ -126,6 +131,31 @@ public class QuizController {
         UUID userUuid = SecurityUtils.extractUserUuid(jwt)
             .orElseThrow(() -> new IllegalArgumentException("사용자 UUID를 추출할 수 없습니다."));
         return ResponseEntity.ok(quizService.getMyAttempts(userUuid));
+    }
+
+    @GetMapping("/department-stats")
+    @Operation(
+        summary = "부서별 퀴즈 통계 조회 (프론트 -> 백엔드)",
+        description = "부서별 평균 점수와 진행률을 조회합니다. educationId가 없으면 전체 교육 대상으로 계산합니다."
+    )
+    public ResponseEntity<List<DepartmentStatsItem>> getDepartmentStats(
+        @org.springframework.web.bind.annotation.RequestParam(required = false) UUID educationId
+    ) {
+        return ResponseEntity.ok(quizService.getDepartmentStats(educationId));
+    }
+
+    @GetMapping("/{eduId}/retry-info")
+    @Operation(
+        summary = "퀴즈 재응시 정보 조회 (프론트 -> 백엔드)",
+        description = "특정 교육에 대한 재응시 가능 여부 및 관련 정보를 조회합니다. (응시 횟수, 최고 점수, 통과 여부 등)"
+    )
+    public ResponseEntity<RetryInfoResponse> getRetryInfo(
+        @PathVariable("eduId") UUID educationId,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userUuid = SecurityUtils.extractUserUuid(jwt)
+            .orElseThrow(() -> new IllegalArgumentException("사용자 UUID를 추출할 수 없습니다."));
+        return ResponseEntity.ok(quizService.getRetryInfo(educationId, userUuid));
     }
 }
 
