@@ -1,6 +1,7 @@
 package com.ctrlf.infra.rag.repository;
 
 import com.ctrlf.infra.rag.entity.RagDocument;
+import com.ctrlf.infra.rag.entity.RagDocumentStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -59,38 +60,32 @@ public interface RagDocumentRepository extends JpaRepository<RagDocument, UUID> 
     @Query("""
         select d from RagDocument d
         where d.documentId is not null
-        and (:search is null or lower(d.documentId) like lower(concat('%', :search, '%'))
-             or lower(d.title) like lower(concat('%', :search, '%')))
         and (:status is null or d.status = :status)
         order by 
-        case when d.status = 'ACTIVE' then 1
-             when d.status = 'PENDING' then 2
-             when d.status = 'DRAFT' then 3
-             when d.status = 'ARCHIVED' then 4
+        case when d.status = com.ctrlf.infra.rag.entity.RagDocumentStatus.ACTIVE then 1
+             when d.status = com.ctrlf.infra.rag.entity.RagDocumentStatus.PENDING then 2
+             when d.status = com.ctrlf.infra.rag.entity.RagDocumentStatus.DRAFT then 3
+             when d.status = com.ctrlf.infra.rag.entity.RagDocumentStatus.ARCHIVED then 4
              else 5 end,
         d.documentId, d.version desc
         """)
     List<RagDocument> findPolicies(
-        @Param("search") String search,
-        @Param("status") String status
+        @Param("status") RagDocumentStatus status
     );
     
     @Query("""
         select d from RagDocument d
         where d.documentId is not null
-        and d.status != 'ARCHIVED'
-        and (:search is null or lower(d.documentId) like lower(concat('%', :search, '%'))
-             or lower(d.title) like lower(concat('%', :search, '%')))
+        and d.status != com.ctrlf.infra.rag.entity.RagDocumentStatus.ARCHIVED
         and (:status is null or d.status = :status)
         order by 
-        case when d.status = 'ACTIVE' then 1
-             when d.status = 'PENDING' then 2
-             when d.status = 'DRAFT' then 3
+        case when d.status = com.ctrlf.infra.rag.entity.RagDocumentStatus.ACTIVE then 1
+             when d.status = com.ctrlf.infra.rag.entity.RagDocumentStatus.PENDING then 2
+             when d.status = com.ctrlf.infra.rag.entity.RagDocumentStatus.DRAFT then 3
              else 4 end,
         d.documentId, d.version desc
         """)
     List<RagDocument> findPoliciesExcludingArchived(
-        @Param("search") String search,
-        @Param("status") String status
+        @Param("status") RagDocumentStatus status
     );
 }

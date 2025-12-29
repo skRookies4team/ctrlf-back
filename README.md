@@ -4,15 +4,15 @@
 
 ## 구성
 
-| 서비스            | 포트 | 설명           |
-| ----------------- | ---- | -------------- |
-| chat-service      | 9005 | 챗봇 서비스    |
-| education-service | 9002 | 교육 서비스    |
-| infra-service     | 9003 | 인프라 서비스  |
-| quiz-service      | 9004 | 퀴즈 서비스    |
-| api-gateway       | 8080 | API 게이트웨이 |
-| Postgres          | 5432 | 데이터베이스   |
-| Keycloak          | 8090 | 인증 서버      |
+| 서비스            | 포트 | 설명                                                                                      |
+| ----------------- | ---- | ----------------------------------------------------------------------------------------- |
+| chat-service      | 9005 | 챗봇 서비스                                                                               |
+| education-service | 9002 | 교육 서비스                                                                               |
+| infra-service     | 9003 | 인프라 서비스                                                                             |
+| quiz-service      | 9004 | 퀴즈 서비스                                                                               |
+| api-gateway       | 8085 | API 게이트웨이 (참고: 현재 라우팅 설정에 문제가 있어 대부분의 엔드포인트가 동작하지 않음) |
+| Postgres          | 5432 | 데이터베이스                                                                              |
+| Keycloak          | 8090 | 인증 서버                                                                                 |
 
 ## 사전 준비물
 
@@ -47,7 +47,8 @@ docker compose logs -f postgres
 # 각 서비스는 별도 터미널에서 실행 권장
 # AWS_PROFILE 설정이 필요한 경우 (S3 연동 등)
 # infra-service 부터 켜야지 education-service 더미(시드) 데이터가 저장된다
-AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=local,local-seed ./gradlew :infra-service:bootRun
+# 주의: 시드 데이터를 생성하려면 local-seed 프로파일이 필요합니다
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed ./gradlew :infra-service:bootRun -Dspring-boot.run.profiles=dev,local-seed
 
 AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed ./gradlew :education-service:bootRun -Dspring-boot.run.profiles=dev,local-seed
 
@@ -63,10 +64,11 @@ AWS_PROFILE=sk_4th_team04 ./gradlew :api-gateway:bootRun
 
 ```bash
 # education-service (교육 시드 데이터 포함)
-AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=local,local-seed ./gradlew --no-configuration-cache :education-service:bootRun
+# 주의: infra-service가 먼저 실행되어 있어야 함 (Keycloak 연동 필요)
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed ./gradlew :education-service:bootRun -Dspring-boot.run.profiles=dev,local-seed
 
 # infra-service (인프라 시드 데이터 포함)
-AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun --args='--spring.profiles.active=local,local-seed'
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed ./gradlew :infra-service:bootRun -Dspring-boot.run.profiles=dev,local-seed
 ```
 
 - DB 연결 정보는 각 서비스의 `application.yml`에 정의되어 있습니다(호스트 기준 `localhost:5432`).
@@ -287,15 +289,17 @@ docker compose run --rm keycloak-init
 
 ## 문제 해결 (Troubleshooting)
 
-| 문제                         | 해결 방법                                                                                                            |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 포트 충돌                    | 5432/8090/9002~9005 사용 중인 프로세스가 없는지 확인                                                                 |
-| DB 연결 실패                 | `docker compose ps`로 Postgres 상태 확인, healthcheck 통과 여부 확인                                                 |
-| 마이그레이션 오류            | Flyway `validate` 오류는 스키마 불일치. 초기화 필요 시 볼륨 삭제 후 재기동                                           |
-| Keycloak realm 미적용        | Keycloak 로그에 `--import-realm` 수행 여부 확인. 필요 시 컨테이너 재기동                                             |
-| Docker Compose API 버전 오류 | `docker compose` (v2) 사용 권장. `docker-compose` (v1) 사용 시 `version: "3.8"` 추가 필요                            |
-| Keycloak Admin API 403       | `infra-admin` 클라이언트의 Service Account에 `realm-management` 역할 할당 필요 (위 "Service Account 권한 설정" 참고) |
-| AWS 자격 증명 오류           | `AWS_PROFILE` 환경변수 설정 확인 또는 `~/.aws/credentials` 파일 확인                                                 |
+| 문제                         | 해결 방법                                                                                                                           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 포트 충돌                    | 5432/8090/9002~9005 사용 중인 프로세스가 없는지 확인                                                                                |
+| DB 연결 실패                 | `docker compose ps`로 Postgres 상태 확인, healthcheck 통과 여부 확인                                                                |
+| 마이그레이션 오류            | Flyway `validate` 오류는 스키마 불일치. 초기화 필요 시 볼륨 삭제 후 재기동                                                          |
+| Keycloak realm 미적용        | Keycloak 로그에 `--import-realm` 수행 여부 확인. 필요 시 컨테이너 재기동                                                            |
+| Docker Compose API 버전 오류 | `docker compose` (v2) 사용 권장. `docker-compose` (v1) 사용 시 `version: "3.8"` 추가 필요                                           |
+| Keycloak Admin API 403       | `infra-admin` 클라이언트의 Service Account에 `realm-management` 역할 할당 필요 (위 "Service Account 권한 설정" 참고)                |
+| AWS 자격 증명 오류           | `AWS_PROFILE` 환경변수 설정 확인 또는 `~/.aws/credentials` 파일 확인                                                                |
+| Windows 한글 로그 깨짐       | PowerShell에서 `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8` 실행 또는 `WINDOWS_TROUBLESHOOTING.md` 참고               |
+| Windows Keycloak 초기화 실패 | infra-service를 먼저 실행한 후 education-service 실행. Keycloak이 완전히 시작될 때까지 대기 필요. `WINDOWS_TROUBLESHOOTING.md` 참고 |
 
 ## DB 접속 및 관리
 

@@ -29,7 +29,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import com.ctrlf.common.dto.PageResponse;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -244,20 +249,19 @@ public class RagDocumentsController {
     @GetMapping("/policies")
     @Operation(
         summary = "사규 목록 조회",
-        description = "사규 목록을 document_id별로 그룹화하여 조회합니다. 검색, 상태 필터, 보관/삭제 포함 옵션을 지원합니다."
+        description = "사규 목록을 document_id별로 그룹화하여 조회합니다. 검색, 상태 필터, 페이지네이션을 지원합니다. 기본적으로 ARCHIVED 상태는 제외됩니다."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "사규 목록 조회 성공",
-            content = @Content(array = @ArraySchema(schema = @Schema(implementation = PolicyListItem.class)))),
+            content = @Content(schema = @Schema(implementation = PageResponse.class))),
         @ApiResponse(responseCode = "400", description = "잘못된 필터 값")
     })
-    public ResponseEntity<List<PolicyListItem>> listPolicies(
+    public ResponseEntity<PageResponse<PolicyListItem>> listPolicies(
         @Parameter(description = "document_id 또는 제목 검색어") @RequestParam(value = "search", required = false) String search,
-        @Parameter(description = "상태 필터 (ACTIVE, DRAFT, PENDING, ARCHIVED, 전체)") @RequestParam(value = "status", required = false) String status,
-        @Parameter(description = "보관 포함 여부") @RequestParam(value = "includeArchived", defaultValue = "false") boolean includeArchived,
-        @Parameter(description = "삭제 포함 여부") @RequestParam(value = "includeDeleted", defaultValue = "false") boolean includeDeleted
+        @Parameter(description = "상태 필터 (ACTIVE, DRAFT, PENDING, ARCHIVED, 전체). ARCHIVED를 조회하려면 status=ARCHIVED로 명시적으로 지정하세요.") @RequestParam(value = "status", required = false) String status,
+        @Parameter(description = "페이지네이션 (page, size)") @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ResponseEntity.ok(ragDocumentService.listPolicies(search, status, includeArchived, includeDeleted));
+        return ResponseEntity.ok(ragDocumentService.listPolicies(search, status, pageable));
     }
 
     @GetMapping("/policies/{documentId}")
@@ -422,6 +426,31 @@ public class RagDocumentsController {
         @Valid @RequestBody ReplaceFileRequest req
     ) {
         return ResponseEntity.ok(ragDocumentService.replaceFile(documentId, version, req));
+    }
+
+    // ========================
+    // 내부 API (AI → Backend)
+    // ========================
+
+    @PatchMapping("/internal/rag/documents/{ragDocumentPk}/status")
+    @Operation(
+        summary = "사규 상태 업데이트 (AI -> Backend 내부 API)",
+        description = "AI 서버가 사규 문서의 임베딩 처리 상태를 업데이트합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "상태 업데이트 성공",
+            content = @Content(schema = @Schema(implementation = InternalUpdateStatusResponse.class))),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류"),
+        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음")
+    })
+    public ResponseEntity<InternalUpdateStatusResponse> updateDocumentStatus(
+        @Parameter(description = "RAG 문서 ID (UUID)", required = true) @PathVariable("ragDocumentPk") UUID ragDocumentPk,
+        @Parameter(description = "문서 버전", example = "1", required = false) @RequestParam(value = "version", required = false) Integer version,
+        @RequestHeader(value = "X-Internal-Token", required = false) String internalToken,
+        @Valid @RequestBody InternalUpdateStatusRequest req
+    ) {
+        return ResponseEntity.ok(ragDocumentService.updateDocumentStatus(ragDocumentPk, req));
     }
 }
 

@@ -262,6 +262,7 @@ public final class RagDtos {
     @Getter
     @AllArgsConstructor
     public static class PolicyListItem {
+        private String id;  // 첫 번째 버전의 UUID (PK)
         private String documentId;
         private String title;
         private String domain;
@@ -444,6 +445,44 @@ public final class RagDtos {
         private String documentId;
         private Integer version;
         private String sourceUrl;
+        private String updatedAt;
+    }
+
+    // ---------- Internal API: Update Document Status (AI → Backend) ----------
+    /**
+     * 사규 상태 업데이트 요청 DTO (내부 API - AI → Backend).
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class InternalUpdateStatusRequest {
+        @NotBlank
+        @Schema(example = "COMPLETED", description = "PROCESSING | COMPLETED | FAILED")
+        private String status;
+
+        @Schema(example = "2025-12-29T12:34:56Z", description = "처리 완료 시각 (ISO-8601)")
+        private String processedAt;
+
+        @Schema(example = "임베딩 처리 실패", description = "실패 사유 (status가 FAILED인 경우)")
+        private String failReason;
+
+        @Schema(example = "3", description = "문서 버전")
+        private Integer version;
+
+        @Schema(example = "POL-EDU-015", description = "문서 ID")
+        private String documentId;
+    }
+
+    /**
+     * 사규 상태 업데이트 응답 DTO (내부 API).
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class InternalUpdateStatusResponse {
+        private String id; // UUID
+        private String documentId;
+        private Integer version;
+        private String status;
+        private String processedAt;
         private String updatedAt;
     }
 }
