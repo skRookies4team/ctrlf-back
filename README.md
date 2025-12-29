@@ -285,13 +285,15 @@ docker compose run --rm keycloak-init
 
 ## 문제 해결 (Troubleshooting)
 
-| 문제                  | 해결 방법                                                                  |
-| --------------------- | -------------------------------------------------------------------------- |
-| 포트 충돌             | 5432/8090/9002~9005 사용 중인 프로세스가 없는지 확인                       |
-| DB 연결 실패          | `docker compose ps`로 Postgres 상태 확인, healthcheck 통과 여부 확인       |
-| 마이그레이션 오류     | Flyway `validate` 오류는 스키마 불일치. 초기화 필요 시 볼륨 삭제 후 재기동 |
-| Keycloak realm 미적용 | Keycloak 로그에 `--import-realm` 수행 여부 확인. 필요 시 컨테이너 재기동   |
-| AWS 자격 증명 오류    | `AWS_PROFILE` 환경변수 설정 확인 또는 `~/.aws/credentials` 파일 확인       |
+| 문제                         | 해결 방법                                                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 포트 충돌                    | 5432/8090/9002~9005 사용 중인 프로세스가 없는지 확인                                                                 |
+| DB 연결 실패                 | `docker compose ps`로 Postgres 상태 확인, healthcheck 통과 여부 확인                                                 |
+| 마이그레이션 오류            | Flyway `validate` 오류는 스키마 불일치. 초기화 필요 시 볼륨 삭제 후 재기동                                           |
+| Keycloak realm 미적용        | Keycloak 로그에 `--import-realm` 수행 여부 확인. 필요 시 컨테이너 재기동                                             |
+| Docker Compose API 버전 오류 | `docker compose` (v2) 사용 권장. `docker-compose` (v1) 사용 시 `version: "3.8"` 추가 필요                            |
+| Keycloak Admin API 403       | `infra-admin` 클라이언트의 Service Account에 `realm-management` 역할 할당 필요 (위 "Service Account 권한 설정" 참고) |
+| AWS 자격 증명 오류           | `AWS_PROFILE` 환경변수 설정 확인 또는 `~/.aws/credentials` 파일 확인                                                 |
 
 ## DB 접속 및 관리
 
