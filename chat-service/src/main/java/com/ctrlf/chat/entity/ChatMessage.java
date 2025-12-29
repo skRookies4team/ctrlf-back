@@ -6,6 +6,7 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.ctrlf.chat.entity.ChatMessageStatus;
 
 /**
  * 채팅 메시지 엔티티
@@ -53,9 +54,34 @@ public class ChatMessage {
     @Column(name = "llm_model")
     private String llmModel;
 
+    /** 요청 ID (AI 서버 요청 추적용) */
+    @Column(name = "request_id", length = 100)
+    private String requestId;
+
+    /** 메시지 상태 */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
+    private ChatMessageStatus status = ChatMessageStatus.PENDING;
+
     /** 메시지 생성 시각 */
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /** 라우팅 타입 (RAG, LLM, FAQ, INCIDENT, OTHER) */
+    @Column(name = "routing_type", length = 50)
+    private String routingType;
+
+    /** 응답 시간 (밀리초) */
+    @Column(name = "response_time_ms")
+    private Integer responseTimeMs;
+
+    /** PII 감지 여부 */
+    @Column(name = "pii_detected")
+    private Boolean piiDetected;
+
+    /** 질문 키워드 (추출된 주요 키워드) */
+    @Column(name = "keyword", length = 200)
+    private String keyword;
 
     /**
      * 엔티티 저장 전 실행되는 콜백
@@ -64,6 +90,9 @@ public class ChatMessage {
     @PrePersist
     void onCreate() {
         this.createdAt = Instant.now();
+        if (this.piiDetected == null) {
+            this.piiDetected = false;
+        }
     }
 
     /**

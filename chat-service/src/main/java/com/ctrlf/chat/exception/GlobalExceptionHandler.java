@@ -2,6 +2,7 @@ package com.ctrlf.chat.exception;
 
 import com.ctrlf.chat.exception.chat.ChatSessionNotFoundException;
 import com.ctrlf.chat.faq.exception.FaqNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,6 +20,7 @@ import java.util.Map;
  * @author CtrlF Team
  * @since 1.0.0
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -66,6 +68,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("IllegalArgumentException 발생: {}", ex.getMessage());
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now());
         response.put("status", 400);
@@ -73,6 +76,27 @@ public class GlobalExceptionHandler {
         response.put("message", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
+     * 비즈니스 로직 예외 처리
+     * 
+     * <p>IllegalStateException을 500 Internal Server Error로 처리합니다.</p>
+     * <p>주로 AI 서비스 호출 실패, DB 제약 조건 위반 등 서버 측 문제를 나타냅니다.</p>
+     * 
+     * @param ex IllegalStateException 예외
+     * @return 500 INTERNAL_SERVER_ERROR 응답
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        log.error("IllegalStateException 발생: {}", ex.getMessage(), ex);
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", 500);
+        response.put("error", "INTERNAL_SERVER_ERROR");
+        response.put("message", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
     /**
@@ -85,11 +109,12 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleException(Exception ex) {
+        log.error("처리되지 않은 예외 발생: {}", ex.getMessage(), ex);
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now());
         response.put("status", 500);
         response.put("error", "INTERNAL_SERVER_ERROR");
-        response.put("message", ex.getMessage());
+        response.put("message", ex.getMessage() != null ? ex.getMessage() : "예상치 못한 오류가 발생했습니다.");
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

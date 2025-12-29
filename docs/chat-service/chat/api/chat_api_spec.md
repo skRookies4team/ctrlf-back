@@ -358,6 +358,256 @@ data:END
 
 ---
 
+## 5. 관리자 대시보드 통계 APIs (Admin)
+
+관리자가 챗봇 사용 현황을 모니터링하고 통계를 조회하는 API입니다.
+
+**인증**: Bearer Token (JWT) - 관리자 권한 필요
+
+### 5.1 대시보드 요약 통계 조회
+
+오늘 질문 수, 평균 응답 시간, PII 감지 비율, 에러율, 최근 7일 질문 수, 활성 사용자 수, 응답 만족도, RAG 사용 비율을 조회합니다.
+
+**Endpoint**: `GET /admin/dashboard/chat/summary`
+
+**Query Parameters**:
+- `period` (Integer, optional): 기간 (일수, 7/30/90, 기본값: 30)
+- `department` (String, optional): 부서 필터 (예: "총무팀", null이면 전체)
+
+**Response** (200 OK):
+```json
+{
+  "todayQuestionCount": 158,
+  "averageResponseTimeMs": 415.0,
+  "piiDetectionRate": 3.4,
+  "errorRate": 0.9,
+  "last7DaysQuestionCount": 1038,
+  "activeUserCount": 102,
+  "satisfactionRate": 92.0,
+  "ragUsageRate": 80.0
+}
+```
+
+**필드 설명**:
+- `todayQuestionCount`: 오늘 생성된 사용자 메시지 수
+- `averageResponseTimeMs`: AI 응답 평균 시간 (밀리초)
+- `piiDetectionRate`: PII 감지 비율 (%)
+- `errorRate`: 에러율 (%)
+- `last7DaysQuestionCount`: 최근 7일간 총 질문 수
+- `activeUserCount`: 기간 내 질문한 고유 사용자 수
+- `satisfactionRate`: 응답 만족도 (%)
+- `ragUsageRate`: RAG 사용 비율 (%)
+
+---
+
+### 5.2 라우트별 질문 비율 조회
+
+RAG, LLM, FAQ, Incident, 기타 라우트별 질문 비율을 조회합니다.
+
+**Endpoint**: `GET /admin/dashboard/chat/route-ratio`
+
+**Query Parameters**:
+- `period` (Integer, optional): 기간 (일수, 7/30/90, 기본값: 30)
+- `department` (String, optional): 부서 필터 (예: "총무팀", null이면 전체)
+
+**Response** (200 OK):
+```json
+{
+  "items": [
+    {
+      "routeType": "RAG",
+      "routeName": "RAG 기반 내부 규정",
+      "ratio": 50.0,
+      "questionCount": 500
+    },
+    {
+      "routeType": "LLM",
+      "routeName": "LLM 단독 답변",
+      "ratio": 19.0,
+      "questionCount": 190
+    },
+    {
+      "routeType": "INCIDENT",
+      "routeName": "Incident 신고 라우트",
+      "ratio": 14.0,
+      "questionCount": 140
+    },
+    {
+      "routeType": "FAQ",
+      "routeName": "FAQ 템플릿 응답",
+      "ratio": 10.0,
+      "questionCount": 100
+    },
+    {
+      "routeType": "OTHER",
+      "routeName": "기타/실험 라우트",
+      "ratio": 7.0,
+      "questionCount": 70
+    }
+  ]
+}
+```
+
+**필드 설명**:
+- `routeType`: 라우트 타입 (RAG, LLM, FAQ, INCIDENT, OTHER)
+- `routeName`: 라우트 이름 (한글)
+- `ratio`: 비율 (%)
+- `questionCount`: 질문 수
+
+---
+
+### 5.3 최근 많이 질문된 키워드 Top 5 조회
+
+기간 내 가장 많이 질문된 키워드 상위 5개를 조회합니다.
+
+**Endpoint**: `GET /admin/dashboard/chat/top-keywords`
+
+**Query Parameters**:
+- `period` (Integer, optional): 기간 (일수, 7/30/90, 기본값: 30)
+- `department` (String, optional): 부서 필터 (예: "총무팀", null이면 전체)
+
+**Response** (200 OK):
+```json
+{
+  "items": [
+    {
+      "keyword": "연차 사용 기준",
+      "questionCount": 39
+    },
+    {
+      "keyword": "개인정보 암호화",
+      "questionCount": 32
+    },
+    {
+      "keyword": "재택 근무 규정",
+      "questionCount": 24
+    },
+    {
+      "keyword": "보안 사고 신고",
+      "questionCount": 19
+    },
+    {
+      "keyword": "교육 이수 확인",
+      "questionCount": 15
+    }
+  ]
+}
+```
+
+**필드 설명**:
+- `keyword`: 키워드
+- `questionCount`: 질문 횟수
+
+---
+
+### 5.4 질문 수 · 에러율 추이 조회
+
+주간별 질문 수와 에러율 추이를 조회합니다.
+
+**Endpoint**: `GET /admin/dashboard/chat/question-trend`
+
+**Query Parameters**:
+- `period` (Integer, optional): 기간 (일수, 7/30/90, 기본값: 30)
+- `department` (String, optional): 부서 필터 (예: "총무팀", null이면 전체)
+
+**Response** (200 OK):
+```json
+{
+  "totalQuestionCount": 3516,
+  "averageQuestionCountPerPeriod": 879.0,
+  "averageErrorRate": 0.9,
+  "weeklyData": [
+    {
+      "week": 1,
+      "questionCount": 780,
+      "errorRate": 0.9
+    },
+    {
+      "week": 2,
+      "questionCount": 842,
+      "errorRate": 0.9
+    },
+    {
+      "week": 3,
+      "questionCount": 918,
+      "errorRate": 0.8
+    },
+    {
+      "week": 4,
+      "questionCount": 976,
+      "errorRate": 1.0
+    }
+  ]
+}
+```
+
+**필드 설명**:
+- `totalQuestionCount`: 기간 총 질문 수
+- `averageQuestionCountPerPeriod`: 구간당 평균 질문 수
+- `averageErrorRate`: 평균 에러율 (%)
+- `weeklyData`: 주간 데이터 배열
+  - `week`: 주차 (1주, 2주, ...)
+  - `questionCount`: 질문 수
+  - `errorRate`: 에러율 (%)
+
+---
+
+### 5.5 도메인별 질문 비율 조회
+
+규정 안내, FAQ, 교육, 퀴즈, 기타 도메인별 질문 비율을 조회합니다.
+
+**Endpoint**: `GET /admin/dashboard/chat/domain-ratio`
+
+**Query Parameters**:
+- `period` (Integer, optional): 기간 (일수, 7/30/90, 기본값: 30)
+- `department` (String, optional): 부서 필터 (예: "총무팀", null이면 전체)
+
+**Response** (200 OK):
+```json
+{
+  "items": [
+    {
+      "domainType": "SECURITY",
+      "domainName": "규정 안내",
+      "ratio": 36.0,
+      "questionCount": 360
+    },
+    {
+      "domainType": "FAQ",
+      "domainName": "FAQ",
+      "ratio": 26.0,
+      "questionCount": 260
+    },
+    {
+      "domainType": "EDUCATION",
+      "domainName": "교육",
+      "ratio": 19.0,
+      "questionCount": 190
+    },
+    {
+      "domainType": "QUIZ",
+      "domainName": "퀴즈",
+      "ratio": 11.0,
+      "questionCount": 110
+    },
+    {
+      "domainType": "OTHER",
+      "domainName": "기타",
+      "ratio": 8.0,
+      "questionCount": 80
+    }
+  ]
+}
+```
+
+**필드 설명**:
+- `domainType`: 도메인 타입 (SECURITY, FAQ, EDUCATION, QUIZ, OTHER)
+- `domainName`: 도메인 이름 (한글)
+- `ratio`: 비율 (%)
+- `questionCount`: 질문 수
+
+---
+
 ## 에러 응답
 
 ### 공통 에러 형식

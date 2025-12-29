@@ -12,9 +12,12 @@ import com.ctrlf.chat.faq.repository.FaqUiCategoryRepository;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -53,10 +56,47 @@ public class FaqUiCategoryServiceImpl implements FaqUiCategoryService {
 
     @Override
     public void update(UUID categoryId, FaqUiCategoryUpdateRequest req, UUID operatorId) {
-        FaqUiCategory category = faqUiCategoryRepository.findById(categoryId)
-            .orElseThrow(() -> new IllegalArgumentException("카테고리가 존재하지 않습니다."));
+        log.info("UI 카테고리 수정 시작: categoryId={}, operatorId={}, displayName={}, sortOrder={}, isActive={}",
+            categoryId, operatorId, req.getDisplayName(), req.getSortOrder(), req.getIsActive());
+        
+        try {
+            FaqUiCategory category = faqUiCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> {
+                    log.error("카테고리를 찾을 수 없습니다: categoryId={}", categoryId);
+                    return new IllegalArgumentException(
+                        String.format("카테고리가 존재하지 않습니다. categoryId=%s", categoryId)
+                    );
+                });
 
-        category.update(req.getDisplayName(), req.getSortOrder(), req.getIsActive(), operatorId);
+            log.debug("카테고리 현재 상태: categoryId={}, slug={}, displayName={}, sortOrder={}, isActive={}",
+                categoryId, category.getSlug(), category.getDisplayName(), 
+                category.getSortOrder(), category.getIsActive());
+
+            category.update(req.getDisplayName(), req.getSortOrder(), req.getIsActive(), operatorId);
+            
+            // 명시적으로 저장 (트랜잭션 커밋 시 자동 저장되지만, 명시적으로 호출)
+            faqUiCategoryRepository.save(category);
+            
+            log.info("UI 카테고리 수정 완료: categoryId={}", categoryId);
+        } catch (DataIntegrityViolationException e) {
+            log.error("DB 제약 조건 위반: categoryId={}, error={}", categoryId, e.getMessage(), e);
+            throw new IllegalStateException(
+                String.format("카테고리 업데이트 중 DB 제약 조건 위반이 발생했습니다. categoryId=%s, error=%s",
+                    categoryId, e.getMessage()),
+                e
+            );
+        } catch (IllegalArgumentException e) {
+            // IllegalArgumentException은 그대로 전파 (GlobalExceptionHandler에서 400으로 처리)
+            log.error("잘못된 인자: categoryId={}, error={}", categoryId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("카테고리 업데이트 실패: categoryId={}, error={}", categoryId, e.getMessage(), e);
+            throw new IllegalStateException(
+                String.format("카테고리 업데이트 중 오류가 발생했습니다. categoryId=%s, error=%s",
+                    categoryId, e.getMessage()),
+                e
+            );
+        }
     }
 
     // ===============================

@@ -10,9 +10,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -122,27 +124,41 @@ public class FaqServiceImpl implements FaqService {
 
     @Override
     public UUID generateDraftFromCandidate(UUID candidateId) {
+        log.info("FAQ Draft 생성 시작: candidateId={}", candidateId);
+        
         FaqCandidate candidate = faqCandidateRepository.findById(candidateId)
-            .orElseThrow(() -> new IllegalArgumentException(
-                String.format("FAQ 후보가 존재하지 않습니다. candidateId=%s", candidateId)
-            ));
+            .orElseThrow(() -> {
+                log.error("FAQ 후보를 찾을 수 없습니다: candidateId={}", candidateId);
+                return new IllegalArgumentException(
+                    String.format("FAQ 후보가 존재하지 않습니다. candidateId=%s", candidateId)
+                );
+            });
+
+        log.debug("후보 정보: candidateId={}, domain={}, piiDetected={}, avgIntentConfidence={}, status={}",
+            candidateId, candidate.getDomain(), candidate.getPiiDetected(), 
+            candidate.getAvgIntentConfidence(), candidate.getStatus());
 
         // PII / 의도 신뢰도 정책
         if (Boolean.TRUE.equals(candidate.getPiiDetected())) {
+            log.warn("PII가 감지된 후보는 Draft 생성 불가: candidateId={}", candidateId);
             candidate.setStatus(FaqCandidate.CandidateStatus.EXCLUDED);
             faqCandidateRepository.save(candidate);
-            throw new IllegalArgumentException("PII가 감지된 FAQ 후보는 Draft를 생성할 수 없습니다.");
+            throw new IllegalArgumentException(
+                String.format("PII가 감지된 FAQ 후보는 Draft를 생성할 수 없습니다. candidateId=%s", candidateId)
+            );
         }
 
         // 의도 신뢰도 검증 (테스트 환경에서는 완화 가능)
         double minConfidence = 0.7;
         // TODO: 프로파일별로 조정 가능 (예: local 프로파일에서는 0.5로 완화)
         if (candidate.getAvgIntentConfidence() == null || candidate.getAvgIntentConfidence() < minConfidence) {
+            log.warn("의도 신뢰도가 부족한 후보는 Draft 생성 불가: candidateId={}, avgIntentConfidence={}, minConfidence={}",
+                candidateId, candidate.getAvgIntentConfidence(), minConfidence);
             candidate.setStatus(FaqCandidate.CandidateStatus.EXCLUDED);
             faqCandidateRepository.save(candidate);
             throw new IllegalArgumentException(
-                String.format("의도 신뢰도가 부족합니다. (현재: %s, 최소 요구: %.1f)",
-                    candidate.getAvgIntentConfidence(), minConfidence)
+                String.format("의도 신뢰도가 부족합니다. (현재: %s, 최소 요구: %.1f, candidateId=%s)",
+                    candidate.getAvgIntentConfidence(), minConfidence, candidateId)
             );
         }
 
@@ -163,6 +179,9 @@ public class FaqServiceImpl implements FaqService {
 
         FaqAiClient.AiFaqResponse aiResponse;
         try {
+            log.info("AI 서비스 호출 시작: candidateId={}, domain={}, mappedDomain={}, canonicalQuestion={}",
+                candidateId, candidate.getDomain(), mappedDomain, candidate.getCanonicalQuestion());
+            
             // sample_questions는 현재 candidate에서 가져올 수 없으므로 null 전달
             // 향후 candidate에 sample_questions 필드가 추가되면 활용 가능
             List<String> sampleQuestions = null;
@@ -174,10 +193,16 @@ public class FaqServiceImpl implements FaqService {
                 sampleQuestions,  // 샘플 질문 목록 (선택, 현재는 null)
                 topDocs  // RAG 검색 결과 전달 (빈 리스트여도 AI 서비스가 처리 가능)
             );
+            
+            log.info("AI 서비스 호출 완료: candidateId={}, status={}", candidateId, aiResponse.status());
         } catch (IllegalStateException e) {
             // 이미 상세한 에러 메시지가 포함된 예외는 그대로 전파
+            log.error("AI 서비스 호출 실패 (IllegalStateException): candidateId={}, error={}", 
+                candidateId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
+            log.error("AI 서비스 호출 실패 (Exception): candidateId={}, domain={}, mappedDomain={}, error={}", 
+                candidateId, candidate.getDomain(), mappedDomain, e.getMessage(), e);
             throw new IllegalStateException(
                 String.format("AI 서비스 호출 실패: candidateId=%s, domain=%s, mappedDomain=%s, topDocsCount=%d, error=%s",
                     candidateId, candidate.getDomain(), mappedDomain, topDocs.size(), e.getMessage()),
@@ -190,11 +215,16 @@ public class FaqServiceImpl implements FaqService {
             String errorMsg = aiResponse.error_message() != null
                 ? aiResponse.error_message()
                 : "AI 서비스에서 FAQ 초안 생성에 실패했습니다.";
+            log.error("AI 서비스 응답 검증 실패: candidateId={}, status={}, error={}", 
+                candidateId, aiResponse.status(), errorMsg);
             throw new IllegalStateException(
                 String.format("FAQ 초안 생성 실패: candidateId=%s, error=%s, status=%s",
                     candidateId, errorMsg, aiResponse.status())
             );
         }
+        
+        log.debug("AI 서비스 응답 검증 성공: candidateId={}, faqDraftId={}", 
+            candidateId, aiResponse.faq_draft().faq_draft_id());
 
         FaqDraft draft = FaqDraft.builder()
             .faqDraftId(aiResponse.faq_draft().faq_draft_id())
@@ -208,8 +238,9 @@ public class FaqServiceImpl implements FaqService {
             .createdAt(java.time.LocalDateTime.now())
             .build();
 
-        faqDraftRepository.save(draft);
-        return draft.getId();
+        FaqDraft savedDraft = faqDraftRepository.save(draft);
+        log.info("FAQ Draft 생성 완료: candidateId={}, draftId={}", candidateId, savedDraft.getId());
+        return savedDraft.getId();
     }
 
     @Override
