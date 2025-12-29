@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://10.0.133.239:5433/db
+    url: jdbc:postgresql://10.0.147.41:5433/db
     username: postgres
     password: postgres
   jpa:
@@ -25,7 +25,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://10.0.133.239:8090/realms/ctrlf
+          issuer-uri: http://10.0.147.41:8090/realms/ctrlf
 
 management:
   endpoints:

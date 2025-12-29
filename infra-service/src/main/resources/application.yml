@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://10.0.133.239:5433/db
+    url: jdbc:postgresql://10.0.147.41:5433/db
     username: postgres
     password: postgres
 
@@ -34,7 +34,7 @@ management:
 
 keycloak:
   admin:
-    base-url: http://10.0.133.239:8090
+    base-url: http://10.0.147.41:8090
     realm: ctrlf
     client-id: infra-admin
     client-secret: changeme
