@@ -2,10 +2,6 @@ server:
   port: 9002
 
 spring:
-  datasource:
-    url: jdbc:postgresql://10.0.147.41:5432/db
-    username: postgres
-    password: postgres
   jpa:
     properties:
       hibernate:
@@ -21,12 +17,8 @@ spring:
     validate-on-migrate: false
     out-of-order: true
     create-schemas: true
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://10.0.147.41:8090/realms/ctrlf
-
+  profiles:
+    active: dev
 management:
   endpoints:
     web:
@@ -38,18 +30,6 @@ management:
       probes:
         enabled: true
 
-# AI 서버 설정
-app:
-  video:
-    ai:
-      base-url: http://192.168.0.112:8000
-      token: "" # 내부 호출 토큰 (필요시 설정)
-  quiz:
-    ai:
-      base-url: http://192.168.0.112:8000
-      token: "" # 내부 호출 토큰 (필요시 설정)
-  infra:
-    base-url: http://infra-service:9003 # infra-service 베이스 URL
 
 # Feign 클라이언트 설정
 spring.cloud.openfeign:

@@ -1,5 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
+
+spring:
+  profiles:
+    active: dev
+    
 metadata:
   name: quiz-service
   namespace: argocd
@@ -20,3 +25,6 @@ spec:
           ports:
             - containerPort: 9004 # Spring Boot 앱 포트
           imagePullPolicy: Always
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
