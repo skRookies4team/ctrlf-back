@@ -98,6 +98,7 @@ AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun --args='--spring.prof
 | Secret   | `changeme`              |
 
 - 값은 `infra-service/src/main/resources/application.yml`에서 변경할 수 있습니다.
+- `infra-admin` 클라이언트는 `keycloak-realms/ctrlf-realm.json`에 정의되어 있어 Keycloak 시작 시 `--import-realm` 옵션으로 자동 import됩니다.
 
 ### 테스트 계정
 
@@ -121,6 +122,43 @@ curl -s -X POST 'http://localhost:8090/realms/ctrlf/protocol/openid-connect/toke
 ```
 
 ### Service Account 권한 확인
+
+#### Keycloak Admin Console에서 확인 (UI)
+
+1. **Keycloak Admin Console 접속**
+
+   - URL: `http://localhost:8090`
+   - 관리자 계정: `admin` / `admin`
+
+2. **Realm 선택**
+
+   - 왼쪽 상단에서 `ctrlf` realm 선택
+
+3. **클라이언트 메뉴 이동**
+
+   - 왼쪽 메뉴에서 **Clients** 클릭
+
+4. **infra-admin 클라이언트 선택**
+
+   - 클라이언트 목록에서 `infra-admin` 클릭
+
+5. **Service Account 역할 확인**
+
+   - 상단 탭에서 **Service accounts roles** 탭 클릭
+   - **Filter by clients** 드롭다운에서 `realm-management` 선택
+   - 할당된 역할 목록 확인:
+     - `view-users` ✅
+     - `manage-users` ✅
+     - `view-realm` ✅
+
+6. **Service Account 사용자로 직접 확인 (선택사항)**
+   - **Service accounts roles** 탭에서 **View service account** 버튼 클릭
+   - 또는 왼쪽 메뉴에서 **Users** → 검색창에 `service-account-infra-admin` 입력
+   - 사용자 선택 → **Role mapping** 탭 클릭
+   - **Filter by clients** → `realm-management` 선택
+   - 할당된 역할 확인
+
+#### 스크립트로 확인
 
 권한이 정상적으로 설정되었는지 확인하는 방법:
 
@@ -180,6 +218,65 @@ Invoke-RestMethod http://localhost:9003/admin/users?page=0&size=10
 
 - 200 OK 응답이 오면 권한이 정상적으로 설정된 것입니다
 - 403 Forbidden이 오면 권한이 없거나 설정이 안 된 것입니다
+
+### keycloak-init 상태 확인
+
+`docker compose up -d` 후에도 권한이 설정되지 않았다면 `keycloak-init`이 실행되지 않았을 수 있습니다:
+
+```bash
+# keycloak-init 상태 확인
+./scripts/check-keycloak-init-status.sh
+
+# 또는 직접 확인
+docker compose ps keycloak-init
+docker compose logs keycloak-init
+```
+
+**keycloak-init이 실행되지 않은 경우:**
+
+```bash
+# 수동으로 실행
+docker compose run --rm keycloak-init
+
+# 또는 호스트에서 직접 실행 (Windows Git Bash)
+./scripts/setup-keycloak-service-account.sh
+```
+
+### 권한 제거 및 재설정 테스트
+
+권한을 제거하고 다시 설정하는 테스트를 수행할 수 있습니다:
+
+**Linux/macOS:**
+
+```bash
+# 1. 권한 제거
+./scripts/remove-keycloak-permissions.sh
+
+# 2. 권한 확인 (제거 확인)
+./scripts/verify-keycloak-permissions.sh
+
+# 3. 권한 다시 설정
+./scripts/setup-keycloak-service-account.sh
+
+# 4. 권한 확인 (재설정 확인)
+./scripts/verify-keycloak-permissions.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+# 1. 권한 제거
+.\scripts\remove-keycloak-permissions.ps1
+
+# 2. 권한 확인 (제거 확인)
+.\scripts\verify-keycloak-permissions.ps1
+
+# 3. 권한 다시 설정
+.\scripts\setup-keycloak-service-account.ps1
+
+# 4. 권한 확인 (재설정 확인)
+.\scripts\verify-keycloak-permissions.ps1
+```
 
 ## 빌드/테스트/포맷
 

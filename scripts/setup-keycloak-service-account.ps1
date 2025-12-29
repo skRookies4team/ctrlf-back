@@ -125,7 +125,24 @@ try {
         -Method Get -Headers $headers
     $clientUuid = $clients[0].id
 } catch {
+    $clientUuid = $null
+}
+
+if (-not $clientUuid) {
     Write-Host "❌ 클라이언트 '$ClientId'를 찾을 수 없습니다." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "💡 해결 방법:" -ForegroundColor Cyan
+    Write-Host "   1. Keycloak Admin Console에서 수동으로 클라이언트를 생성하거나"
+    Write-Host "   2. Keycloak 볼륨을 삭제하고 재시작하여 realm import를 다시 수행하세요:"
+    Write-Host "      docker compose down"
+    Write-Host "      docker volume rm ctrlf-back_kc-db-data"
+    Write-Host "      docker compose up -d keycloak"
+    Write-Host ""
+    Write-Host "   클라이언트 설정:" -ForegroundColor Cyan
+    Write-Host "   - Client ID: $ClientId"
+    Write-Host "   - Client authentication: ON"
+    Write-Host "   - Service accounts roles: ON"
+    Write-Host "   - Secret: changeme"
     exit 1
 }
 

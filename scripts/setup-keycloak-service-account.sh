@@ -82,6 +82,19 @@ CLIENT_UUID=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 if [ -z "$CLIENT_UUID" ] || [ "$CLIENT_UUID" = "null" ]; then
     echo "❌ 클라이언트 '$CLIENT_ID'를 찾을 수 없습니다."
+    echo ""
+    echo "💡 해결 방법:"
+    echo "   1. Keycloak Admin Console에서 수동으로 클라이언트를 생성하거나"
+    echo "   2. Keycloak 볼륨을 삭제하고 재시작하여 realm import를 다시 수행하세요:"
+    echo "      docker compose down"
+    echo "      docker volume rm ctrlf-back_kc-db-data"
+    echo "      docker compose up -d keycloak"
+    echo ""
+    echo "   클라이언트 설정:"
+    echo "   - Client ID: $CLIENT_ID"
+    echo "   - Client authentication: ON"
+    echo "   - Service accounts roles: ON"
+    echo "   - Secret: changeme"
     exit 1
 fi
 
