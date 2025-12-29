@@ -17,7 +17,7 @@ spec:
         - name: chat-service
           image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/chat-service:latest
           ports:
-            - containerPort: 9001 # Spring Boot 앱 포트
+            - containerPort: 9005 # Spring Boot 앱 포트
           imagePullPolicy: Always
           env:
             - name: SPRING_PROFILES_ACTIVE
