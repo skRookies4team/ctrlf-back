@@ -21,6 +21,6 @@ spec:
   type: LoadBalancer # 또는 NodePort
   ports:
     - port: 8090
-      targetPort: 8090
+      targetPort: 8080
   selector:
     app: keycloak # Keycloak Deployment의 labels와 맞춰야 함
