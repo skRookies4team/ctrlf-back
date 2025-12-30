@@ -8,11 +8,11 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://keycloak:8090/realms/ctrlf
+          issuer-uri: http://keycloak-service:8090/realms/ctrlf
 
 keycloak:
   admin:
-    base-url: http://keycloak:8090
+    base-url: http://keycloak-service:8090
     realm: ctrlf
     client-id: infra-admin
     client-secret: changeme
