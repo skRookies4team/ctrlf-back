@@ -23,18 +23,21 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
-            - name: SPRING_FLYWAY_CREATE_SCHEMAS
-              value: "true"
-            # DB 접속 정보 (keycloak-db 서비스 이름과 일치해야 함)
+            # 1. DB 접속 정보 (keycloak-db 서비스 이름과 포트 5432 일치 확인됨)
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://keycloak-db:5432/keycloak"
             - name: SPRING_DATASOURCE_USERNAME
               value: "keycloak"
             - name: SPRING_DATASOURCE_PASSWORD
               value: "keycloak"
-            # Keycloak 인증 서버 정보 (keycloak-service 포트 8090 필수)
+            # 2. docker-compose에 있던 초기화 스크립트 대신 JPA가 직접 생성하게 함
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: SPRING_FLYWAY_CREATE_SCHEMAS
+              value: "true"
+            # 3. 인증 서버 정보 (이 주소가 틀리면 0초 만에 Crash 발생)
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              value: "http://keycloak-service:8080/realms/ctrlf"
+              value: "http://keycloak-service:8090/realms/ctrlf"
           livenessProbe:
             httpGet:
               path: /actuator/health
