@@ -8,6 +8,8 @@ on:
       - 'keycloak-realms/**'
       - 'keycloak-themes/**'
       - 'kubernetes/keycloak*'
+      - '.github/workflows/keycloak.yml'
+
 
 jobs:
   build:
