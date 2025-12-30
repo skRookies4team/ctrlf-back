@@ -50,7 +50,7 @@ spec:
         - name: KC_DB
           value: "postgres"
         - name: KC_DB_URL
-          value: "jdbc:postgresql://keycloak-db.argocd.svc.cluster.local:5432/keycloak"
+          value: "jdbc:postgresql://keycloak-db:5432/keycloak"
         - name: KC_DB_USERNAME
           value: "postgres"
         - name: KC_DB_PASSWORD
