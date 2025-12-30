@@ -7,13 +7,20 @@ server:
       force: true
 
 spring:
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: update
+  #   properties:
+  #     hibernate.default_schema: infra
+  #     hibernate.format_sql: true
+  #     hibernate.query.escapeCharacter: '\\'
   jpa:
-    hibernate:
-      ddl-auto: update
     properties:
-      hibernate.default_schema: infra
-      hibernate.format_sql: true
-      hibernate.query.escapeCharacter: '\\'
+      hibernate:
+        default_schema: infra
+        format_sql: true
+    hibernate:
+      ddl-auto: validate    
   flyway:
     enabled: true
     schemas: infra
