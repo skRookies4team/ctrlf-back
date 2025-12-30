@@ -1,0 +1,13 @@
+---- V13__chat_message_extend.sql
+--ALTER TABLE chat.chat_message
+--  ADD COLUMN routing_type VARCHAR(50),
+--  ADD COLUMN pii_detected BOOLEAN DEFAULT FALSE,
+--  ADD COLUMN response_time_ms BIGINT,
+--  ADD COLUMN is_error BOOLEAN DEFAULT FALSE,
+--  ADD COLUMN department VARCHAR(100),
+--  ADD COLUMN keyword VARCHAR(200);
+--
+--CREATE INDEX IF NOT EXISTS idx_chat_message_routing_type ON chat.chat_message (routing_type);
+--CREATE INDEX IF NOT EXISTS idx_chat_message_created_at ON chat.chat_message (created_at);
+--CREATE INDEX IF NOT EXISTS idx_chat_message_department ON chat.chat_message (department);
+--CREATE INDEX IF NOT EXISTS idx_chat_message_keyword ON chat.chat_message (keyword);
