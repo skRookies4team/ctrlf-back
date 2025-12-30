@@ -15,7 +15,6 @@ spec:
     spec:
       containers:
         - name: infra-service
-          # 여기에 아까 성공한 ECR 이미지 주소를 정확히 넣으세요a
           image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/infra-service:latest
 
           ports:
@@ -26,16 +25,16 @@ spec:
               value: "prod"
             - name: SPRING_FLYWAY_CREATE_SCHEMAS
               value: "true"
-            # # DB 접속 정보 (keycloak-db 서비스 이름과 일치해야 함)
-            # - name: SPRING_DATASOURCE_URL
-            #   value: "jdbc:postgresql://keycloak-db:5432/keycloak"
-            # - name: SPRING_DATASOURCE_USERNAME
-            #   value: "keycloak"
-            # - name: SPRING_DATASOURCE_PASSWORD
-            #   value: "keycloak"
-            # # Keycloak 인증 서버 정보 (keycloak-service 포트 8090 필수)
-            # - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-            #   value: "http://keycloak-service:8090/realms/ctrlf"
+            # DB 접속 정보 (keycloak-db 서비스 이름과 일치해야 함)
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://keycloak-db:5432/keycloak"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "keycloak"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "keycloak"
+            # Keycloak 인증 서버 정보 (keycloak-service 포트 8090 필수)
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: "http://keycloak-service:8090/realms/ctrlf"
           livenessProbe:
             httpGet:
               path: /health

@@ -8,17 +8,20 @@ server:
 
 spring:
   jpa:
+    properties:
+      hibernate:
+        default_schema: infra
+        format_sql: true
     hibernate:
       ddl-auto: validate
-    properties:
-      hibernate.default_schema: infra
-      hibernate.format_sql: true
-      hibernate.query.escapeCharacter: '\\'
   flyway:
     enabled: true
     schemas: infra
     default-schema: infra
+    validate-on-migrate: false    
     locations: classpath:db/migration
+    out-of-order: true
+    create-schemas: true
   profiles:
     active: dev
 management:
@@ -32,16 +35,16 @@ management:
       probes:
         enabled: true
 
-logging:
-  charset:
-    console: UTF-8
-  file:
-    charset: UTF-8
+# logging:
+#   charset:
+#     console: UTF-8
+#   file:
+#     charset: UTF-8
 
 app:
   api:
     title: Infra Service API
-    description: 인프라 설정
+    description: infra
     security:
       enabled: true
   s3:
