@@ -40,7 +40,7 @@ spec:
             # - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
             #   value: "http://keycloak-service:8090/realms/ctrlf"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
-              value: "http://keycloak-service:8080/realms/ctrlf/protocol/openid-connect/certs"
+              value: "http://keycloak-service:8090/realms/ctrlf/protocol/openid-connect/certs"
           # livenessProbe:
           #   httpGet:
           #     path: /actuator/health
