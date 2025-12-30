@@ -32,9 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import com.ctrlf.common.dto.PageResponse;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -428,28 +426,5 @@ public class RagDocumentsController {
         return ResponseEntity.ok(ragDocumentService.replaceFile(documentId, version, req));
     }
 
-    // ========================
-    // 내부 API (AI → Backend)
-    // ========================
-
-    @PatchMapping("/internal/rag/documents/{ragDocumentPk}/status")
-    @Operation(
-        summary = "사규 상태 업데이트 (AI -> Backend 내부 API)",
-        description = "AI 서버가 사규 문서의 임베딩 처리 상태를 업데이트합니다."
-    )
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "상태 업데이트 성공",
-            content = @Content(schema = @Schema(implementation = InternalUpdateStatusResponse.class))),
-        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
-        @ApiResponse(responseCode = "401", description = "내부 토큰 오류"),
-        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음")
-    })
-    public ResponseEntity<InternalUpdateStatusResponse> updateDocumentStatus(
-        @Parameter(description = "RAG 문서 ID (UUID)", required = true) @PathVariable("ragDocumentPk") UUID ragDocumentPk,
-        @RequestHeader(value = "X-Internal-Token", required = false) String internalToken,
-        @Valid @RequestBody InternalUpdateStatusRequest req
-    ) {
-        return ResponseEntity.ok(ragDocumentService.updateDocumentStatus(ragDocumentPk, req));
-    }
 }
 

@@ -54,16 +54,6 @@ AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun
 AWS_PROFILE=sk_4th_team04 ./gradlew :api-gateway:bootRun
 ```
 
-### 3. 시드 데이터 포함 실행
-
-```bash
-# education-service (교육 시드 데이터 포함)
-AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=local,local-seed ./gradlew --no-configuration-cache :education-service:bootRun
-
-# infra-service (인프라 시드 데이터 포함)
-AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun --args='--spring.profiles.active=local,local-seed'
-```
-
 - DB 연결 정보는 각 서비스의 `application.yml`에 정의되어 있습니다(호스트 기준 `localhost:5432`).
 - Flyway가 서비스별 스키마로 마이그레이션을 적용합니다.
   - chat: `chat` 스키마
