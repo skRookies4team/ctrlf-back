@@ -44,6 +44,8 @@ spec:
       containers:
       - name: keycloak
         image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/keycloak:latest
+        ports:
+          - containerPort: 8090
         env:
         - name: KC_DB_URL
           value: "jdbc:postgresql://keycloak-db:5432/keycloak" 
