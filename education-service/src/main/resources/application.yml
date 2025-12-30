@@ -51,5 +51,9 @@ spring.cloud.openfeign:
 
 # Feign 로깅 (DEBUG 레벨에서 활성화)
 logging:
+  charset:
+    console: UTF-8
+  file:
+    charset: UTF-8
   level:
     com.ctrlf.education.client: DEBUG
