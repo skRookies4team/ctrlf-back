@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak-db
-  namespace: ctrlf
+  namespace: argocd
 spec:
   replicas: 1
   selector:
@@ -30,7 +30,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: platform-keycloak
-  namespace: ctrlf
+  namespace: argocd
 spec:
   replicas: 1
   selector:
