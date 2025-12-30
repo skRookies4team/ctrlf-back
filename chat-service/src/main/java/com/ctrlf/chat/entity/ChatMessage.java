@@ -53,6 +53,30 @@ public class ChatMessage {
     @Column(name = "llm_model")
     private String llmModel;
 
+    /** 라우팅 타입 (RAG, LLM, INCIDENT, FAQ, OTHER) */
+    @Column(name = "routing_type", length = 50)
+    private String routingType;
+
+    /** PII 감지 여부 */
+    @Column(name = "pii_detected")
+    private Boolean piiDetected;
+
+    /** 응답 시간 (밀리초, AI 응답 시) */
+    @Column(name = "response_time_ms")
+    private Long responseTimeMs;
+
+    /** 에러 여부 */
+    @Column(name = "is_error")
+    private Boolean isError;
+
+    /** 부서 정보 */
+    @Column(name = "department", length = 100)
+    private String department;
+
+    /** 질문 키워드 (사용자 메시지의 주요 키워드) */
+    @Column(name = "keyword", length = 200)
+    private String keyword;
+
     /** 메시지 생성 시각 */
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

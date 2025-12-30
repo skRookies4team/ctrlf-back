@@ -24,8 +24,10 @@ import com.ctrlf.education.quiz.entity.QuizQuestion;
 import com.ctrlf.education.quiz.repository.QuizAttemptRepository;
 import com.ctrlf.education.quiz.repository.QuizQuestionRepository;
 import com.ctrlf.education.quiz.repository.QuizLeaveTrackingRepository;
+import com.ctrlf.common.dto.PageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
@@ -44,7 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 로컬 개발용 시드 데이터 주입기.
- * 활성화: --spring.profiles.active=local,local-seed
+ * 활성화: --spring.profiles.active=dev,local-seed (또는 다른 프로파일과 함께 local-seed)
  */
 @Profile("local-seed")
 @Order(1)
@@ -109,21 +111,29 @@ public class SeedDataRunner implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        clearAllEducationData();
-        
-        // infra-service를 통해 실제 Keycloak 유저 정보 가져오기
-        List<UserInfo> users = fetchUsersFromInfraService();
-        if (users.isEmpty()) {
-            log.warn("유저 데이터를 가져올 수 없어 시드 데이터 생성을 건너뜁니다.");
-            return;
+        try {
+            log.info("Starting seed data generation...");
+            clearAllEducationData();
+            
+            // infra-service를 통해 실제 Keycloak 유저 정보 가져오기 (필수)
+            List<UserInfo> users = fetchUsersFromInfraService();
+            if (users.isEmpty()) {
+                log.error("Failed to fetch user data from infra-service. Seed data generation requires at least one user. Aborting seed data generation.");
+                throw new IllegalStateException("#### Cannot generate seed data without user data. Please ensure infra-service is running and contains at least one enabled user.");
+            }
+            
+            log.info("Successfully fetched {} user(s) from infra-service. Proceeding with seed data generation.", users.size());
+            
+            // 유저 정보를 사용하여 모든 데이터 생성
+            seedScriptsAndJobs(users);
+            seedEducationsVideosAndProgress(users);
+            seedQuizData(users);
+            
+            log.info("Seed data generation completed successfully!");
+        } catch (Exception e) {
+            log.error("Failed to generate seed data: {}", e.getMessage(), e);
+            throw e; // 트랜잭션 롤백을 위해 예외를 다시 던짐
         }
-        
-        log.info("{} 명의 유저 정보를 가져왔습니다.", users.size());
-        
-        // 유저 정보를 사용하여 모든 데이터 생성
-        seedScriptsAndJobs(users);
-        seedEducationsVideosAndProgress(users);
-        seedQuizData(users);
     }
 
     /**
@@ -131,68 +141,69 @@ public class SeedDataRunner implements CommandLineRunner {
      * FK 관계로 인해 자식 테이블부터 삭제합니다.
      */
     private void clearAllEducationData() {
-        log.info("기존 교육 데이터 삭제 시작...");
+        log.info("Starting to delete existing education data...");
         
         // 1. 교육 진행 현황 삭제 (education_id FK 참조)
         educationProgressRepository.deleteAll();
-        log.info("교육 진행 현황 삭제 완료");
+        log.info("Education progress deleted");
         
         // 2. 영상 진행률 삭제
         educationVideoProgressRepository.deleteAll();
-        log.info("교육 영상 진행률 삭제 완료");
+        log.info("Education video progress deleted");
         
         // 3. 소스셋 문서 삭제 (source_set_id FK 참조)
         sourceSetDocumentRepository.deleteAll();
-        log.info("소스셋 문서 삭제 완료");
+        log.info("Source set documents deleted");
         
         // 4. 소스셋 삭제 (video_id FK 참조하므로 video보다 먼저 삭제)
         sourceSetRepository.deleteAll();
-        log.info("소스셋 삭제 완료");
+        log.info("Source sets deleted");
         
         // 5. 영상 검토(리뷰) 삭제 (video_id FK 참조하므로 video보다 먼저 삭제)
         educationVideoReviewRepository.deleteAll();
-        log.info("영상 검토 삭제 완료");
+        log.info("Education video reviews deleted");
         
         // 6. 영상 삭제
         educationVideoRepository.deleteAll();
-        log.info("교육 영상 삭제 완료");
+        log.info("Education videos deleted");
         
         // 7. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
         videoGenerationJobRepository.deleteAll();
-        log.info("영상 생성 작업 삭제 완료");
+        log.info("Video generation jobs deleted");
         
         // 8. 스크립트 씬 삭제
         sceneRepository.deleteAll();
-        log.info("스크립트 씬 삭제 완료");
+        log.info("Script scenes deleted");
         
         // 9. 스크립트 챕터 삭제
         chapterRepository.deleteAll();
-        log.info("스크립트 챕터 삭제 완료");
+        log.info("Script chapters deleted");
         
         // 10. 스크립트 삭제
         scriptRepository.deleteAll();
-        log.info("스크립트 삭제 완료");
+        log.info("Scripts deleted");
         
         // 11. 퀴즈 문항 삭제 (attempt_id FK 참조)
         quizQuestionRepository.deleteAll();
-        log.info("퀴즈 문항 삭제 완료");
+        log.info("Quiz questions deleted");
         
         // 12. 퀴즈 이탈 추적 삭제 (attempt_id FK 참조)
         quizLeaveTrackingRepository.deleteAll();
-        log.info("퀴즈 이탈 추적 삭제 완료");
+        log.info("Quiz leave tracking deleted");
         
         // 12. 퀴즈 시도 삭제 (education_id FK 참조)
         quizAttemptRepository.deleteAll();
-        log.info("퀴즈 시도 삭제 완료");
+        log.info("Quiz attempts deleted");
         
         // 13. 교육 삭제
         educationRepository.deleteAll();
-        log.info("교육 삭제 완료");
+        log.info("Educations deleted");
         
-        log.info("기존 교육 데이터 삭제 완료!");
+        log.info("Existing education data deletion completed!");
     }
 
     private void seedScriptsAndJobs(List<UserInfo> users) {
+        log.info("Starting to seed scripts and jobs...");
         // 5가지 교육 카테고리별 시드 데이터 생성
         List<Education> educations = new ArrayList<>();
 
@@ -253,7 +264,7 @@ public class SeedDataRunner implements CommandLineRunner {
 
         // 모든 교육 저장
         educationRepository.saveAll(educations);
-        log.info("Seed created: {} 개의 교육 시드 데이터 생성 완료", educations.size());
+        log.info("Seed created: {} education(s) created", educations.size());
 
         // 각 교육에 대해 스크립트 생성
         List<UUID> scriptIds = new ArrayList<>();
@@ -283,6 +294,7 @@ public class SeedDataRunner implements CommandLineRunner {
         chapterRepository.flush();
         sceneRepository.flush();
 
+        log.info("Scripts and jobs seeding completed!");
         // Job 시드는 별도 러너(@Order(2))에서 처리합니다.
     }
 
@@ -291,9 +303,14 @@ public class SeedDataRunner implements CommandLineRunner {
      * infra-service에서 가져온 실제 유저 정보를 사용합니다.
      */
     private void seedEducationsVideosAndProgress(List<UserInfo> users) {
+        log.info("Starting to seed educations, videos and progress...");
         // 이미 영상이 있으면 스킵
         List<Education> edus = educationRepository.findAll();
-        if (edus.isEmpty()) return;
+        if (edus.isEmpty()) {
+            log.warn("No education data found. Skipping video and progress seeding.");
+            return;
+        }
+        log.info("Found {} education(s) to process.", edus.size());
 
         // 첫 번째 유저를 기본 유저로 사용 (또는 랜덤 선택)
         UUID demoUser = users.isEmpty() 
@@ -340,7 +357,7 @@ public class SeedDataRunner implements CommandLineRunner {
                 log.info("Seed created: {} dummy videos for eduId={}", videos.size(), edu.getId());
             }
             if (videos.isEmpty()) {
-                log.info("Seed skip: 교육에 연결된 영상이 없어 진행률 더미 생성을 건너뜁니다. eduId={}", edu.getId());
+                log.info("Seed skip: No videos found for education, skipping progress dummy generation. eduId={}", edu.getId());
                 continue;
             }
             /**
@@ -381,6 +398,7 @@ public class SeedDataRunner implements CommandLineRunner {
                 }
             }
         }
+        log.info("Educations, videos and progress seeding completed!");
     }
     
     /**
@@ -392,7 +410,7 @@ public class SeedDataRunner implements CommandLineRunner {
             .filter(ss -> videoId.equals(ss.getVideoId()) && ss.getDeletedAt() == null)
             .toList();
         if (!existingSourceSets.isEmpty()) {
-            log.debug("Source-set이 이미 존재합니다. videoId={}", videoId);
+            log.debug("Source-set already exists. videoId={}", videoId);
             return;
         }
         
@@ -438,7 +456,7 @@ public class SeedDataRunner implements CommandLineRunner {
 
     private void seedChaptersAndScenes(UUID scriptId) {
         if (!chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId).isEmpty()) {
-            log.info("Seed skip: 챕터/씬이 이미 존재합니다. scriptId={}", scriptId);
+            log.info("Seed skip: Chapters/scenes already exist. scriptId={}", scriptId);
             return;
         }
         // Chapter 0: 괴롭힘
@@ -508,20 +526,20 @@ public class SeedDataRunner implements CommandLineRunner {
      * infra-service를 통해 Keycloak의 실제 유저 정보를 가져와 퀴즈 시도 데이터를 생성합니다.
      */
     private void seedQuizData(List<UserInfo> users) {
-        log.info("퀴즈 시드 데이터 생성 시작...");
+        log.info("Starting quiz seed data generation...");
         
         List<Education> educations = educationRepository.findAll();
         if (educations.isEmpty()) {
-            log.warn("교육 데이터가 없어 퀴즈 시드 데이터 생성을 건너뜁니다.");
+            log.warn("No education data found. Skipping quiz seed data generation.");
             return;
         }
 
         if (users.isEmpty()) {
-            log.warn("유저 데이터가 없어 퀴즈 시드 데이터 생성을 건너뜁니다.");
+            log.warn("No user data found. Skipping quiz seed data generation.");
             return;
         }
         
-        log.info("{} 명의 유저 정보로 퀴즈 데이터를 생성합니다.", users.size());
+        log.info("Generating quiz data for {} user(s).", users.size());
 
         for (UserInfo user : users) {
             UUID userUuid = user.userUuid;
@@ -568,7 +586,7 @@ public class SeedDataRunner implements CommandLineRunner {
         }
         
         quizAttemptRepository.flush();
-        log.info("퀴즈 시드 데이터 생성 완료!");
+        log.info("Quiz seed data generation completed!");
     }
 
     /**
@@ -583,21 +601,20 @@ public class SeedDataRunner implements CommandLineRunner {
         
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                log.info("infra-service에서 유저 목록 조회 중... (baseUrl: {}, 시도: {}/{})", infraBaseUrl, attempt, maxRetries);
+                log.info("Fetching user list from infra-service... (baseUrl: {}, attempt: {}/{})", infraBaseUrl, attempt, maxRetries);
                 
-                // infra-service의 /admin/users API 호출
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> userList = restClient.get()
-                    .uri("/admin/users?page=0&size=200")
+                // infra-service의 /admin/users/search API 호출
+                PageResponse<Map<String, Object>> pageResponse = restClient.get()
+                    .uri("/admin/users/search?page=0&size=200")
                     .retrieve()
-                    .body(List.class);
+                    .body(new ParameterizedTypeReference<PageResponse<Map<String, Object>>>() {});
                 
-                if (userList == null || userList.isEmpty()) {
-                    log.warn("infra-service에서 유저 목록이 비어있습니다.");
+                if (pageResponse == null || pageResponse.getItems() == null || pageResponse.getItems().isEmpty()) {
+                    log.warn("User list from infra-service is empty.");
                     return users;
                 }
             
-            for (Map<String, Object> userMap : userList) {
+            for (Map<String, Object> userMap : pageResponse.getItems()) {
                 try {
                     String userId = (String) userMap.get("id");
                     String username = (String) userMap.get("username");
@@ -611,7 +628,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     // attributes에서 department 추출
                     @SuppressWarnings("unchecked")
                     Map<String, Object> attributes = (Map<String, Object>) userMap.get("attributes");
-                    String department = "기타";
+                    String department = "Others";
                     if (attributes != null) {
                         @SuppressWarnings("unchecked")
                         List<String> deptList = (List<String>) attributes.get("department");
@@ -622,18 +639,18 @@ public class SeedDataRunner implements CommandLineRunner {
                     
                     UUID userUuid = UUID.fromString(userId);
                     users.add(new UserInfo(userUuid, username, department));
-                    log.debug("유저 정보 추가: username={}, department={}, userId={}", username, department, userId);
+                    log.debug("User added: username={}, department={}, userId={}", username, department, userId);
                 } catch (Exception e) {
-                    log.warn("유저 정보 파싱 실패: {}", userMap, e);
+                    log.warn("Failed to parse user info: {}", userMap, e);
                 }
             }
             
-                log.info("infra-service에서 {} 명의 유저를 가져왔습니다.", users.size());
+                log.info("Fetched {} user(s) from infra-service.", users.size());
                 return users; // 성공 시 즉시 반환
                 
             } catch (org.springframework.web.client.HttpClientErrorException e) {
                 if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
-                    log.warn("infra-service 인증 오류 (시도 {}/{}): {}. Keycloak이 아직 시작되지 않았을 수 있습니다.", 
+                    log.warn("infra-service authentication error (attempt {}/{}): {}. Keycloak may not have started yet.", 
                         attempt, maxRetries, e.getMessage());
                     if (attempt < maxRetries) {
                         try {
@@ -645,7 +662,7 @@ public class SeedDataRunner implements CommandLineRunner {
                         continue; // 재시도
                     }
                 } else {
-                    log.error("infra-service HTTP 오류 (시도 {}/{}): {}", attempt, maxRetries, e.getMessage());
+                    log.error("infra-service HTTP error (attempt {}/{}): {}", attempt, maxRetries, e.getMessage());
                     if (attempt < maxRetries) {
                         try {
                             Thread.sleep(retryDelayMs);
@@ -657,7 +674,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     }
                 }
             } catch (org.springframework.web.client.ResourceAccessException e) {
-                log.warn("infra-service 연결 실패 (시도 {}/{}): {}. infra-service가 아직 시작되지 않았을 수 있습니다.", 
+                log.warn("infra-service connection failed (attempt {}/{}): {}. infra-service may not have started yet.", 
                     attempt, maxRetries, e.getMessage());
                 if (attempt < maxRetries) {
                     try {
@@ -669,7 +686,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     continue; // 재시도
                 }
             } catch (Exception e) {
-                log.error("infra-service에서 유저 목록을 가져오는 중 오류 발생 (시도 {}/{}): {}", 
+                log.error("Error occurred while fetching user list from infra-service (attempt {}/{}): {}", 
                     attempt, maxRetries, e.getMessage(), e);
                 if (attempt < maxRetries) {
                     try {
@@ -683,7 +700,7 @@ public class SeedDataRunner implements CommandLineRunner {
             }
         }
         
-        log.warn("infra-service에서 유저 목록을 가져오지 못했습니다. 퀴즈 시드 데이터 생성을 건너뜁니다.");
+        log.warn("Failed to fetch user list from infra-service after {} attempts. Returning empty list.", maxRetries);
         return users;
     }
 
@@ -714,7 +731,7 @@ public class SeedDataRunner implements CommandLineRunner {
             }
             
             question.setCorrectOptionIdx(random.nextInt(5)); // 0~4 중 랜덤
-            question.setExplanation("정답 설명입니다.");
+            question.setExplanation("Correct answer explanation.");
             question.setQuestionOrder(i);
             
             // 제출된 경우 사용자 선택값 설정
