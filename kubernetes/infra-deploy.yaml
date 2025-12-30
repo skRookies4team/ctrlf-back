@@ -33,7 +33,7 @@ spec:
               value: "keycloak"
             # 2. docker-compose에 있던 초기화 스크립트 대신 JPA가 직접 생성하게 함
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-              value: "create"
+              value: "update"
             - name: SPRING_FLYWAY_ENABLED
               value: "false"
             # - name: SPRING_FLYWAY_CREATE_SCHEMAS
@@ -49,6 +49,6 @@ spec:
           #     port: 9003
           #   initialDelaySeconds: 180
           #   periodSeconds: 10
-      nodeSelector:
-        zone: private
+      # nodeSelector:
+      #   zone: private
         
