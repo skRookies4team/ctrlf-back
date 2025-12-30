@@ -27,7 +27,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 이미지 빌드 및 푸시
+      # 이미지 빌드 및 푸시.
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
