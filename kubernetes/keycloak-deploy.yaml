@@ -47,17 +47,23 @@ spec:
         ports:
           - containerPort: 8090
         env:
+        - name: KC_DB
+          value: "postgres"
         - name: KC_DB_URL
-          value: "jdbc:postgresql://keycloak-db:5432/keycloak" 
+          value: "jdbc:postgresql://keycloak-db.argocd.svc.cluster.local:5432/keycloak"
+        - name: KC_DB_USERNAME
+          value: "keycloak"
+        - name: KC_DB_PASSWORD
+          value: "keycloak"
         - name: KEYCLOAK_ADMIN
           value: "admin"
         - name: KEYCLOAK_ADMIN_PASSWORD
           value: "admin"
-        - name: KC_HOSTNAME_STRICT
-          value: "false"
-        - name: KC_HOSTNAME_STRICT_HTTPS
-          value: "false"
-        - name: KC_PROXY
-          value: "edge"
-        - name: KC_HTTP_ENABLED
-          value: "true"
+        # 리소스 제한 (노드 자원이 부족하므로 명시하는 것이 좋습니다)
+        # resources:
+        #   requests:
+        #     memory: "512Mi"
+        #     cpu: "250m"
+        #   limits:
+        #     memory: "1024Mi"
+        #     cpu: "500m"
