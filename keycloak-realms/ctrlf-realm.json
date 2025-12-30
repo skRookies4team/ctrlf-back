@@ -1,7 +1,11 @@
 {
   "realm": "ctrlf",
-  "enabled": true,
   "sslRequired": "none",
+  "attributes": {
+    "checkLoginIframe": "false"
+  },
+
+  "enabled": true,
   "displayName": "CTRL-F",
   "loginTheme": "ctrlf-theme",
 
@@ -85,11 +89,21 @@
       "protocol": "openid-connect",
       "publicClient": true,
       "standardFlowEnabled": true,
-      "redirectUris": ["http://58.127.241.84:5173/*",
-              "http://k8s-argocd-fronting-526db1f734-1347346656.ap-northeast-2.elb.amazonaws.com/*"],
-
-      "webOrigins": ["http://58.127.241.84:5173/*",
-              "http://k8s-argocd-fronting-526db1f734-1347346656.ap-northeast-2.elb.amazonaws.com/*"],
+      "redirectUris": [
+        "http://front-service:5173/*",
+        "http://k8s-argocd-fronting-526db1f734-1347346656.ap-northeast-2.elb.amazonaws.com/*",
+        "http://k8s-argocd-fronting-526db1f734-1347346656.ap-northeast-2.elb.amazonaws.com"
+      ],
+      "webOrigins": [
+        "http://front-service:5173",
+        "http://k8s-argocd-fronting-526db1f734-1347346656.ap-northeast-2.elb.amazonaws.com"
+      ],
+      "attributes": {
+        "backchannel.logout.session.required": "false",
+        "display.on.consent.screen": "false",
+        "checkLoginIframe": "false"
+      },
+      "frontchannelLogout": "false",
       "protocolMappers": [
         {
           "name": "employeeNo",
@@ -436,3 +450,4 @@
     }
   ]
 }
+

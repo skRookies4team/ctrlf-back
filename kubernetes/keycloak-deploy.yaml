@@ -1,0 +1,61 @@
+# 1. Keycloak DB 서비스
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-db
+  namespace: ctrlf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-db # [여기] Service가 찾아올 이름
+  template:
+    metadata:
+      labels:
+        app: keycloak-db # [여기] Pod에 붙는 이름
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        env:
+        - name: POSTGRES_DB
+          value: "keycloak"
+        - name: POSTGRES_USER
+          value: "keycloak"
+        - name: POSTGRES_PASSWORD
+          value: "keycloak"
+---
+# 2. Keycloak 서버 서비스
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-keycloak
+  namespace: ctrlf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak # [여기] Service가 찾아올 이름
+  template:
+    metadata:
+      labels:
+        app: keycloak # [여기] Pod에 붙는 이름
+    spec:
+      containers:
+      - name: keycloak
+        image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/keycloak:latest
+        env:
+        - name: KC_DB_URL
+          value: "jdbc:postgresql://keycloak-db-service:5432/keycloak" 
+        - name: KEYCLOAK_ADMIN
+          value: "admin"
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: "admin"
+        - name: KC_HOSTNAME_STRICT
+          value: "false"
+        - name: KC_HOSTNAME_STRICT_HTTPS
+          value: "false"
+        - name: KC_PROXY
+          value: "edge"
+        - name: KC_HTTP_ENABLED
+          value: "true"

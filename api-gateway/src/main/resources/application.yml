@@ -9,31 +9,31 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8090/realms/ctrlf
+          issuer-uri: http://key:8090/realms/ctrlf
 
   cloud:
     gateway:
       routes:
         - id: chat-route
-          uri: http://localhost:9005
+          uri: http://chat-service:9005
           predicates:
             - Path=/api/chat/**
           filters:
             - StripPrefix=2
         - id: education-route
-          uri: http://localhost:9002
+          uri: http://education-service:9002
           predicates:
             - Path=/api/edu/**
           filters:
             - StripPrefix=2
         - id: infra-route
-          uri: http://localhost:9003
+          uri: http://infra-service:9003
           predicates:
             - Path=/api/infra/**
           filters:
             - StripPrefix=2
         - id: quiz-route
-          uri: http://localhost:9004
+          uri: http://quiz-service:9004
           predicates:
             - Path=/api/quiz/**
           filters:
