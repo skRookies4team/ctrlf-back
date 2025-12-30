@@ -37,9 +37,9 @@ spec:
               value: "http://keycloak-service:8090/realms/ctrlf"
           livenessProbe:
             httpGet:
-              path: /health
+              path: /actuator/health
               port: 9003
-            initialDelaySeconds: 60 
+            initialDelaySeconds: 180
             periodSeconds: 10
       nodeSelector:
         zone: private
