@@ -23,6 +23,7 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
+            
             # 1. DB 접속 정보 (keycloak-db 서비스 이름과 포트 5432 일치 확인됨)
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://keycloak-db:5432/keycloak"
@@ -36,8 +37,10 @@ spec:
             - name: SPRING_FLYWAY_CREATE_SCHEMAS
               value: "true"
             # 3. 인증 서버 정보 (이 주소가 틀리면 0초 만에 Crash 발생)
-            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              value: "http://keycloak-service:8090/realms/ctrlf"
+            # - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+            #   value: "http://keycloak-service:8090/realms/ctrlf"
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+              value: "http://keycloak-service:8080/realms/ctrlf/protocol/openid-connect/certs"
           # livenessProbe:
           #   httpGet:
           #     path: /actuator/health
