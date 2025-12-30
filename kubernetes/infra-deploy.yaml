@@ -34,7 +34,7 @@ spec:
               value: "keycloak"
             # Keycloak 인증 서버 정보 (keycloak-service 포트 8090 필수)
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              value: "http://keycloak-service:8090/realms/ctrlf"
+              value: "http://keycloak-service:8080/realms/ctrlf"
           livenessProbe:
             httpGet:
               path: /actuator/health

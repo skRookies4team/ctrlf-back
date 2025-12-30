@@ -47,7 +47,7 @@ services:
       # 커스텀 로그인 테마
       - ./keycloak-themes/ctrlf-theme:/opt/keycloak/themes/ctrlf-theme
     environment:
-      # DB 설정
+      # DB 설정'
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
       - KC_DB_USERNAME=keycloak
