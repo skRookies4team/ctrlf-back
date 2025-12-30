@@ -38,12 +38,12 @@ spec:
             # 3. 인증 서버 정보 (이 주소가 틀리면 0초 만에 Crash 발생)
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
               value: "http://keycloak-service:8090/realms/ctrlf"
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 9003
-            initialDelaySeconds: 180
-            periodSeconds: 10
+          # livenessProbe:
+          #   httpGet:
+          #     path: /actuator/health
+          #     port: 9003
+          #   initialDelaySeconds: 180
+          #   periodSeconds: 10
       nodeSelector:
         zone: private
         
