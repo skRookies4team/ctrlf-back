@@ -46,7 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 로컬 개발용 시드 데이터 주입기.
- * 활성화: --spring.profiles.active=local,local-seed
+ * 활성화: --spring.profiles.active=dev,local-seed (또는 다른 프로파일과 함께 local-seed)
  */
 @Profile("local-seed")
 @Order(1)

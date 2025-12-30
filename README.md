@@ -44,14 +44,11 @@ docker compose logs -f postgres
 ### 2. 애플리케이션 실행(개별 서비스)
 
 ```bash
-# 각 서비스는 별도 터미널에서 실행 권장
-# AWS_PROFILE 설정이 필요한 경우 (S3 연동 등)
 # infra-service 부터 켜야지 education-service 더미(시드) 데이터가 저장된다
-AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=local,local-seed ./gradlew :infra-service:bootRun
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed,keycloak-setup ./gradlew :infra-service:bootRun
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed,keycloak-setup ./gradlew :education-service:bootRun
 
-AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed ./gradlew :education-service:bootRun -Dspring-boot.run.profiles=dev,local-seed
-
-
+# 키클락 설정이랑 시드 데이터 초기화 필요없는 경우 사용
 AWS_PROFILE=sk_4th_team04 ./gradlew :chat-service:bootRun
 AWS_PROFILE=sk_4th_team04 ./gradlew :education-service:bootRun
 AWS_PROFILE=sk_4th_team04 ./gradlew :infra-service:bootRun
