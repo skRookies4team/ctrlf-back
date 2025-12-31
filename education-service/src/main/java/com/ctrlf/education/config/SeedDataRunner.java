@@ -329,11 +329,8 @@ public class SeedDataRunner implements CommandLineRunner {
             if (videos.isEmpty()) {
                 List<com.ctrlf.education.video.entity.EducationVideo> seeds = new ArrayList<>();
                 String[] urls = new String[] {
-                    "s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4",
-                    "s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4",
-                    "s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4",
-                    "s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4",
-                    "s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4"
+                    "s3://ctrl-s3/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
+                    "s3://ctrl-s3/videos/f75a41fb-ff76-4d37-8220-c7647de1679f.mp4"
                 };
                 String[] titles = new String[] {
                     edu.getTitle() + " - 기본편",
@@ -366,14 +363,6 @@ public class SeedDataRunner implements CommandLineRunner {
                 log.info("Seed skip: No videos found for education, skipping progress dummy generation. eduId={}", edu.getId());
                 continue;
             }
-            /**
-             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4
-             * s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4
-             * s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4
-             */
 
             // 각 영상에 대해 source-set 생성
             for (var v : videos) {
