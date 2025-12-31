@@ -96,15 +96,31 @@ public class AiRestClient {
     ) {
         UUID traceId = UUID.randomUUID(); // 자동 생성
         
-        return addRequiredHeaders(
-            restClient.post().uri(uri),
-            traceId,
-            conversationId,
-            turnId
-        )
-        .body(body)
-        .retrieve()
-        .body(responseType);
+        // JWT에서 정보 추출
+        Jwt jwt = getJwtFromContext();
+        String userId = jwt != null ? jwt.getSubject() : "";
+        String deptId = extractDeptId(jwt);
+        
+        // POST 요청 생성 및 헤더 추가
+        RestClient.RequestBodySpec requestSpec = restClient.post().uri(uri);
+        
+        // 필수 헤더 추가
+        requestSpec.header("X-Trace-Id", traceId.toString());
+        requestSpec.header("X-User-Id", userId);
+        requestSpec.header("X-Dept-Id", deptId);
+        
+        // 선택 헤더 추가
+        if (conversationId != null && !conversationId.isBlank()) {
+            requestSpec.header("X-Conversation-Id", conversationId);
+        }
+        if (turnId != null) {
+            requestSpec.header("X-Turn-Id", turnId.toString());
+        }
+        
+        return requestSpec
+            .body(body)
+            .retrieve()
+            .body(responseType);
     }
 
     /**
@@ -135,52 +151,32 @@ public class AiRestClient {
     ) {
         UUID traceId = UUID.randomUUID(); // 자동 생성
         
-        return addRequiredHeaders(
-            restClient.get().uri(uri),
-            traceId,
-            conversationId,
-            turnId
-        )
-        .retrieve()
-        .body(responseType);
-    }
-
-    /**
-     * 요청에 필수 헤더를 추가합니다.
-     * 
-     * @param requestSpec RestClient 요청 스펙
-     * @param traceId Trace ID
-     * @param conversationId Conversation ID (선택)
-     * @param turnId Turn ID (선택)
-     * @return 헤더가 추가된 요청 스펙
-     */
-    private RestClient.RequestHeadersSpec<?> addRequiredHeaders(
-        RestClient.RequestHeadersSpec<?> requestSpec,
-        UUID traceId,
-        String conversationId,
-        Integer turnId
-    ) {
         // JWT에서 정보 추출
         Jwt jwt = getJwtFromContext();
         String userId = jwt != null ? jwt.getSubject() : "";
         String deptId = extractDeptId(jwt);
-
+        
+        // GET 요청 생성 및 헤더 추가
+        RestClient.RequestHeadersSpec<?> requestSpec = restClient.get().uri(uri);
+        
         // 필수 헤더 추가
-        requestSpec.header("X-Trace-Id", traceId != null ? traceId.toString() : "");
+        requestSpec.header("X-Trace-Id", traceId.toString());
         requestSpec.header("X-User-Id", userId);
         requestSpec.header("X-Dept-Id", deptId);
-
+        
         // 선택 헤더 추가
         if (conversationId != null && !conversationId.isBlank()) {
             requestSpec.header("X-Conversation-Id", conversationId);
         }
-
         if (turnId != null) {
             requestSpec.header("X-Turn-Id", turnId.toString());
         }
-
-        return requestSpec;
+        
+        return requestSpec
+            .retrieve()
+            .body(responseType);
     }
+
 
     /**
      * SecurityContext에서 JWT를 가져옵니다.
