@@ -17,6 +17,8 @@ kind: Service
 metadata:
   name: keycloak-service
   namespace: argocd
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
   type: LoadBalancer # 또는 NodePort
   ports:
