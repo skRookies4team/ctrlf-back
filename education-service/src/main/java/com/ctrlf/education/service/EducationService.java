@@ -1107,7 +1107,7 @@ public class EducationService {
             // 전체 사용자 목록 조회 (큰 페이지로)
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restClient.get()
-                .uri("/admin/users/count")
+            .uri("/admin/users/search?page=0&size=1000")
                 .retrieve()
                 .body(Map.class);
             
