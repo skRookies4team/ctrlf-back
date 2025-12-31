@@ -23,5 +23,5 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
-      nodeSelector:
-        zone: private
+      # nodeSelector:
+      #   zone: private
