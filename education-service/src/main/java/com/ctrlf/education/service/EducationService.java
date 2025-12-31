@@ -80,6 +80,7 @@ public class EducationService {
         e.setCategory(req.getCategory());
         e.setEduType(req.getEduType());
         e.setDescription(req.getDescription());
+        e.setVersion(req.getVersion());
         e.setPassScore(req.getPassScore());
         e.setPassRatio(req.getPassRatio());
         e.setRequire(req.getRequire());
@@ -146,10 +147,11 @@ public class EducationService {
             List<EducationResponses.EducationVideosResponse.VideoItem> videoItems = new ArrayList<>();
             int sumPct = 0;
 
-            // 6. 교육 정보 조회 (passRatio, eduTypeCategory 등)
+            // 6. 교육 정보 조회 (passRatio, eduTypeCategory, version 등)
             Education edu = educationRepository.findById(eduId).orElse(null);
             Integer passRatio = edu != null && edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             EducationCategory eduTypeCategory = edu != null ? edu.getEduType() : null;
+            Integer version = edu != null ? edu.getVersion() : null;
             for (EducationVideo v : vids) {
                 Integer resume = 0;
                 Integer total = 0;
@@ -221,6 +223,7 @@ public class EducationService {
                 cat,
                 eduTypeCategory,
                 required != null && required,
+                version,
                 eduProgress,
                 watchStatus,
                 videoItems
@@ -621,6 +624,8 @@ public class EducationService {
         if (userId == null) {
             return null;
         }
+
+        log.info("@@@@@@@@@@@@@@@@@@ userId: {}", userId);
         
         try {
             RestClient restClient = RestClient.builder()
@@ -644,9 +649,12 @@ public class EducationService {
                 @SuppressWarnings("unchecked")
                 List<String> deptList = (List<String>) attributes.get("department");
                 if (deptList != null && !deptList.isEmpty()) {
-                    return deptList.get(0);
+                    String dept = deptList.get(0);
+                    log.info("@@@@@@@@@@@@@@@@@@ userId: {}, department: {}", userId, dept);
+                    return dept;
                 }
             }
+            log.info("@@@@@@@@@@@@@@@@@@ userId: {}, department: null (attributes 또는 department가 없음)", userId);
             return null;
         } catch (Exception e) {
             log.debug("사용자 부서 정보 조회 실패: userId={}, error={}", userId, e.getMessage());
@@ -670,35 +678,36 @@ public class EducationService {
     public EducationResponses.DashboardSummaryResponse getDashboardSummary(Integer periodDays, String department) {
         Instant startDate = calculateStartDate(periodDays);
         
-        // 모든 교육 진행 현황 조회 (기간 필터)
+        // 모든 교육 진행 현황 조회 (기간 필터: updatedAt 기준으로 기간 내에 업데이트된 모든 진행 현황 포함)
         List<EducationProgress> allProgresses = educationProgressRepository.findAll().stream()
-            .filter(p -> p.getCompletedAt() != null && p.getCompletedAt().isAfter(startDate))
+            .filter(p -> p.getUpdatedAt() != null && p.getUpdatedAt().isAfter(startDate))
             .filter(p -> p.getDeletedAt() == null)
             .collect(Collectors.toList());
 
+            log.info("@@@@@@@@@@@@@@@@@@ department: {}", department);
+
         // 부서 필터 적용
         if (department != null && !department.isBlank()) {
+            String departmentTrimmed = department.trim();
             allProgresses = allProgresses.stream()
                 .filter(p -> {
                     String userDept = fetchUserDepartmentFromInfraService(p.getUserUuid());
-                    return department.equals(userDept);
+                    if (userDept == null || userDept.isBlank()) {
+                        return false;
+                    }
+                    // 공백 제거 후 비교
+                    return departmentTrimmed.equals(userDept.trim());
                 })
                 .collect(Collectors.toList());
         }
 
-        // 전체 평균 이수율 계산
-        long totalUsers = allProgresses.stream()
-            .map(EducationProgress::getUserUuid)
-            .distinct()
-            .count();
-        
-        long completedUsers = allProgresses.stream()
+        // 전체 평균 이수율 계산 (모든 교육 진행 현황 중 완료된 비율)
+        long totalProgresses = allProgresses.size();
+        long completedProgresses = allProgresses.stream()
             .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
-            .map(EducationProgress::getUserUuid)
-            .distinct()
             .count();
 
-        double overallAverage = totalUsers > 0 ? (double) completedUsers / totalUsers * 100 : 0.0;
+        double overallAverage = totalProgresses > 0 ? (double) completedProgresses / totalProgresses * 100 : 0.0;
 
         // 미이수자 수 계산
         // 필수 교육(require=true) 중 이수하지 않은 사용자 수
@@ -776,12 +785,14 @@ public class EducationService {
                     .map(EducationProgress::getUserUuid)
                     .distinct()
                     .count();
+                    
                 
                 long completedUsers = eduProgresses.stream()
                     .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
                     .map(EducationProgress::getUserUuid)
                     .distinct()
                     .count();
+
 
                 if (totalUsers > 0) {
                     totalRate += (double) completedUsers / totalUsers * 100;
@@ -806,10 +817,15 @@ public class EducationService {
 
         // 부서 필터 적용
         if (department != null && !department.isBlank()) {
+            String departmentTrimmed = department.trim();
             allProgresses = allProgresses.stream()
                 .filter(p -> {
                     String userDept = fetchUserDepartmentFromInfraService(p.getUserUuid());
-                    return department.equals(userDept);
+                    if (userDept == null || userDept.isBlank()) {
+                        return false;
+                    }
+                    // 공백 제거 후 비교
+                    return departmentTrimmed.equals(userDept.trim());
                 })
                 .collect(Collectors.toList());
         }
@@ -889,10 +905,15 @@ public class EducationService {
 
         // 부서 필터 적용
         if (department != null && !department.isBlank()) {
+            String departmentTrimmed = department.trim();
             allProgresses = allProgresses.stream()
                 .filter(p -> {
                     String userDept = fetchUserDepartmentFromInfraService(p.getUserUuid());
-                    return department.equals(userDept);
+                    if (userDept == null || userDept.isBlank()) {
+                        return false;
+                    }
+                    // 공백 제거 후 비교
+                    return departmentTrimmed.equals(userDept.trim());
                 })
                 .collect(Collectors.toList());
         }

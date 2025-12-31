@@ -60,6 +60,10 @@ public class Education {
     @Column(name = "require")
     private Boolean require;
 
+    /** 교육 버전 */
+    @Column(name = "version")
+    private Integer version;
+
     /** 생성 시각 */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

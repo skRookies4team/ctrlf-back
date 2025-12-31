@@ -1,23 +1,39 @@
 package com.ctrlf.infra.keycloak.service;
 
 import com.ctrlf.infra.keycloak.KeycloakAdminClient;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class KeycloakAdminService {
 
+    private static final Logger log = LoggerFactory.getLogger(KeycloakAdminService.class);
+
     private final KeycloakAdminClient client;
 
-    public KeycloakAdminService(KeycloakAdminClient client) {
+    public KeycloakAdminService(
+            KeycloakAdminClient client) {
         this.client = client;
     }
 
+    /**
+     * 사용자 정보를 조회하고, Keycloak DB의 user_attribute 테이블에서 attributes를 가져와 추가합니다.
+     */
     public Map<String, Object> getUser(String userId) {
-        return client.getUser(userId);
+        Map<String, Object> user = client.getUser(userId);
+
+        if (user == null) {
+            return null;
+        }
+
+        return user;
     }
 
     public String createUser(Map<String, Object> payload, String initialPassword, boolean temporary) {

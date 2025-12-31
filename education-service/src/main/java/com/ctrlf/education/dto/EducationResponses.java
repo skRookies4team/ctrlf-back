@@ -118,6 +118,8 @@ public final class EducationResponses {
         private EducationTopic category;
         private EducationCategory eduType;
         private boolean required;
+        /** 교육 버전 */
+        private Integer version;
         /** 사용자 기준 교육 진행률(%) */
         private int progressPercent;
         /** 교육 시청 상태(시청전/시청중/시청완료) */

@@ -46,4 +46,5 @@ app:
       enabled: true
   s3:
     bucket: ctrl-s3
-    ttlSeconds: 600
+    ttlSeconds: 36000 # 업로드용 TTL (기본값: 10분)
+    downloadTtlSeconds: 43200 # 다운로드용 TTL (6시간)
