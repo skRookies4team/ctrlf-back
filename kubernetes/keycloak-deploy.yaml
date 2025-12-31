@@ -45,7 +45,7 @@ spec:
       - name: keycloak
         image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/keycloak:latest
         ports:
-          - containerPort: 8080 # [수정] 서비스의 targetPort인 8080과 일치시킴
+          - containerPort: 8090 # [수정] 서비스의 targetPort인 8080과 일치시킴
         env:
         - name: KC_DB
           value: "postgres"

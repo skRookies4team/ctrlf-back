@@ -33,9 +33,9 @@ spec:
 
             # 1. Flyway가 기존 DB를 무시하고 진행하게 설정
             - name: SPRING_FLYWAY_ENABLED
-              value: "false"
+              value: "true"
             - name: SPRING_FLYWAY_BASELINE_ON_MIGRATE
-              value: "false"
+              value: "true"
 
             # 2. Hibernate는 구조 검증만 수행 (싸움 방지)
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
