@@ -1,11 +1,11 @@
 package com.ctrlf.infra.keycloak.service;
 
 import com.ctrlf.infra.keycloak.KeycloakAdminClient;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import org.slf4j.Logger;
@@ -272,5 +272,58 @@ public class KeycloakAdminService {
         long total = allUsers.size();
         
         return new com.ctrlf.common.dto.PageResponse<>(pagedUsers, page, size, total);
+    }
+
+    /**
+     * 부서와 역할로 필터링된 사용자 수를 조회합니다.
+     * @param search 검색어 (옵션)
+     * @param department 부서 필터 (옵션)
+     * @param roleName 역할 필터 (옵션)
+     * @return 필터링된 사용자 수
+     */
+    public long countUsersWithFilters(String search, String department, String roleName) {
+        // 먼저 모든 사용자 조회 (검색어가 있으면 적용)
+        com.ctrlf.common.dto.PageResponse<Map<String, Object>> allUsersPage = client.listUsers(search, 0, 1000);
+        List<Map<String, Object>> allUsers = allUsersPage.getItems();
+        
+        // 부서 필터링
+        if (department != null && !department.isBlank() && !department.equals("전체 부서")) {
+            // URL 디코딩
+            String decodedDepartment;
+            try {
+                decodedDepartment = URLDecoder.decode(department, StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                decodedDepartment = department; // 디코딩 실패 시 원본 사용
+            }
+            
+            final String finalDepartment = decodedDepartment;
+            allUsers = allUsers.stream()
+                .filter(user -> {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> attrs = (Map<String, Object>) user.get("attributes");
+                    if (attrs == null) return false;
+                    @SuppressWarnings("unchecked")
+                    List<String> deptList = (List<String>) attrs.get("department");
+                    return deptList != null && deptList.contains(finalDepartment);
+                })
+                .toList();
+        }
+        
+        // 역할 필터링
+        if (roleName != null && !roleName.isBlank() && !roleName.equals("전체 역할")) {
+            allUsers = allUsers.stream()
+                .filter(user -> {
+                    try {
+                        List<Map<String, Object>> userRoles = client.getUserRealmRoles((String) user.get("id"));
+                        return userRoles.stream()
+                            .anyMatch(role -> roleName.equals(role.get("name")));
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .toList();
+        }
+        
+        return allUsers.size();
     }
 }

@@ -61,7 +61,7 @@ public class KeycloakAdminClient {
     public PageResponse<Map<String, Object>> listUsers(String search, int page, int size) {
         int first = page * size;
         int max = size;
-        String url = adminApi("/users?first=" + first + "&max=" + max + (search != null && !search.isBlank() ? "&search=" + search : ""));
+        String url = adminApi("/users?briefRepresentation=false&first=" + first + "&max=" + max + (search != null && !search.isBlank() ? "&search=" + search : ""));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(getAccessToken());
         HttpEntity<Void> req = new HttpEntity<>(headers);
@@ -206,7 +206,7 @@ public class KeycloakAdminClient {
     }
 
     public Map<String, Object> getUser(String userId) {
-        String url = adminApi("/users?briefRepresentation=false&max=1");
+        String url = adminApi("/users?briefRepresentation=false&max=1000");
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(getAccessToken());
         HttpEntity<Void> req = new HttpEntity<>(headers);
