@@ -19,7 +19,7 @@ services:
       start_period: 10s
   # Keycloak 전용 Postgres (호스트 포트 노출 없음)
   keycloak-db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: keycloak-postgres
     environment:
       - POSTGRES_USER=keycloak
