@@ -27,6 +27,8 @@ public final class EducationRequests {
         private String title;
         // 교육 설명
         private String description;
+
+        private Integer version;
         // 주제 카테고리 (필수)
         @NotNull
         @Schema(description = "주제 카테고리", example = "JOB_DUTY")
@@ -64,6 +66,8 @@ public final class EducationRequests {
         private Integer passScore;
         // 통과 기준 비율(%)
         private Integer passRatio;
+        // 교육 버전
+        private Integer version;
     }
 
     /**

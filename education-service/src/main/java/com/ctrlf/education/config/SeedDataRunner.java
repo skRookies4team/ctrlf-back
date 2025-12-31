@@ -2,6 +2,7 @@ package com.ctrlf.education.config;
 
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
+import com.ctrlf.education.entity.EducationProgress;
 import com.ctrlf.education.entity.EducationTopic;
 import com.ctrlf.education.repository.EducationRepository;
 import com.ctrlf.education.script.entity.EducationScript;
@@ -216,6 +217,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu1.setPassRatio(90);
         edu1.setRequire(Boolean.TRUE);
         edu1.setEduType(EducationCategory.JOB);
+        edu1.setVersion(1);
         educations.add(edu1);
 
         // 2. 성희롱 예방 교육 (SEXUAL_HARASSMENT_PREVENTION) - edu_type: MANDATORY
@@ -227,6 +229,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu2.setPassRatio(90);
         edu2.setRequire(Boolean.TRUE);
         edu2.setEduType(EducationCategory.MANDATORY);
+        edu2.setVersion(1);
         educations.add(edu2);
 
         // 3. 개인정보 보호 교육 (PERSONAL_INFO_PROTECTION) - edu_type: MANDATORY
@@ -238,6 +241,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu3.setPassRatio(90);
         edu3.setRequire(Boolean.TRUE);
         edu3.setEduType(EducationCategory.MANDATORY);
+        edu3.setVersion(1);
         educations.add(edu3);
 
         // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
@@ -249,6 +253,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu4.setPassRatio(90);
         edu4.setRequire(Boolean.TRUE);
         edu4.setEduType(EducationCategory.MANDATORY);
+        edu4.setVersion(1);
         educations.add(edu4);
 
         // 5. 장애인 인식 개선 교육 (DISABILITY_AWARENESS) - edu_type: MANDATORY
@@ -260,6 +265,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu5.setPassRatio(90);
         edu5.setRequire(Boolean.TRUE);
         edu5.setEduType(EducationCategory.MANDATORY);
+        edu5.setVersion(1);
         educations.add(edu5);
 
         // 모든 교육 저장
@@ -378,14 +384,28 @@ public class SeedDataRunner implements CommandLineRunner {
             // passRatio 기준으로 완료 여부 판단
             Integer passRatio = edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             for (UserInfo user : users) {
+                int completedVideoCount = 0;
+                int totalProgress = 0;
+                
+                // 50% 확률로 모든 영상을 완료 상태로 만들기 (통계 데이터 생성을 위해)
+                boolean shouldCompleteAll = random.nextDouble() > 0.5;
+                
                 for (int i = 0; i < videos.size(); i++) {
                     var v = videos.get(i);
                     var p = educationVideoProgressRepository
                         .findByUserUuidAndEducationIdAndVideoId(user.userUuid, edu.getId(), v.getId())
                         .orElseGet(() -> com.ctrlf.education.video.entity.EducationVideoProgress.create(user.userUuid, edu.getId(), v.getId()));
                     
-                    // 랜덤 진행률 설정
-                    int progress = random.nextInt(101); // 0~100%
+                    // 완료 상태로 만들 경우 passRatio 이상의 진행률 설정, 그렇지 않으면 랜덤
+                    int progress;
+                    if (shouldCompleteAll) {
+                        // passRatio 이상의 진행률 (passRatio ~ 100%)
+                        progress = passRatio + random.nextInt(101 - passRatio);
+                    } else {
+                        // 랜덤 진행률 (0~100%)
+                        progress = random.nextInt(101);
+                    }
+                    
                     int totalSeconds = v.getDuration() != null ? v.getDuration() : 1200;
                     int watchedSeconds = (int) (totalSeconds * progress / 100.0);
                     
@@ -393,9 +413,43 @@ public class SeedDataRunner implements CommandLineRunner {
                     p.setTotalWatchSeconds(watchedSeconds);
                     p.setProgress(progress);
                     // passRatio 기준으로 완료 여부 판단
-                    p.setIsCompleted(progress >= passRatio);
+                    boolean isCompleted = progress >= passRatio;
+                    p.setIsCompleted(isCompleted);
                     educationVideoProgressRepository.save(p);
+                    
+                    if (isCompleted) {
+                        completedVideoCount++;
+                    }
+                    totalProgress += progress;
                 }
+                
+                // EducationProgress 생성/업데이트
+                // 모든 영상이 완료된 경우에만 완료 처리
+                boolean allVideosCompleted = completedVideoCount == videos.size();
+                int avgProgress = videos.isEmpty() ? 0 : totalProgress / videos.size();
+                
+                EducationProgress eduProgress = educationProgressRepository
+                    .findByUserUuidAndEducationId(user.userUuid, edu.getId())
+                    .orElseGet(() -> {
+                        EducationProgress newProgress = new EducationProgress();
+                        newProgress.setUserUuid(user.userUuid);
+                        newProgress.setEducationId(edu.getId());
+                        return newProgress;
+                    });
+                
+                eduProgress.setProgress(avgProgress);
+                eduProgress.setIsCompleted(allVideosCompleted);
+                
+                // 완료된 경우 completedAt 설정 (최근 30일 내 랜덤 시간 - 다양한 기간 필터 테스트용)
+                if (allVideosCompleted) {
+                    // 최근 30일 내 랜덤 시간 (0~30일 전)
+                    Instant completedAt = Instant.now().minusSeconds(random.nextInt(86400 * 30));
+                    eduProgress.setCompletedAt(completedAt);
+                } else {
+                    eduProgress.setCompletedAt(null);
+                }
+                
+                educationProgressRepository.save(eduProgress);
             }
         }
         log.info("Educations, videos and progress seeding completed!");
@@ -552,6 +606,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     QuizAttempt attempt = new QuizAttempt();
                     attempt.setUserUuid(userUuid);
                     attempt.setEducationId(edu.getId());
+                    attempt.setVersion(edu.getVersion());
                     attempt.setAttemptNo(attemptNo);
                     attempt.setTimeLimit(900); // 15분
                     attempt.setDepartment(user.department);

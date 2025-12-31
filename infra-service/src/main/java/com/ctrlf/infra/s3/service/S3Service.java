@@ -22,15 +22,18 @@ public class S3Service {
     private final S3Presigner presigner;
     private final String defaultBucket;
     private final Duration ttl;
+    private final Duration downloadTtl;
 
     public S3Service(
         S3Presigner presigner,
         @Value("${app.s3.bucket:}") String defaultBucket,
-        @Value("${app.s3.ttlSeconds:600}") long ttlSeconds
+        @Value("${app.s3.ttlSeconds:36000}") long ttlSeconds,
+        @Value("${app.s3.downloadTtlSeconds:43200}") long downloadTtlSeconds
     ) {
         this.presigner = presigner;
         this.defaultBucket = defaultBucket;
         this.ttl = Duration.ofSeconds(ttlSeconds);
+        this.downloadTtl = Duration.ofSeconds(downloadTtlSeconds);
     }
 
     /**
@@ -60,13 +63,23 @@ public class S3Service {
      * @param fileUrl s3://bucket/key 또는 key 문자열
      */
     public URL presignDownload(String fileUrl) {
+        return presignDownload(fileUrl, downloadTtl);
+    }
+
+    /**
+     * 다운로드용 Presigned URL 생성 (만료 시간 지정).
+     *
+     * @param fileUrl s3://bucket/key 또는 key 문자열
+     * @param expiration 만료 시간
+     */
+    public URL presignDownload(String fileUrl, Duration expiration) {
         S3Path path = S3Path.fromUrl(fileUrl, defaultBucket);
         GetObjectRequest getReq = GetObjectRequest.builder()
             .bucket(path.bucket())
             .key(path.key())
             .build();
         GetObjectPresignRequest presignReq = GetObjectPresignRequest.builder()
-            .signatureDuration(ttl)
+            .signatureDuration(expiration)
             .getObjectRequest(getReq)
             .build();
         return presigner.presignGetObject(presignReq).url();
