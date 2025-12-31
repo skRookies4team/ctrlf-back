@@ -91,12 +91,12 @@
       "standardFlowEnabled": true,
       "redirectUris": [
         "http://front-service:5173/*",
-        "http://k8s-argocd-frontser-1b75097c24-62b5b4cbc5bd6562.elb.ap-northeast-2.amazonaws.com/",
-        "http://k8s-argocd-frontser-1b75097c24-62b5b4cbc5bd6562.elb.ap-northeast-2.amazonaws.com"
+        "http://affbe17a3ecba4d138cad67db9183e39-937258026.ap-northeast-2.elb.amazonaws.com/*",
+        "http://affbe17a3ecba4d138cad67db9183e39-937258026.ap-northeast-2.elb.amazonaws.com"
       ],
       "webOrigins": [
         "http://front-service:5173",
-        "http://k8s-argocd-frontser-1b75097c24-62b5b4cbc5bd6562.elb.ap-northeast-2.amazonaws.com"
+        "http://affbe17a3ecba4d138cad67db9183e39-937258026.ap-northeast-2.elb.amazonaws.com"
       ],
       "attributes": {
         "backchannel.logout.session.required": "false",
