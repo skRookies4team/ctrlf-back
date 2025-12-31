@@ -49,18 +49,25 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
         chatMessageRepository.save(userMessage);
 
-        // 2️⃣ AI Gateway 호출
+        // 2️⃣ AI Gateway 호출 (헤더 전파 포함)
         ChatAiResponse aiResponse;
         try {
+            // conversationId는 sessionId를 사용, turnId는 현재 턴 수로 계산
+            UUID conversationId = request.sessionId();
+            List<ChatMessage> existingMessages = chatMessageRepository.findAllBySessionIdOrderByCreatedAtAsc(request.sessionId());
+            int turnId = (existingMessages.size() / 2) + 1; // user + assistant 쌍 기준
+
             aiResponse =
                 chatAiClient.ask(
                     request.sessionId(),
                     userId,
                     "EMPLOYEE",   // TODO: JWT에서 추출
-                    null,         // department
+                    null,         // department (TODO: JWT에서 추출)
                     domain,
                     "WEB",
-                    request.content()
+                    request.content(),
+                    conversationId,
+                    turnId
                 );
         } catch (Exception e) {
             log.error("[AI] call failed", e);
@@ -206,17 +213,24 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             throw new IllegalArgumentException("재시도할 user 메시지를 찾을 수 없습니다.");
         }
         
-        // 4️⃣ AI Gateway에 재요청
+        // 4️⃣ AI Gateway에 재요청 (헤더 전파 포함)
         ChatAiResponse aiResponse;
         try {
+            UUID conversationId = sessionId;
+            List<ChatMessage> allMessagesBeforeRetry = 
+                chatMessageRepository.findAllBySessionIdOrderByCreatedAtAsc(sessionId);
+            int turnId = (allMessagesBeforeRetry.size() / 2) + 1; // user + assistant 쌍 기준
+
             aiResponse = chatAiClient.ask(
                 sessionId,
                 session.getUserUuid(),
                 "EMPLOYEE",   // TODO: JWT에서 추출
-                null,         // department
+                null,         // department (TODO: JWT에서 추출)
                 session.getDomain(),
                 "WEB",
-                userMessage.getContent()
+                userMessage.getContent(),
+                conversationId,
+                turnId
             );
         } catch (Exception e) {
             log.error("[AI] retry failed", e);

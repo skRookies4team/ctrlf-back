@@ -22,6 +22,23 @@
 
 ## 빠른 시작
 
+### 0. 환경변수 설정 (선택사항)
+
+```bash
+# .env 파일 생성 (루트 디렉토리)
+cp .env.example .env
+
+# .env 파일 편집하여 실제 값 설정
+# INTERNAL_TOKEN=your-actual-token
+# AWS_PROFILE=sk_4th_team04
+```
+
+또는 환경변수로 직접 설정:
+```bash
+export INTERNAL_TOKEN="your-secret-token"
+export AWS_PROFILE="sk_4th_team04"
+```
+
 ### 1. 인프라(Docker) 기동
 
 ```bash

@@ -1,7 +1,9 @@
 package com.ctrlf.chat.controller;
 
 import com.ctrlf.chat.dto.response.ChatDashboardResponse;
+import com.ctrlf.chat.dto.response.DashboardResponseDtos;
 import com.ctrlf.chat.service.ChatDashboardService;
+import com.ctrlf.chat.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,32 +29,131 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Chat-Admin", description = "챗봇 관리자 대시보드 통계 API (ADMIN)")
 @RestController
-@RequestMapping("/admin/dashboard/chat")
+@RequestMapping("/admin/dashboard")
 @SecurityRequirement(name = "bearer-jwt")
 @RequiredArgsConstructor
 public class AdminChatDashboardController {
 
     private final ChatDashboardService chatDashboardService;
+    private final DashboardService dashboardService;
 
-    @GetMapping("/summary")
+    // ==================== 새 스펙 API ====================
+
+    @GetMapping("/chat/summary")
     @Operation(
-        summary = "대시보드 요약 통계 조회",
-        description = "오늘 질문 수, 평균 응답 시간, PII 감지 비율, 에러율, 최근 7일 질문 수, 활성 사용자 수, 응답 만족도, RAG 사용 비율을 조회합니다."
+        summary = "챗봇 탭 상단 요약 카드 조회",
+        description = "새 스펙: period(today|7d|30d|90d), dept(all|dept_id), refresh(true면 캐시 무시)"
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "성공",
-            content = @Content(schema = @Schema(implementation = ChatDashboardResponse.DashboardSummaryResponse.class))
+            content = @Content(schema = @Schema(implementation = DashboardResponseDtos.ChatSummaryResponse.class))
         )
     })
-    public ResponseEntity<ChatDashboardResponse.DashboardSummaryResponse> getDashboardSummary(
-        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
-        @RequestParam(value = "period", required = false) Integer period,
-        @Parameter(description = "부서 필터", example = "총무팀")
-        @RequestParam(value = "department", required = false) String department
+    public ResponseEntity<DashboardResponseDtos.ChatSummaryResponse> getChatSummary(
+        @Parameter(description = "기간 (today|7d|30d|90d)", example = "30d")
+        @RequestParam(value = "period", defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all|dept_id)", example = "all")
+        @RequestParam(value = "dept", defaultValue = "all") String dept,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", defaultValue = "false") boolean refresh
     ) {
-        return ResponseEntity.ok(chatDashboardService.getDashboardSummary(period, department));
+        return ResponseEntity.ok(dashboardService.getChatSummary(period, dept, refresh));
+    }
+
+    @GetMapping("/chat/trends")
+    @Operation(
+        summary = "질문 수·에러율 추이 조회",
+        description = "새 스펙: period, dept, bucket(day|week), refresh"
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "성공",
+            content = @Content(schema = @Schema(implementation = DashboardResponseDtos.ChatTrendsResponse.class))
+        )
+    })
+    public ResponseEntity<DashboardResponseDtos.ChatTrendsResponse> getChatTrends(
+        @Parameter(description = "기간 (today|7d|30d|90d)", example = "30d")
+        @RequestParam(value = "period", defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all|dept_id)", example = "all")
+        @RequestParam(value = "dept", defaultValue = "all") String dept,
+        @Parameter(description = "버킷 (day|week)", example = "week")
+        @RequestParam(value = "bucket", defaultValue = "week") String bucket,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", defaultValue = "false") boolean refresh
+    ) {
+        return ResponseEntity.ok(dashboardService.getChatTrends(period, dept, bucket, refresh));
+    }
+
+    @GetMapping("/chat/domain-share")
+    @Operation(
+        summary = "도메인별 질문 비율 조회",
+        description = "새 스펙: period, dept, refresh"
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "성공",
+            content = @Content(schema = @Schema(implementation = DashboardResponseDtos.DomainShareResponse.class))
+        )
+    })
+    public ResponseEntity<DashboardResponseDtos.DomainShareResponse> getDomainShare(
+        @Parameter(description = "기간 (today|7d|30d|90d)", example = "30d")
+        @RequestParam(value = "period", defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all|dept_id)", example = "all")
+        @RequestParam(value = "dept", defaultValue = "all") String dept,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", defaultValue = "false") boolean refresh
+    ) {
+        return ResponseEntity.ok(dashboardService.getDomainShare(period, dept, refresh));
+    }
+
+    @GetMapping("/metrics/security")
+    @Operation(
+        summary = "지표 탭 — 보안·PII",
+        description = "새 스펙: period, dept, refresh"
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "성공",
+            content = @Content(schema = @Schema(implementation = DashboardResponseDtos.SecurityMetricsResponse.class))
+        )
+    })
+    public ResponseEntity<DashboardResponseDtos.SecurityMetricsResponse> getSecurityMetrics(
+        @Parameter(description = "기간 (today|7d|30d|90d)", example = "30d")
+        @RequestParam(value = "period", defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all|dept_id)", example = "all")
+        @RequestParam(value = "dept", defaultValue = "all") String dept,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", defaultValue = "false") boolean refresh
+    ) {
+        return ResponseEntity.ok(dashboardService.getSecurityMetrics(period, dept, refresh));
+    }
+
+    @GetMapping("/metrics/performance")
+    @Operation(
+        summary = "지표 탭 — 성능·장애",
+        description = "새 스펙: period, dept, refresh"
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "성공",
+            content = @Content(schema = @Schema(implementation = DashboardResponseDtos.PerformanceMetricsResponse.class))
+        )
+    })
+    public ResponseEntity<DashboardResponseDtos.PerformanceMetricsResponse> getPerformanceMetrics(
+        @Parameter(description = "기간 (today|7d|30d|90d)", example = "30d")
+        @RequestParam(value = "period", defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all|dept_id)", example = "all")
+        @RequestParam(value = "dept", defaultValue = "all") String dept,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", defaultValue = "false") boolean refresh
+    ) {
+        return ResponseEntity.ok(dashboardService.getPerformanceMetrics(period, dept, refresh));
     }
 
     @GetMapping("/route-ratio")
