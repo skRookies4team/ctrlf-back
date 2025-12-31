@@ -4,7 +4,7 @@ metadata:
   name: education-service
   namespace: argocd
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: education-service
@@ -23,5 +23,5 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
-      # nodeSelector:
-      #   zone: private
+      nodeSelector:
+          zone: private

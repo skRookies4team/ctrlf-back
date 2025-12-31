@@ -4,7 +4,7 @@ metadata:
   name: chat-service
   namespace: argocd
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: chat-service
@@ -23,5 +23,5 @@ spec:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod" # 배포할 때
             #  value: "dev"  #개발할 때
-      # nodeSelector:
-      #   zone: private
+      nodeSelector:
+         zone: private

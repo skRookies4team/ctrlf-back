@@ -4,7 +4,7 @@ metadata:
   name: infra-service
   namespace: argocd
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: infra-service
@@ -44,5 +44,5 @@ spec:
             # 3. 포트 확인 (Keycloak 내부망 접속 포트)
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
               value: "http://keycloak-service:8090/realms/ctrlf/protocol/openid-connect/certs"
-      # nodeSelector:
-      #   zone: private
+      nodeSelector:
+         zone: private
