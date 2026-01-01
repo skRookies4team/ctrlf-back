@@ -67,6 +67,8 @@ spec:
           value: "false"
         - name: KC_PROXY
           value: "edge"
+        - name: KC_HTTP_PORT
+          value: "8090"
         # 리소스 제한 (노드 자원이 부족하므로 명시하는 것이 좋습니다)
         # resources:
         #   requests:
