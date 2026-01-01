@@ -5,7 +5,7 @@ metadata:
   name: keycloak-db
   namespace: argocd
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: keycloak-db # [여기] Service가 찾아올 이름
