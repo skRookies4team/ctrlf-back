@@ -90,7 +90,7 @@ public class EducationController {
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"departmentScope\": \"[\\\"개발팀\\\",\\\"인사팀\\\"]\",\n" +
+                                "      \"departmentScope\": [\"개발팀\", \"인사팀\"],\n" +
                                 "      \"resumePosition\": 600,\n" +
                                 "      \"isCompleted\": false,\n" +
                                 "      \"totalWatchSeconds\": 600,\n" +
@@ -149,7 +149,7 @@ public class EducationController {
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"departmentScope\": \"[\\\"개발팀\\\",\\\"인사팀\\\"]\",\n" +
+                                "      \"departmentScope\": [\"개발팀\", \"인사팀\"],\n" +
                                 "      \"resumePosition\": 600,\n" +
                                 "      \"isCompleted\": false,\n" +
                                 "      \"totalWatchSeconds\": 600,\n" +

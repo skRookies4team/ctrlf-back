@@ -86,6 +86,9 @@ public class EducationService {
         e.setPassScore(req.getPassScore());
         e.setPassRatio(req.getPassRatio());
         e.setRequire(req.getRequire());
+        e.setStartAt(req.getStartAt());
+        e.setEndAt(req.getEndAt());
+        e.setDepartmentScope(req.getDepartmentScope());
         UUID id = educationRepository.save(e).getId();
         return new MutationResponse<>(id);
     }
@@ -190,13 +193,14 @@ public class EducationService {
                 // S3 URL을 presigned URL로 변환
                 String fileUrl = v.getFileUrl();
                 String presignedUrl = infraRagClient.getPresignedDownloadUrl(fileUrl);
+                
                 videoItems.add(new EducationResponses.EducationVideosResponse.VideoItem(
                     v.getId(),
                     v.getTitle(),
                     presignedUrl != null ? presignedUrl : fileUrl,
                     durationSec,
                     v.getVersion() != null ? v.getVersion() : 1,
-                    v.getDepartmentScope(),
+                    edu != null ? edu.getDepartmentScope() : null,
                     resume,
                     completedV,
                     total,
@@ -261,6 +265,9 @@ public class EducationService {
             .passScore(e.getPassScore())
             .passRatio(e.getPassRatio())
             .duration(totalDuration)
+            .startAt(e.getStartAt())
+            .endAt(e.getEndAt())
+            .departmentScope(e.getDepartmentScope())
             .createdAt(e.getCreatedAt())
             .updatedAt(e.getUpdatedAt())
             .sections(Collections.emptyList())
@@ -286,6 +293,10 @@ public class EducationService {
         if (req.getRequire() != null) e.setRequire(req.getRequire());
         if (req.getPassScore() != null) e.setPassScore(req.getPassScore());
         if (req.getPassRatio() != null) e.setPassRatio(req.getPassRatio());
+        if (req.getVersion() != null) e.setVersion(req.getVersion());
+        if (req.getStartAt() != null) e.setStartAt(req.getStartAt());
+        if (req.getEndAt() != null) e.setEndAt(req.getEndAt());
+        if (req.getDepartmentScope() != null) e.setDepartmentScope(req.getDepartmentScope());
         educationRepository.saveAndFlush(e);
         return e.getUpdatedAt();
     }
@@ -371,7 +382,7 @@ public class EducationService {
                 presignedUrl != null ? presignedUrl : fileUrl,
                 durationSec,
                 v.getVersion() != null ? v.getVersion() : 1,
-                v.getDepartmentScope(),
+                e.getDepartmentScope(),
                 resume,
                 completed,
                 total,
@@ -383,6 +394,9 @@ public class EducationService {
         return EducationVideosResponse.builder()
             .id(e.getId())
             .title(e.getTitle())
+            .startAt(e.getStartAt())
+            .endAt(e.getEndAt())
+            .departmentScope(e.getDepartmentScope())
             .videos(items)
             .build();
     }
@@ -393,32 +407,32 @@ public class EducationService {
      * - departmentScope에 사용자 부서 중 하나라도 포함되면 접근 가능
      */
     private boolean isVideoAccessibleByDepartment(EducationVideo video, List<String> userDepartments) {
-        String deptScope = video.getDepartmentScope();
+        // Education에서 departmentScope 가져오기
+        if (video.getEducationId() == null) {
+            return true; // educationId가 없으면 접근 허용
+        }
+        Education education = educationRepository.findById(video.getEducationId()).orElse(null);
+        if (education == null) {
+            return true; // Education을 찾을 수 없으면 접근 허용
+        }
+        String[] deptScope = education.getDepartmentScope();
         // departmentScope가 없으면 모든 부서 접근 가능
-        if (deptScope == null || deptScope.isBlank()) {
+        if (deptScope == null || deptScope.length == 0) {
             return true;
         }
         // 사용자 부서가 없으면 접근 불가
         if (userDepartments == null || userDepartments.isEmpty()) {
             return false;
         }
-        // departmentScope JSON 파싱
-        try {
-            List<String> allowedDepts = objectMapper.readValue(deptScope, new TypeReference<List<String>>() {});
-            if (allowedDepts == null || allowedDepts.isEmpty()) {
-                return true; // 빈 리스트면 모든 부서 접근 가능
-            }
-            // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
-            for (String userDept : userDepartments) {
-                if (allowedDepts.contains(userDept)) {
+        // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
+        for (String userDept : userDepartments) {
+            for (String allowedDept : deptScope) {
+                if (allowedDept != null && allowedDept.equals(userDept)) {
                     return true;
                 }
             }
-            return false;
-        } catch (Exception e) {
-            // 파싱 실패 시 접근 허용 (관대하게 처리)
-            return true;
         }
+        return false;
     }
 
     /**
@@ -706,13 +720,16 @@ public class EducationService {
     }
 
     /**
-     * 대시보드 요약 통계 조회.
+     * 대시보드 요약 통계 조회. 추후 교육 시작일, 종료일 필터에 대한 적용을 어떻게 할지 생각해야함
      */
     public EducationResponses.DashboardSummaryResponse getDashboardSummary(Integer periodDays, String department) {
-        // 전체 진행 기록 조회 (기간 필터 없이 모든 기록 포함)
-        // overallAverage와 nonCompleterCount는 전체 데이터를 기반으로 계산해야 함
+        // 기간 필터 적용
+        Instant startDate = calculateStartDate(periodDays);
+        
+        // 기간 내에 완료된 진행 기록만 조회
         List<EducationProgress> allProgresses = educationProgressRepository.findAll().stream()
             .filter(p -> p.getDeletedAt() == null)
+            .filter(p -> p.getCompletedAt() != null && p.getCompletedAt().isAfter(startDate))
             .collect(Collectors.toList());
 
         // 전체 대상자 수 계산 (부서 필터 적용 시)
