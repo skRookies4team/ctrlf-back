@@ -92,7 +92,7 @@
       "redirectUris": [
         "http://front-service:5173/*",
         "http://k8s-argocd-ctrlfing-24d9f59895-1823150137.ap-northeast-2.elb.amazonaws.com/auth/*",
-        "http://k8s-argocd-ctrlfing-24d9f59895-1823150137.ap-northeast-2.elb.amazonaws.com"
+        "http://k8s-argocd-ctrlfing-24d9f59895-1823150137.ap-northeast-2.elb.amazonaws.com/*"
       ],
       "webOrigins": [
         "http://front-service:5173",
