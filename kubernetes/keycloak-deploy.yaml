@@ -73,5 +73,5 @@ spec:
           value: "false"
         - name: KC_HTTP_RELATIVE_PATH
           value: "/auth"
-        # - name: KC_HTTP_PORT
-        #   value: "8090"
+        - name: KC_HTTP_PORT
+          value: "8090"
