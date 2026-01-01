@@ -63,6 +63,8 @@ spec:
         # Dockerfile에서 start-dev를 썼으므로 아래 변수 추가 권장
         - name: KC_HTTP_ENABLED
           value: "true"
+        - name: KC_ADMIN_HTTP_ENABLED
+          value: "true"
         - name: KC_HOSTNAME
           value: "k8s-argocd-ctrlfing-24d9f59895-1823150137.ap-northeast-2.elb.amazonaws.com"
         - name: KC_HOSTNAME_STRICT
