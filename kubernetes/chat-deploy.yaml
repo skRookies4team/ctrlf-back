@@ -22,6 +22,8 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod" # 배포할 때
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+              value: "http://keycloak-service:8090/realms/ctrlf/protocol/openid-connect/certs"
             #  value: "dev"  #개발할 때
       nodeSelector:
          zone: private
