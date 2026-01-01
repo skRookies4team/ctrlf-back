@@ -153,10 +153,12 @@ public class EducationService {
             int sumPct = 0;
 
             // 6. 교육 정보 조회 (passRatio, eduTypeCategory, version 등)
-            Education edu = educationRepository.findById(eduId).orElse(null);
+            Education edu = educationRepository.findByIdAndDeletedAtIsNull(eduId).orElse(null);
             Integer passRatio = edu != null && edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             EducationCategory eduTypeCategory = edu != null ? edu.getEduType() : null;
             Integer version = edu != null ? edu.getVersion() : null;
+            Instant startAt = edu != null ? edu.getStartAt() : null;
+            Instant endAt = edu != null ? edu.getEndAt() : null;
             for (EducationVideo v : vids) {
                 Integer resume = 0;
                 Integer total = 0;
@@ -230,6 +232,8 @@ public class EducationService {
                 eduTypeCategory,
                 required != null && required,
                 version,
+                startAt,
+                endAt,
                 eduProgress,
                 watchStatus,
                 videoItems

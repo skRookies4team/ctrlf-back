@@ -81,6 +81,8 @@ public class EducationController {
                                 "  \"category\": \"JOB_DUTY\",\n" +
                                 "  \"eduType\": \"MANDATORY\",\n" +
                                 "  \"required\": true,\n" +
+                                "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                                "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
                                 "  \"progressPercent\": 60,\n" +
                                 "  \"watchStatus\": \"시청중\",\n" +
                                 "  \"videos\": [\n" +
