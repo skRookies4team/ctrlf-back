@@ -44,12 +44,6 @@ spec:
       containers:
       - name: keycloak
         image: 858507113889.dkr.ecr.ap-northeast-2.amazonaws.com/argocd/keycloak:latest
-        args: 
-            - "start-dev"
-            - "--http-relative-path=/auth"
-            - "--http-port=8090"
-            - "--proxy=edge"
-            - "--hostname-strict-https=false"
         ports:
           - containerPort: 8090 # [수정] 서비스의 targetPort인 8080과 일치시킴
         env:
@@ -79,5 +73,5 @@ spec:
           value: "false"
         - name: KC_HTTP_RELATIVE_PATH
           value: "/auth"
-        - name: KC_HTTP_PORT
-          value: "8090"
+        # - name: KC_HTTP_PORT
+        #   value: "8090"
