@@ -10,4 +10,4 @@ spring:
           issuer-uri: http://keycloak-service:8090/realms/ctrlf
 ai:
   gateway:
-    url: http://192.168.0.112:3232
+    url: http://ai-service:8000
