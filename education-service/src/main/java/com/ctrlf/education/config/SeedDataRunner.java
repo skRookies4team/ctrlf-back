@@ -2,6 +2,7 @@ package com.ctrlf.education.config;
 
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
+import com.ctrlf.education.entity.EducationProgress;
 import com.ctrlf.education.entity.EducationTopic;
 import com.ctrlf.education.repository.EducationRepository;
 import com.ctrlf.education.script.entity.EducationScript;
@@ -207,16 +208,35 @@ public class SeedDataRunner implements CommandLineRunner {
         // 5가지 교육 카테고리별 시드 데이터 생성
         List<Education> educations = new ArrayList<>();
 
-        // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB
-        Education edu1 = new Education();
-        edu1.setTitle("직무 역량 강화 교육");
-        edu1.setCategory(EducationTopic.JOB_DUTY);
-        edu1.setDescription("업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.");
-        edu1.setPassScore(80);
-        edu1.setPassRatio(90);
-        edu1.setRequire(Boolean.TRUE);
-        edu1.setEduType(EducationCategory.JOB);
-        educations.add(edu1);
+        // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB - 8개 부서별로 생성
+        String[] departments = {"총무팀", "기획팀", "마케팅팀", "인사팀", "재무팀", "개발팀", "영업팀", "법무팀"};
+        String[] departmentDescriptions = {
+            "총무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "기획 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "마케팅 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "인사 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "재무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "개발 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "영업 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "법무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다."
+        };
+        int[] startDaysAgo = {30, 35, 40, 45, 50, 55, 60, 65}; // 각 교육마다 다른 시작일
+        
+        for (int i = 0; i < departments.length; i++) {
+            Education edu = new Education();
+            edu.setTitle(departments[i] + " 직무 역량 강화 교육");
+            edu.setCategory(EducationTopic.JOB_DUTY);
+            edu.setDescription(departmentDescriptions[i]);
+            edu.setPassScore(80);
+            edu.setPassRatio(90);
+            edu.setRequire(Boolean.TRUE);
+            edu.setEduType(EducationCategory.JOB);
+            edu.setVersion(1);
+            edu.setStartAt(Instant.now().minusSeconds(86400L * startDaysAgo[i])); // 각각 다른 시작일
+            edu.setEndAt(Instant.now().plusSeconds(86400L * (180 - startDaysAgo[i]))); // 총 180일
+            edu.setDepartmentScope(new String[]{departments[i]});
+            educations.add(edu);
+        }
 
         // 2. 성희롱 예방 교육 (SEXUAL_HARASSMENT_PREVENTION) - edu_type: MANDATORY
         Education edu2 = new Education();
@@ -227,6 +247,10 @@ public class SeedDataRunner implements CommandLineRunner {
         edu2.setPassRatio(90);
         edu2.setRequire(Boolean.TRUE);
         edu2.setEduType(EducationCategory.MANDATORY);
+        edu2.setVersion(1);
+        edu2.setStartAt(Instant.now().minusSeconds(86400 * 60)); // 60일 전 시작
+        edu2.setEndAt(Instant.now().plusSeconds(86400 * 120)); // 120일 후 종료 (총 180일)
+        edu2.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu2);
 
         // 3. 개인정보 보호 교육 (PERSONAL_INFO_PROTECTION) - edu_type: MANDATORY
@@ -238,6 +262,10 @@ public class SeedDataRunner implements CommandLineRunner {
         edu3.setPassRatio(90);
         edu3.setRequire(Boolean.TRUE);
         edu3.setEduType(EducationCategory.MANDATORY);
+        edu3.setVersion(1);
+        edu3.setStartAt(Instant.now().minusSeconds(86400 * 90)); // 90일 전 시작
+        edu3.setEndAt(Instant.now().plusSeconds(86400 * 90)); // 90일 후 종료 (총 180일)
+        edu3.setDepartmentScope(new String[]{"개발팀", "인사팀", "재무팀"}); // 특정 부서만
         educations.add(edu3);
 
         // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
@@ -249,6 +277,10 @@ public class SeedDataRunner implements CommandLineRunner {
         edu4.setPassRatio(90);
         edu4.setRequire(Boolean.TRUE);
         edu4.setEduType(EducationCategory.MANDATORY);
+        edu4.setVersion(1);
+        edu4.setStartAt(Instant.now().minusSeconds(86400 * 120)); // 120일 전 시작
+        edu4.setEndAt(Instant.now().plusSeconds(86400 * 60)); // 60일 후 종료 (총 180일)
+        edu4.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu4);
 
         // 5. 장애인 인식 개선 교육 (DISABILITY_AWARENESS) - edu_type: MANDATORY
@@ -260,6 +292,10 @@ public class SeedDataRunner implements CommandLineRunner {
         edu5.setPassRatio(90);
         edu5.setRequire(Boolean.TRUE);
         edu5.setEduType(EducationCategory.MANDATORY);
+        edu5.setVersion(1);
+        edu5.setStartAt(Instant.now().minusSeconds(86400 * 15)); // 15일 전 시작
+        edu5.setEndAt(Instant.now().plusSeconds(86400 * 165)); // 165일 후 종료 (총 180일)
+        edu5.setDepartmentScope(new String[]{"총무팀", "기획팀", "마케팅팀"}); // 특정 부서만
         educations.add(edu5);
 
         // 모든 교육 저장
@@ -268,17 +304,10 @@ public class SeedDataRunner implements CommandLineRunner {
 
         // 각 교육에 대해 스크립트 생성
         List<UUID> scriptIds = new ArrayList<>();
-        String[] scriptTitles = {
-            "직무 역량 강화 교육 영상",
-            "성희롱 예방 교육 영상",
-            "개인정보 보호 교육 영상",
-            "직장 내 괴롭힘 예방 교육 영상",
-            "장애인 인식 개선 교육 영상"
-        };
-
-        for (int i = 0; i < educations.size(); i++) {
-            UUID scriptId = insertScript(educations.get(i).getId(), null,
-                scriptTitles[i] + " 스크립트 내용입니다.", 1, scriptTitles[i]);
+        for (Education edu : educations) {
+            String scriptTitle = edu.getTitle() + " 영상";
+            UUID scriptId = insertScript(edu.getId(), null,
+                scriptTitle + " 스크립트 내용입니다.", 1, scriptTitle);
             scriptIds.add(scriptId);
         }
 
@@ -323,11 +352,8 @@ public class SeedDataRunner implements CommandLineRunner {
             if (videos.isEmpty()) {
                 List<com.ctrlf.education.video.entity.EducationVideo> seeds = new ArrayList<>();
                 String[] urls = new String[] {
-                    "s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4",
-                    "s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4",
-                    "s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4",
-                    "s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4",
-                    "s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4"
+                    "s3://ctrl-s3/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
+                    "s3://ctrl-s3/videos/f75a41fb-ff76-4d37-8220-c7647de1679f.mp4"
                 };
                 String[] titles = new String[] {
                     edu.getTitle() + " - 기본편",
@@ -360,14 +386,6 @@ public class SeedDataRunner implements CommandLineRunner {
                 log.info("Seed skip: No videos found for education, skipping progress dummy generation. eduId={}", edu.getId());
                 continue;
             }
-            /**
-             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4
-             * s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4
-             * s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4
-             */
 
             // 각 영상에 대해 source-set 생성
             for (var v : videos) {
@@ -378,14 +396,28 @@ public class SeedDataRunner implements CommandLineRunner {
             // passRatio 기준으로 완료 여부 판단
             Integer passRatio = edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             for (UserInfo user : users) {
+                int completedVideoCount = 0;
+                int totalProgress = 0;
+                
+                // 50% 확률로 모든 영상을 완료 상태로 만들기 (통계 데이터 생성을 위해)
+                boolean shouldCompleteAll = random.nextDouble() > 0.5;
+                
                 for (int i = 0; i < videos.size(); i++) {
                     var v = videos.get(i);
                     var p = educationVideoProgressRepository
                         .findByUserUuidAndEducationIdAndVideoId(user.userUuid, edu.getId(), v.getId())
                         .orElseGet(() -> com.ctrlf.education.video.entity.EducationVideoProgress.create(user.userUuid, edu.getId(), v.getId()));
                     
-                    // 랜덤 진행률 설정
-                    int progress = random.nextInt(101); // 0~100%
+                    // 완료 상태로 만들 경우 passRatio 이상의 진행률 설정, 그렇지 않으면 랜덤
+                    int progress;
+                    if (shouldCompleteAll) {
+                        // passRatio 이상의 진행률 (passRatio ~ 100%)
+                        progress = passRatio + random.nextInt(101 - passRatio);
+                    } else {
+                        // 랜덤 진행률 (0~100%)
+                        progress = random.nextInt(101);
+                    }
+                    
                     int totalSeconds = v.getDuration() != null ? v.getDuration() : 1200;
                     int watchedSeconds = (int) (totalSeconds * progress / 100.0);
                     
@@ -393,9 +425,43 @@ public class SeedDataRunner implements CommandLineRunner {
                     p.setTotalWatchSeconds(watchedSeconds);
                     p.setProgress(progress);
                     // passRatio 기준으로 완료 여부 판단
-                    p.setIsCompleted(progress >= passRatio);
+                    boolean isCompleted = progress >= passRatio;
+                    p.setIsCompleted(isCompleted);
                     educationVideoProgressRepository.save(p);
+                    
+                    if (isCompleted) {
+                        completedVideoCount++;
+                    }
+                    totalProgress += progress;
                 }
+                
+                // EducationProgress 생성/업데이트
+                // 모든 영상이 완료된 경우에만 완료 처리
+                boolean allVideosCompleted = completedVideoCount == videos.size();
+                int avgProgress = videos.isEmpty() ? 0 : totalProgress / videos.size();
+                
+                EducationProgress eduProgress = educationProgressRepository
+                    .findByUserUuidAndEducationId(user.userUuid, edu.getId())
+                    .orElseGet(() -> {
+                        EducationProgress newProgress = new EducationProgress();
+                        newProgress.setUserUuid(user.userUuid);
+                        newProgress.setEducationId(edu.getId());
+                        return newProgress;
+                    });
+                
+                eduProgress.setProgress(avgProgress);
+                eduProgress.setIsCompleted(allVideosCompleted);
+                
+                // 완료된 경우 completedAt 설정 (최근 30일 내 랜덤 시간 - 다양한 기간 필터 테스트용)
+                if (allVideosCompleted) {
+                    // 최근 30일 내 랜덤 시간 (0~30일 전)
+                    Instant completedAt = Instant.now().minusSeconds(random.nextInt(86400 * 30));
+                    eduProgress.setCompletedAt(completedAt);
+                } else {
+                    eduProgress.setCompletedAt(null);
+                }
+                
+                educationProgressRepository.save(eduProgress);
             }
         }
         log.info("Educations, videos and progress seeding completed!");
@@ -552,6 +618,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     QuizAttempt attempt = new QuizAttempt();
                     attempt.setUserUuid(userUuid);
                     attempt.setEducationId(edu.getId());
+                    attempt.setVersion(edu.getVersion());
                     attempt.setAttemptNo(attemptNo);
                     attempt.setTimeLimit(900); // 15분
                     attempt.setDepartment(user.department);

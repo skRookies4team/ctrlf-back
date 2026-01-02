@@ -69,10 +69,6 @@ public class EducationScript {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-    /** 수강 가능한 부서 목록(JSON) */
-    @Column(name = "department_scope", columnDefinition = "text")
-    private String departmentScope;
-
     /** 연결된 소스셋 ID (멀티문서 지원) */
     @Column(name = "source_set_id", columnDefinition = "uuid")
     private UUID sourceSetId;

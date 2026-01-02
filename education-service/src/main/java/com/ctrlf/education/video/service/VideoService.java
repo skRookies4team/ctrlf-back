@@ -34,8 +34,6 @@ import com.ctrlf.education.video.entity.VideoGenerationJob;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
 import com.ctrlf.education.video.repository.EducationVideoReviewRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
-import com.ctrlf.common.constant.Department;
-import com.fasterxml.jackson.core.type.TypeReference;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -375,10 +373,6 @@ public class VideoService {
     @Transactional
     public VideoCreateResponse createVideoContent(VideoCreateRequest request, UUID creatorUuid) {
         EducationVideo video = EducationVideo.createDraft(request.educationId(), request.title(), creatorUuid);
-        if (request.departmentScope() != null && !request.departmentScope().isEmpty()) {
-            String deptScopeJson = convertDepartmentsToJson(request.departmentScope());
-            video.setDepartmentScope(deptScopeJson);
-        }
         video = videoRepository.save(video);
         log.info("영상 컨텐츠 생성. videoId={}, title={}, status={}, creatorUuid={}", video.getId(), video.getTitle(), video.getStatus(), creatorUuid);
         return new VideoCreateResponse(video.getId(), video.getStatus());
@@ -415,10 +409,6 @@ public class VideoService {
         if (request.version() != null) video.setVersion(request.version());
         if (request.duration() != null) video.setDuration(request.duration());
         if (request.status() != null) video.setStatus(request.status().name());
-        if (request.departmentScope() != null) {
-            String deptScopeJson = convertDepartmentsToJson(request.departmentScope());
-            video.setDepartmentScope(deptScopeJson);
-        }
         if (request.orderIndex() != null) video.setOrderIndex(request.orderIndex());
         video = videoRepository.save(video);
         log.info("영상 컨텐츠 수정. videoId={}, status={}", video.getId(), video.getStatus());
@@ -706,52 +696,6 @@ public class VideoService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "영상을 찾을 수 없습니다: " + videoId));
     }
 
-    /**
-     * List<Department>를 JSON 문자열로 변환합니다.
-     */
-    private String convertDepartmentsToJson(List<Department> departments) {
-        if (departments == null || departments.isEmpty()) {
-            return null;
-        }
-        try {
-            List<String> displayNames = departments.stream()
-                .map(Department::getDisplayName)
-                .collect(Collectors.toList());
-            return objectMapper.writeValueAsString(displayNames);
-        } catch (Exception e) {
-            log.error("부서 목록을 JSON으로 변환하는 중 오류 발생", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "부서 목록 변환 실패");
-        }
-    }
-
-    /**
-     * JSON 문자열을 List<Department>로 변환합니다.
-     */
-    private List<Department> convertJsonToDepartments(String deptScopeJson) {
-        if (deptScopeJson == null || deptScopeJson.isBlank()) {
-            return null;
-        }
-        try {
-            List<String> displayNames = objectMapper.readValue(deptScopeJson, new TypeReference<List<String>>() {});
-            if (displayNames == null || displayNames.isEmpty()) {
-                return null;
-            }
-            List<Department> departments = new ArrayList<>();
-            for (String displayName : displayNames) {
-                Department dept = Department.fromDisplayName(displayName);
-                if (dept != null) {
-                    departments.add(dept);
-                } else {
-                    log.warn("알 수 없는 부서명: {}", displayName);
-                }
-            }
-            return departments.isEmpty() ? null : departments;
-        } catch (Exception e) {
-            log.warn("부서 목록 JSON 파싱 실패: {}", deptScopeJson, e);
-            return null;
-        }
-    }
-
     private VideoMetaItem toVideoMetaItem(EducationVideo v) {
         VideoStatus status = null;
         if (v.getStatus() != null) {
@@ -761,7 +705,16 @@ public class VideoService {
                 log.warn("알 수 없는 영상 상태: {}, videoId={}", v.getStatus(), v.getId());
             }
         }
-        List<Department> departmentScope = convertJsonToDepartments(v.getDepartmentScope());
+        // Education에서 departmentScope 가져오기
+        List<String> departmentScope = null;
+        if (v.getEducationId() != null) {
+            Education education = educationRepository.findById(v.getEducationId()).orElse(null);
+            if (education != null && education.getDepartmentScope() != null) {
+                departmentScope = java.util.Arrays.stream(education.getDepartmentScope())
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toList());
+            }
+        }
         return new VideoMetaItem(
             v.getId(),
             v.getEducationId(),

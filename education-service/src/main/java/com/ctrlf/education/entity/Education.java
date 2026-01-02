@@ -48,6 +48,12 @@ public class Education {
     @Column(name = "description")
     private String description;
 
+    /** 부서 범위 (
+     * "전체 부서", "총무팀", "기획팀", "마케팅팀", "인사팀", "재무팀", "개발팀", "영업팀", "법무팀"
+    ) */
+    @Column(name = "department_scope", columnDefinition = "text[]")
+    private String[] departmentScope;
+
     /** 통과 기준 점수 */
     @Column(name = "pass_score")
     private Integer passScore;
@@ -59,6 +65,18 @@ public class Education {
     /** 필수 교육 여부 */
     @Column(name = "require")
     private Boolean require;
+
+    /** 교육 버전 */
+    @Column(name = "version")
+    private Integer version;
+
+    /** 교육 시작 시각 */
+    @Column(name = "start_at")
+    private Instant startAt;
+
+    /** 교육 종료 시각 */
+    @Column(name = "end_at")
+    private Instant endAt;
 
     /** 생성 시각 */
     @CreationTimestamp

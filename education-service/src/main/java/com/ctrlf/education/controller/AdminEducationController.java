@@ -82,7 +82,10 @@ public class AdminEducationController {
                             "  \"eduType\": \"MANDATORY\",\n" +
                             "  \"passScore\": 80,\n" +
                             "  \"passRatio\": 90,\n" +
-                            "  \"require\": true\n" +
+                            "  \"require\": true,\n" +
+                            "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                            "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                            "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"]\n" +
                             "}"
                 )
             )
@@ -134,6 +137,9 @@ public class AdminEducationController {
                                 "  \"passScore\": 80,\n" +
                                 "  \"passRatio\": 90,\n" +
                                 "  \"duration\": 3600,\n" +
+                                "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                                "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                                "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"],\n" +
                                 "  \"createdAt\": \"2025-12-17T10:00:00Z\",\n" +
                                 "  \"updatedAt\": \"2025-12-17T10:00:00Z\",\n" +
                                 "  \"sections\": []\n" +
@@ -169,7 +175,10 @@ public class AdminEducationController {
                             "  \"eduType\": \"MANDATORY\",\n" +
                             "  \"passScore\": 85,\n" +
                             "  \"passRatio\": 95,\n" +
-                            "  \"require\": true\n" +
+                            "  \"require\": true,\n" +
+                            "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                            "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                            "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"]\n" +
                             "}"
                 )
             )
@@ -253,6 +262,9 @@ public class AdminEducationController {
                         value = "[{\n" +
                                 "  \"id\": \"2c2f8c7a-8a2c-4f3a-9d2b-111111111111\",\n" +
                                 "  \"title\": \"산업안전 교육\",\n" +
+                                "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                                "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                                "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"],\n" +
                                 "  \"videos\": [\n" +
                                 "    {\n" +
                                 "      \"id\": \"3d3f8c7a-8a2c-4f3a-9d2b-222222222222\",\n" +
@@ -290,7 +302,7 @@ public class AdminEducationController {
                     v.getFileUrl(),
                     v.getDuration() != null ? v.getDuration() : 0,
                     v.getVersion() != null ? v.getVersion() : 1,
-                    v.getDepartmentScope(),
+                    e.getDepartmentScope(),
                     null, // resumePosition
                     null, // isCompleted
                     null, // totalWatchSeconds
@@ -301,6 +313,9 @@ public class AdminEducationController {
             result.add(EducationVideosResponse.builder()
                 .id(e.getId())
                 .title(e.getTitle())
+                .startAt(e.getStartAt())
+                .endAt(e.getEndAt())
+                .departmentScope(e.getDepartmentScope())
                 .videos(items)
                 .build());
         }

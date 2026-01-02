@@ -305,6 +305,29 @@ public class AdminUserController {
         return ResponseEntity.ok(users);
     }
 
+    @GetMapping("/count")
+    @Operation(
+        summary = "사용자 수 조회",
+        description = "검색어, 부서, 역할로 필터링된 사용자 수를 조회합니다.",
+        security = {}
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = Long.class)))
+    })
+    public ResponseEntity<Map<String, Long>> countUsers(
+        @Parameter(description = "이름 또는 사번 검색어", example = "김민수", required = false)
+        @RequestParam(name = "search", required = false) String search,
+        @Parameter(description = "부서 필터 (예: '인사팀', '개발팀')", example = "개발팀", required = false)
+        @RequestParam(name = "department", required = false) String department,
+        @Parameter(description = "역할 필터 (예: 'SYSTEM_ADMIN', 'EMPLOYEE')", example = "SYSTEM_ADMIN", required = false)
+        @RequestParam(name = "role", required = false) String role
+    ) {
+        long count = service.countUsersWithFilters(search, department, role);
+        return ResponseEntity.ok(Map.of("count", count));
+    }
+
     // ===== Development helper: issue Keycloak tokens (exposed under /admin/users/token/**) =====
 
     private String tokenEndpoint() {

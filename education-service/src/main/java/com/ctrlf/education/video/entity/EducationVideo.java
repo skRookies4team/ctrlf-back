@@ -88,10 +88,6 @@ public class EducationVideo {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-    /** 수강 가능한 부서 목록(JSON) */
-    @Column(name = "department_scope", columnDefinition = "text")
-    private String departmentScope;
-
     /** 제작자 UUID */
     @Column(name = "creator_uuid", columnDefinition = "uuid")
     private UUID creatorUuid;

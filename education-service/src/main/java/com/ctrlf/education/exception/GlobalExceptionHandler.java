@@ -10,6 +10,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 /**
  * 교육 서비스 전역 예외 처리기.
@@ -49,6 +50,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleBadRequest(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(new ApiError("Bad Request", ex.getMessage()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        String message = ex.getMessage() != null 
+            ? "Invalid request format: " + ex.getMessage()
+            : "Invalid request format";
+        log.warn("Invalid request format: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(new ApiError("Bad Request", message));
     }
 
     @ExceptionHandler(Exception.class)

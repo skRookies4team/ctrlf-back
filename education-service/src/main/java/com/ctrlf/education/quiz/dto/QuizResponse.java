@@ -207,8 +207,6 @@ public final class QuizResponse {
         private UUID educationId;
         /** 퀴즈 제목 (교육 제목) */
         private String quizTitle;
-        /** 회차 */
-        private Integer attemptNo;
         /** 평균 점수 */
         private Double averageScore;
         /** 응시 수 */

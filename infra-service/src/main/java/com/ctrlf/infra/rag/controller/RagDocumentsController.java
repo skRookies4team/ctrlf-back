@@ -32,9 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import com.ctrlf.common.dto.PageResponse;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -376,7 +374,7 @@ public class RagDocumentsController {
     @PatchMapping("/policies/{documentId}/versions/{version}")
     @Operation(
         summary = "버전 수정",
-        description = "사규 버전의 change_summary나 파일을 수정합니다."
+        description = "사규 버전의 title, change_summary, 파일을 수정합니다."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "버전 수정 성공",
@@ -428,28 +426,57 @@ public class RagDocumentsController {
         return ResponseEntity.ok(ragDocumentService.replaceFile(documentId, version, req));
     }
 
-    // ========================
-    // 내부 API (AI → Backend)
-    // ========================
-
-    @PatchMapping("/internal/rag/documents/{ragDocumentPk}/status")
+    @GetMapping("/policies/{documentId}/versions/{version}/preprocess")
     @Operation(
-        summary = "사규 상태 업데이트 (AI -> Backend 내부 API)",
-        description = "AI 서버가 사규 문서의 임베딩 처리 상태를 업데이트합니다."
+        summary = "전처리 미리보기 조회",
+        description = "사규 버전의 전처리 상태와 미리보기를 조회합니다."
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "상태 업데이트 성공",
-            content = @Content(schema = @Schema(implementation = InternalUpdateStatusResponse.class))),
-        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
-        @ApiResponse(responseCode = "401", description = "내부 토큰 오류"),
-        @ApiResponse(responseCode = "404", description = "문서를 찾을 수 없음")
+        @ApiResponse(responseCode = "200", description = "전처리 미리보기 조회 성공",
+            content = @Content(schema = @Schema(implementation = PreprocessPreviewResponse.class))),
+        @ApiResponse(responseCode = "404", description = "버전을 찾을 수 없음")
     })
-    public ResponseEntity<InternalUpdateStatusResponse> updateDocumentStatus(
-        @Parameter(description = "RAG 문서 ID (UUID)", required = true) @PathVariable("ragDocumentPk") UUID ragDocumentPk,
-        @RequestHeader(value = "X-Internal-Token", required = false) String internalToken,
-        @Valid @RequestBody InternalUpdateStatusRequest req
+    public ResponseEntity<PreprocessPreviewResponse> getPreprocessPreview(
+        @Parameter(description = "사규 document_id", example = "POL-EDU-015") @PathVariable("documentId") String documentId,
+        @Parameter(description = "버전 번호", example = "1") @PathVariable("version") Integer version
     ) {
-        return ResponseEntity.ok(ragDocumentService.updateDocumentStatus(ragDocumentPk, req));
+        return ResponseEntity.ok(ragDocumentService.getPreprocessPreview(documentId, version));
     }
+
+    @PostMapping("/policies/{documentId}/versions/{version}/preprocess/retry")
+    @Operation(
+        summary = "전처리 재시도",
+        description = "사규 버전의 전처리를 재시도합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "전처리 재시도 성공",
+            content = @Content(schema = @Schema(implementation = RetryPreprocessResponse.class))),
+        @ApiResponse(responseCode = "404", description = "버전을 찾을 수 없음")
+    })
+    public ResponseEntity<RetryPreprocessResponse> retryPreprocess(
+        @Parameter(description = "사규 document_id", example = "POL-EDU-015") @PathVariable("documentId") String documentId,
+        @Parameter(description = "버전 번호", example = "1") @PathVariable("version") Integer version,
+        @Valid @RequestBody RetryPreprocessRequest req
+    ) {
+        return ResponseEntity.ok(ragDocumentService.retryPreprocess(documentId, version));
+    }
+
+    @GetMapping("/policies/{documentId}/versions/{version}/history")
+    @Operation(
+        summary = "히스토리 조회",
+        description = "사규 버전의 히스토리를 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "히스토리 조회 성공",
+            content = @Content(schema = @Schema(implementation = HistoryResponse.class))),
+        @ApiResponse(responseCode = "404", description = "버전을 찾을 수 없음")
+    })
+    public ResponseEntity<HistoryResponse> getHistory(
+        @Parameter(description = "사규 document_id", example = "POL-EDU-015") @PathVariable("documentId") String documentId,
+        @Parameter(description = "버전 번호", example = "1") @PathVariable("version") Integer version
+    ) {
+        return ResponseEntity.ok(ragDocumentService.getHistory(documentId, version));
+    }
+
 }
 

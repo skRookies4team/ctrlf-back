@@ -307,6 +307,15 @@ public final class RagDtos {
         private String uploaderUuid;
         private String createdAt;
         private String processedAt;
+        // 전처리 관련 필드
+        private String preprocessStatus; // "IDLE", "PROCESSING", "READY", "FAILED"
+        private Integer preprocessPages;
+        private Integer preprocessChars;
+        private String preprocessExcerpt;
+        private String preprocessError;
+        // 검토 관련 필드
+        private String reviewRequestedAt;
+        private String reviewItemId;
     }
 
     /**
@@ -380,6 +389,9 @@ public final class RagDtos {
     @Getter
     @NoArgsConstructor
     public static class UpdateVersionRequest {
+        @Schema(example = "교육/퀴즈 운영 정책")
+        private String title;
+
         @Schema(example = "퀴즈 리포트(오답 분석/재학습) 및 배포 캘린더 추가(초안)")
         private String changeSummary;
 
@@ -470,6 +482,16 @@ public final class RagDtos {
 
         @Schema(example = "POL-EDU-015", description = "문서 ID")
         private String documentId;
+
+        // 전처리 미리보기 데이터 (선택)
+        @Schema(example = "10", description = "전처리된 페이지 수")
+        private Integer preprocessPages;
+
+        @Schema(example = "5000", description = "전처리된 문자 수")
+        private Integer preprocessChars;
+
+        @Schema(example = "문서의 첫 부분 미리보기 텍스트...", description = "전처리 미리보기 텍스트")
+        private String preprocessExcerpt;
     }
 
     /**
@@ -484,6 +506,70 @@ public final class RagDtos {
         private String status;
         private String processedAt;
         private String updatedAt;
+    }
+
+    // ---------- Preprocess API ----------
+
+    /**
+     * 전처리 미리보기 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class PreprocessPreviewResponse {
+        private String preprocessStatus; // "IDLE", "PROCESSING", "READY", "FAILED"
+        private Integer preprocessPages;
+        private Integer preprocessChars;
+        private String preprocessExcerpt;
+        private String preprocessError;
+    }
+
+    /**
+     * 전처리 재시도 요청 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class RetryPreprocessRequest {
+        // 재시도 요청에는 특별한 필드가 필요 없음
+    }
+
+    /**
+     * 전처리 재시도 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class RetryPreprocessResponse {
+        private String documentId;
+        private Integer version;
+        private String preprocessStatus; // "PROCESSING"
+        private String message;
+    }
+
+    // ---------- History API ----------
+
+    /**
+     * 히스토리 항목 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class HistoryItem {
+        private String id; // UUID
+        private String documentId;
+        private Integer version;
+        private String action;
+        private String actor;
+        private String message;
+        private String createdAt; // ISO-8601
+    }
+
+    /**
+     * 히스토리 조회 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class HistoryResponse {
+        private String documentId;
+        private Integer version;
+        private List<HistoryItem> items;
     }
 }
 

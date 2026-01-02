@@ -81,6 +81,8 @@ public class EducationController {
                                 "  \"category\": \"JOB_DUTY\",\n" +
                                 "  \"eduType\": \"MANDATORY\",\n" +
                                 "  \"required\": true,\n" +
+                                "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                                "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
                                 "  \"progressPercent\": 60,\n" +
                                 "  \"watchStatus\": \"시청중\",\n" +
                                 "  \"videos\": [\n" +
@@ -90,7 +92,7 @@ public class EducationController {
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"departmentScope\": \"[\\\"개발팀\\\",\\\"인사팀\\\"]\",\n" +
+                                "      \"departmentScope\": [\"개발팀\", \"인사팀\"],\n" +
                                 "      \"resumePosition\": 600,\n" +
                                 "      \"isCompleted\": false,\n" +
                                 "      \"totalWatchSeconds\": 600,\n" +
@@ -149,7 +151,7 @@ public class EducationController {
                                 "      \"fileUrl\": \"https://cdn.example.com/video1.mp4\",\n" +
                                 "      \"duration\": 1800,\n" +
                                 "      \"version\": 1,\n" +
-                                "      \"departmentScope\": \"[\\\"개발팀\\\",\\\"인사팀\\\"]\",\n" +
+                                "      \"departmentScope\": [\"개발팀\", \"인사팀\"],\n" +
                                 "      \"resumePosition\": 600,\n" +
                                 "      \"isCompleted\": false,\n" +
                                 "      \"totalWatchSeconds\": 600,\n" +

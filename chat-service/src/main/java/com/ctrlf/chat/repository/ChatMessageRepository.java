@@ -273,21 +273,21 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     @Query(
         value = """
             SELECT 
-                s.domain,
+                COALESCE(UPPER(TRIM(s.domain)), 'OTHER') as domain,
                 COUNT(*) as count,
-                COUNT(*) * 100.0 / (SELECT COUNT(*) FROM chat.chat_message m2 
+                COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM chat.chat_message m2 
                     INNER JOIN chat.chat_session s2 ON s2.id = m2.session_id
                     WHERE m2.role = 'user' 
                       AND m2.created_at >= :startDate
                       AND s2.deleted = false
-                      AND (:department IS NULL OR m2.department = :department)) as ratio
+                      AND (:department IS NULL OR m2.department = :department)), 0) as ratio
             FROM chat.chat_message m
             INNER JOIN chat.chat_session s ON s.id = m.session_id
             WHERE m.role = 'user'
               AND m.created_at >= :startDate
               AND s.deleted = false
               AND (:department IS NULL OR m.department = :department)
-            GROUP BY s.domain
+            GROUP BY COALESCE(UPPER(TRIM(s.domain)), 'OTHER')
             ORDER BY count DESC
             """,
         nativeQuery = true

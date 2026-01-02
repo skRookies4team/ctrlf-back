@@ -635,6 +635,7 @@ array of object
 ### ✔ 설명
 
 - 퀴즈 제목, 회차, 평균 점수, 응시 수, 통과율을 조회합니다.
+- 각 교육의 최신 버전 퀴즈만 통계에 포함하며, 각 교육당 회차를 통합하여 결과를 반환합니다.
 - 기간 필터(period)와 부서 필터(department)를 지원합니다.
 - 평균 점수 기준으로 내림차순 정렬됩니다.
 
@@ -657,14 +658,14 @@ Body: 없음
 
 array of object
 
-| key          | 설명           | value 타입   | 옵션     | Nullable | 예시                                   |
-| ------------ | -------------- | ------------ | -------- | -------- | -------------------------------------- |
-| educationId  | 교육 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| quizTitle    | 퀴즈 제목      | string       | required | false    | "개인정보보호 퀴즈"                     |
-| attemptNo    | 회차           | number       | required | false    | 1                                      |
-| averageScore | 평균 점수      | number       | required | false    | 86.0                                   |
-| attemptCount | 응시 수        | number       | required | false    | 57                                     |
-| passRate     | 통과율 (%)     | number       | required | false    | 81.0                                   |
+| key          | 설명                    | value 타입   | 옵션     | Nullable | 예시                                   |
+| ------------ | ----------------------- | ------------ | -------- | -------- | -------------------------------------- |
+| educationId  | 교육 ID                 | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| quizTitle    | 퀴즈 제목               | string       | required | false    | "개인정보보호 퀴즈"                     |
+| attemptNo    | 회차 (회차 통합 시 null) | number       | optional | true     | null                                   |
+| averageScore | 평균 점수               | number       | required | false    | 86.0                                   |
+| attemptCount | 응시 수                 | number       | required | false    | 57                                     |
+| passRate     | 통과율 (%)              | number       | required | false    | 81.0                                   |
 
 ### Status
 

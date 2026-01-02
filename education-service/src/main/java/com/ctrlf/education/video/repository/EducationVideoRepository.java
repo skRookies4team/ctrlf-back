@@ -44,10 +44,11 @@ public interface EducationVideoRepository extends JpaRepository<EducationVideo, 
     List<EducationVideo> findByScriptId(@Param("scriptId") UUID scriptId);
 
     /**
-     * 특정 교육에 속한 영상 목록 조회 (status 필터).
+     * 특정 교육에 속한 영상 목록 조회 (status 필터, 삭제되지 않은 것만).
      */
+    @Query("SELECT v FROM EducationVideo v WHERE v.educationId = :educationId AND v.status = :status AND v.deletedAt IS NULL ORDER BY v.orderIndex ASC, v.createdAt ASC")
     List<EducationVideo> findByEducationIdAndStatusOrderByOrderIndexAscCreatedAtAsc(
-        UUID educationId, String status);
+        @Param("educationId") UUID educationId, @Param("status") String status);
 
     /**
      * 검토 대기 영상 조회 (SCRIPT_REVIEW_REQUESTED 또는 FINAL_REVIEW_REQUESTED).

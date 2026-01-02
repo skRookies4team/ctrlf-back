@@ -2,7 +2,14 @@
 
 ## 개요
 
-이 문서는 `RagDocumentsController`에 구현된 모든 RAG 문서 관리 API의 상세 명세를 제공합니다.
+이 문서는 `RagDocumentsController`와 `InternalRagDocumentController`에 구현된 모든 RAG 문서 관리 API의 상세 명세를 제공합니다.
+
+### API 카테고리
+
+1. **RAG 문서 관리 API**: 일반적인 RAG 문서 업로드, 조회, 수정, 삭제 등
+2. **관리자 대시보드 - 사규 관리 API**: 관리자 대시보드에서 사규/정책 문서를 관리하기 위한 API (버전 관리 포함)
+3. **내부 API (FastAPI → Spring)**: FastAPI에서 호출하는 문서 청크 및 실패 로그 처리 API
+4. **내부 API (AI → Backend)**: AI 서버에서 호출하는 문서 상태 업데이트 API
 
 ## 기본 정보
 
@@ -484,11 +491,13 @@ POST /rag/documents/{documentId}/fail-chunks:bulk
 
 ---
 
-## 3. 사규 관리 API
+## 3. 관리자 대시보드 - 사규 관리 API
+
+관리자 대시보드에서 사규/정책 문서를 관리하기 위한 API입니다. 사규는 document_id별로 그룹화되며, 각 사규는 여러 버전을 가질 수 있습니다.
 
 ### 3.1 사규 목록 조회
 
-사규 목록을 document_id별로 그룹화하여 조회합니다. 검색, 상태 필터, 페이지네이션을 지원합니다.
+사규 목록을 document_id별로 그룹화하여 조회합니다. 검색, 상태 필터, 페이지네이션을 지원합니다. 기본적으로 ARCHIVED 상태는 제외됩니다.
 
 **엔드포인트**
 
@@ -496,7 +505,7 @@ POST /rag/documents/{documentId}/fail-chunks:bulk
 GET /rag/documents/policies
 ```
 
-**인증**: ❌ (명시되지 않음)
+**인증**: ❌ (명시되지 않음, 실제 구현 확인 필요)
 
 **Query Parameters**
 
@@ -538,6 +547,12 @@ GET /rag/documents/policies
 }
 ```
 
+**참고**:
+
+- `id`는 첫 번째 버전의 UUID (Primary Key)입니다.
+- `versions` 배열은 각 버전의 요약 정보(version, status, createdAt)를 포함합니다.
+- 기본적으로 ARCHIVED 상태는 제외됩니다. ARCHIVED를 조회하려면 `status=ARCHIVED`로 명시적으로 지정하세요.
+
 **에러 응답**
 
 - `400 Bad Request`: 잘못된 필터 값
@@ -554,7 +569,7 @@ document_id로 사규의 모든 버전을 조회합니다.
 GET /rag/documents/policies/{documentId}
 ```
 
-**인증**: ❌ (명시되지 않음)
+**인증**: ❌ (명시되지 않음, 실제 구현 확인 필요)
 
 **Path Parameters**
 
@@ -603,7 +618,7 @@ GET /rag/documents/policies/{documentId}
 GET /rag/documents/policies/{documentId}/versions/{version}
 ```
 
-**인증**: ❌ (명시되지 않음)
+**인증**: ❌ (명시되지 않음, 실제 구현 확인 필요)
 
 **Path Parameters**
 
@@ -646,7 +661,7 @@ GET /rag/documents/policies/{documentId}/versions/{version}
 GET /rag/documents/policies/{documentId}/versions
 ```
 
-**인증**: ❌ (명시되지 않음)
+**인증**: ❌ (명시되지 않음, 실제 구현 확인 필요)
 
 **Path Parameters**
 
@@ -690,7 +705,7 @@ GET /rag/documents/policies/{documentId}/versions
 POST /rag/documents/policies
 ```
 
-**인증**: ✅ JWT Bearer Token 필요
+**인증**: ✅ JWT Bearer Token 필요 (JWT에서 uploaderUuid 자동 추출)
 
 **요청 Body**
 
@@ -725,6 +740,11 @@ POST /rag/documents/policies
 }
 ```
 
+**참고**:
+
+- `id`는 생성된 버전의 UUID입니다.
+- 초기 버전은 항상 v1이며 DRAFT 상태로 생성됩니다.
+
 **에러 응답**
 
 - `400 Bad Request`: 잘못된 요청
@@ -742,7 +762,7 @@ POST /rag/documents/policies
 POST /rag/documents/policies/{documentId}/versions
 ```
 
-**인증**: ✅ JWT Bearer Token 필요
+**인증**: ✅ JWT Bearer Token 필요 (JWT에서 uploaderUuid 자동 추출)
 
 **Path Parameters**
 
@@ -776,6 +796,11 @@ POST /rag/documents/policies/{documentId}/versions
 }
 ```
 
+**참고**:
+
+- `id`는 생성된 새 버전의 UUID입니다.
+- 버전 번호는 자동으로 증가하며 DRAFT 상태로 생성됩니다.
+
 **에러 응답**
 
 - `404 Not Found`: 사규를 찾을 수 없음
@@ -792,7 +817,7 @@ POST /rag/documents/policies/{documentId}/versions
 PATCH /rag/documents/policies/{documentId}/versions/{version}
 ```
 
-**인증**: ❌ (명시되지 않음)
+**인증**: ❌ (명시되지 않음, 실제 구현 확인 필요)
 
 **Path Parameters**
 
@@ -843,7 +868,7 @@ PATCH /rag/documents/policies/{documentId}/versions/{version}
 PATCH /rag/documents/policies/{documentId}/versions/{version}/status
 ```
 
-**인증**: ❌ (명시되지 않음)
+**인증**: ❌ (명시되지 않음, 실제 구현 확인 필요)
 
 **Path Parameters**
 
@@ -893,7 +918,7 @@ PATCH /rag/documents/policies/{documentId}/versions/{version}/status
 PUT /rag/documents/policies/{documentId}/versions/{version}/file
 ```
 
-**인증**: ❌ (명시되지 않음)
+**인증**: ❌ (명시되지 않음, 실제 구현 확인 필요)
 
 **Path Parameters**
 
@@ -944,7 +969,7 @@ AI 서버가 사규 문서의 임베딩 처리 상태를 업데이트합니다.
 PATCH /internal/rag/documents/{ragDocumentPk}/status
 ```
 
-**인증**: 내부 토큰 (X-Internal-Token, 현재 검증 미구현)
+**인증**: 내부 토큰 (X-Internal-Token 헤더, 현재 검증 미구현)
 
 **Path Parameters**
 
@@ -954,9 +979,10 @@ PATCH /internal/rag/documents/{ragDocumentPk}/status
 
 **Headers**
 
-| 헤더           | 타입   | 필수 | 설명               |
-| -------------- | ------ | ---- | ------------------ |
-| `Content-Type` | string | ✅   | `application/json` |
+| 헤더               | 타입   | 필수 | 설명                         |
+| ------------------ | ------ | ---- | ---------------------------- |
+| `Content-Type`     | string | ✅   | `application/json`           |
+| `X-Internal-Token` | string | ❌   | 내부 토큰 (현재 검증 미구현) |
 
 **요청 Body**
 
@@ -990,6 +1016,8 @@ PATCH /internal/rag/documents/{ragDocumentPk}/status
   "updatedAt": "2025-12-29T12:34:57Z"
 }
 ```
+
+**참고**: `processedAt`는 요청에서 제공된 경우에만 응답에 포함됩니다.
 
 **에러 응답**
 
@@ -1036,9 +1064,16 @@ PATCH /internal/rag/documents/{ragDocumentPk}/status
 
 ## 참고사항
 
-1. **인증**: 대부분의 API는 JWT Bearer Token 인증이 필요하지만, 일부 API는 명시되지 않았습니다. 실제 구현을 확인하세요.
+1. **인증**:
 
-2. **내부 API**: 내부 API는 서비스 간 통신용이며, `X-Internal-Token` 헤더를 사용합니다. 현재는 검증 로직이 구현되지 않았습니다.
+   - JWT Bearer Token이 필요한 API: `POST /rag/documents/upload`, `POST /rag/documents/policies`, `POST /rag/documents/policies/{documentId}/versions`
+   - JWT에서 `uploaderUuid`가 자동으로 추출됩니다.
+   - 일부 API는 인증이 명시되지 않았으므로 실제 구현을 확인하세요.
+
+2. **내부 API**:
+
+   - 내부 API는 서비스 간 통신용이며, `X-Internal-Token` 헤더를 사용합니다.
+   - 현재는 검증 로직이 구현되지 않았습니다.
 
 3. **페이지네이션**: `PageResponse` 형식은 다음과 같습니다:
 
@@ -1054,3 +1089,15 @@ PATCH /internal/rag/documents/{ragDocumentPk}/status
 4. **날짜 형식**: 모든 날짜/시간 필드는 ISO-8601 형식을 사용합니다 (예: `2025-12-29T12:34:56Z`).
 
 5. **UUID 형식**: 모든 UUID는 하이픈 포함 형식을 사용합니다 (예: `024776fa-009b-4161-ab3b-33c974a3844a`).
+
+6. **사규 관리 상태**:
+
+   - `ACTIVE`: 활성 상태 (한 document_id당 하나의 ACTIVE 버전만 존재 가능)
+   - `DRAFT`: 초안 상태
+   - `PENDING`: 검토 대기 상태
+   - `ARCHIVED`: 보관 상태 (기본적으로 목록 조회에서 제외)
+
+7. **사규 버전 관리**:
+   - 새 사규 생성 시 자동으로 v1이 DRAFT 상태로 생성됩니다.
+   - 새 버전 생성 시 버전 번호는 자동으로 증가합니다.
+   - ACTIVE로 변경 시 같은 document_id의 다른 ACTIVE 버전은 자동으로 DRAFT로 변경됩니다.

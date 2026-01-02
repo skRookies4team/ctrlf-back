@@ -84,7 +84,7 @@ public class QuizService {
     @Transactional
     public StartResponse start(UUID educationId, UUID userUuid) {
         // 1. 교육 정보 조회
-        educationRepository.findById(educationId)
+        Education education = educationRepository.findById(educationId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
         
         // 2. 이전 시도 조회
@@ -97,6 +97,7 @@ public class QuizService {
             attempt = new QuizAttempt();
             attempt.setUserUuid(userUuid);
             attempt.setEducationId(educationId);
+            attempt.setVersion(education.getVersion());
             long cnt = attemptRepository.countByUserUuidAndEducationId(userUuid, educationId);
             attempt.setAttemptNo((int) cnt + 1);
             // 시간 제한 설정 (기본값: 15분 = 900초)
@@ -1135,6 +1136,8 @@ public class QuizService {
 
     /**
      * 퀴즈별 통계 조회.
+     * - 각 교육의 최신 버전 퀴즈만 통계에 포함
+     * - 각 교육당 회차를 통합하여 결과 반환
      */
     public QuizStatsResponse getQuizStats(Integer periodDays, String department) {
         Instant startDate = calculateStartDate(periodDays);
@@ -1152,8 +1155,38 @@ public class QuizService {
                 .collect(Collectors.toList());
         }
 
+        // 교육별 최신 버전 찾기 (QuizAttempt의 version 기준)
+        Map<UUID, Integer> latestVersionByEducation = new HashMap<>();
+        for (QuizAttempt attempt : allAttempts) {
+            UUID eduId = attempt.getEducationId();
+            if (eduId == null) {
+                continue;
+            }
+            Integer version = attempt.getVersion();
+            if (version == null) {
+                continue;
+            }
+            latestVersionByEducation.merge(eduId, version, Math::max);
+        }
+
+        // 최신 버전의 퀴즈 시도만 필터링
+        List<QuizAttempt> latestVersionAttempts = allAttempts.stream()
+            .filter(a -> {
+                UUID eduId = a.getEducationId();
+                if (eduId == null) {
+                    return false;
+                }
+                Integer latestVersion = latestVersionByEducation.get(eduId);
+                if (latestVersion == null) {
+                    return false;
+                }
+                Integer attemptVersion = a.getVersion();
+                return attemptVersion != null && attemptVersion.equals(latestVersion);
+            })
+            .collect(Collectors.toList());
+
         // 교육 정보 조회
-        Set<UUID> educationIds = allAttempts.stream()
+        Set<UUID> educationIds = latestVersionAttempts.stream()
             .map(QuizAttempt::getEducationId)
             .filter(id -> id != null)
             .collect(Collectors.toSet());
@@ -1167,34 +1200,29 @@ public class QuizService {
             });
         }
 
-        // 교육별, 회차별로 그룹화
-        Map<String, List<QuizAttempt>> groupedAttempts = new HashMap<>();
-        for (QuizAttempt attempt : allAttempts) {
+        // 교육별로 그룹화 (회차 통합)
+        Map<UUID, List<QuizAttempt>> groupedAttempts = new HashMap<>();
+        for (QuizAttempt attempt : latestVersionAttempts) {
             UUID eduId = attempt.getEducationId();
             if (eduId == null || !educationMap.containsKey(eduId)) {
                 continue;
             }
-            Integer attemptNo = attempt.getAttemptNo() != null ? attempt.getAttemptNo() : 1;
-            String key = eduId.toString() + "_" + attemptNo;
-            groupedAttempts.computeIfAbsent(key, k -> new ArrayList<>()).add(attempt);
+            groupedAttempts.computeIfAbsent(eduId, k -> new ArrayList<>()).add(attempt);
         }
 
         List<QuizStatsItem> items = new ArrayList<>();
 
-        for (Map.Entry<String, List<QuizAttempt>> entry : groupedAttempts.entrySet()) {
+        for (Map.Entry<UUID, List<QuizAttempt>> entry : groupedAttempts.entrySet()) {
+            UUID educationId = entry.getKey();
             List<QuizAttempt> attempts = entry.getValue();
             if (attempts.isEmpty()) {
                 continue;
             }
 
-            QuizAttempt firstAttempt = attempts.get(0);
-            UUID educationId = firstAttempt.getEducationId();
             Education education = educationMap.get(educationId);
             if (education == null) {
                 continue;
             }
-
-            Integer attemptNo = firstAttempt.getAttemptNo() != null ? firstAttempt.getAttemptNo() : 1;
 
             // 평균 점수 계산
             double avgScore = attempts.stream()
@@ -1203,7 +1231,7 @@ public class QuizService {
                 .average()
                 .orElse(0.0);
 
-            // 응시 수
+            // 응시 수 (모든 회차 통합)
             long attemptCount = attempts.size();
 
             // 통과율 계산 (80점 이상)
@@ -1215,7 +1243,6 @@ public class QuizService {
             items.add(new QuizStatsItem(
                 educationId,
                 education.getTitle() != null ? education.getTitle() : "",
-                attemptNo,
                 avgScore,
                 attemptCount,
                 passRate
