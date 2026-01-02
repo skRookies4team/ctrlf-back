@@ -2,6 +2,53 @@
 
 교육 영상 시청 페이지에서 사용되는 API 플로우입니다.
 
+## 0. 교육 목록 조회 (페이지 진입 전)
+
+```
+GET /edus/me?completed={boolean}&eduType={string}&sort={UPDATED|TITLE}
+→ 사용자 자신의 교육 목록 및 각 교육의 영상 목록/진행 정보 조회
+→ Query Parameters:
+    - completed: 이수 여부 필터 (optional)
+    - eduType: 교육 유형 필터 (MANDATORY/JOB/ETC, optional)
+    - sort: 정렬 기준 (UPDATED|TITLE, 기본값: UPDATED)
+→ Response: [
+    {
+      id: "교육 ID",
+      title: "교육 제목",
+      description: "교육 설명",
+      category: "JOB_DUTY",
+      eduType: "MANDATORY",
+      required: true,
+      version: 1,
+      startAt: "2024-01-01T00:00:00Z",  // 교육 시작 시각
+      endAt: "2024-12-31T23:59:59Z",    // 교육 종료 시각
+      progressPercent: 60,              // 사용자 기준 교육 진행률(%)
+      watchStatus: "시청중",             // 교육 시청 상태 (시청전/시청중/시청완료)
+      videos: [                         // PUBLISHED 상태의 영상만 포함
+        {
+          id: "영상 ID",
+          title: "영상 제목",
+          fileUrl: "https://cdn.example.com/video1.mp4",
+          duration: 1800,
+          version: 1,
+          departmentScope: ["개발팀", "인사팀"],
+          resumePosition: 600,          // 사용자 이어보기 위치(초)
+          isCompleted: false,            // 사용자 영상 이수 여부
+          totalWatchSeconds: 600,       // 사용자 누적 시청 시간(초)
+          progressPercent: 33,          // 진행률(%)
+          watchStatus: "시청중"          // 시청 상태 (시청전/시청중/시청완료)
+        }
+      ]
+    }
+  ]
+```
+
+**참고:**
+
+- 삭제되지 않은 교육만 조회됩니다 (`deletedAt IS NULL`).
+- PUBLISHED 상태의 영상만 포함됩니다.
+- 각 교육의 진행률은 포함된 영상들의 진행률 평균으로 계산됩니다.
+
 ## 1. 페이지 진입 및 영상 정보 조회
 
 ```
@@ -10,6 +57,9 @@ GET /edu/{id}/videos
 → Response: {
     id,
     title,
+    startAt: "2024-01-01T00:00:00Z",  // 교육 시작 시각
+    endAt: "2024-12-31T23:59:59Z",    // 교육 종료 시각
+    departmentScope: ["전체 부서", "총무팀", "기획팀"],
     videos: [{
       id,
       title,
@@ -24,6 +74,11 @@ GET /edu/{id}/videos
     }]
   }
 ```
+
+**참고:**
+
+- 삭제되지 않은 교육만 조회됩니다 (`deletedAt IS NULL`).
+- PUBLISHED 상태의 영상만 반환됩니다.
 
 ## 2. 영상 시청 중 진행률 업데이트 (주기적으로 요청)
 
@@ -124,24 +179,39 @@ POST /edu/{educationId}/video/{videoId}/progress
 ## 전체 플로우 다이어그램
 
 ```
-사용자 → [교육 목록] → [교육 선택] → [영상 시청 페이지]
-                                              │
-                                              ├─→ GET /edu/{id}/videos (영상 정보 조회)
-                                              │
-                                              ├─→ POST /edu/{id}/video/{videoId}/progress (진행률 업데이트)
-                                              │   └─→ 시청률 100% 도달 시 자동 교육 이수 처리
-                                              │
-                                              └─→ [퀴즈 풀기 버튼 클릭]
-                                                    │
-                                                    ├─→ GET /quiz/{eduId}/start (퀴즈 시작)
-                                                    │
-                                                    ├─→ [선택] GET /quiz/attempt/{attemptId}/timer (타이머 조회)
-                                                    │
-                                                    ├─→ [반복] POST /quiz/attempt/{attemptId}/save (임시 저장)
-                                                    │
-                                                    ├─→ POST /quiz/attempt/{attemptId}/submit (퀴즈 제출)
-                                                    │
-                                                    └─→ GET /quiz/attempt/{attemptId}/result (결과 조회)
+사용자 → [교육 목록 페이지]
+          │
+          └─→ GET /edus/me (교육 목록 조회)
+              └─→ Response: [
+                    {
+                      id, title, description, category, eduType,
+                      required, version, startAt, endAt,
+                      progressPercent, watchStatus, videos: [...]
+                    }
+                  ]
+              │
+              └─→ [교육 선택] → [영상 시청 페이지]
+                                  │
+                                  ├─→ GET /edu/{id}/videos (영상 정보 조회)
+                                  │   └─→ Response: {
+                                  │         id, title, startAt, endAt,
+                                  │         departmentScope, videos: [...]
+                                  │       }
+                                  │
+                                  ├─→ POST /edu/{id}/video/{videoId}/progress (진행률 업데이트)
+                                  │   └─→ 시청률 100% 도달 시 자동 교육 이수 처리
+                                  │
+                                  └─→ [퀴즈 풀기 버튼 클릭]
+                                        │
+                                        ├─→ GET /quiz/{eduId}/start (퀴즈 시작)
+                                        │
+                                        ├─→ [선택] GET /quiz/attempt/{attemptId}/timer (타이머 조회)
+                                        │
+                                        ├─→ [반복] POST /quiz/attempt/{attemptId}/save (임시 저장)
+                                        │
+                                        ├─→ POST /quiz/attempt/{attemptId}/submit (퀴즈 제출)
+                                        │
+                                        └─→ GET /quiz/attempt/{attemptId}/result (결과 조회)
 ```
 
 ## 관련 API 명세
@@ -161,24 +231,40 @@ POST /edu/{educationId}/video/{videoId}/progress
 1. 교육 영상 컨텐츠 만들기 버튼 클릭시 -> 교육 목록 조회 API로 교육 종류를 클릭하는 모달이 떠서 선택하고 이제 교육 영상 컨텐츠 폼이뜸
 
 ```
-GET /admin/edus/with-videos
+GET /admin/edus/with-videos?status={VideoStatus}
 → 교육 목록과 각 교육의 영상 목록 조회
 → Query Parameter: status (optional) - 영상 상태 필터
 → Response: [
     {
       id: "교육 ID",
       title: "교육 제목",
+      startAt: "2024-01-01T00:00:00Z",  // 교육 시작 시각
+      endAt: "2024-12-31T23:59:59Z",    // 교육 종료 시각
+      departmentScope: ["전체 부서", "총무팀", "기획팀"],  // 수강 가능 부서 목록
       videos: [
         {
           id: "영상 ID",
           title: "영상 제목",
-          status: "DRAFT" | "SCRIPT_READY" | "SCRIPT_REVIEW_REQUESTED" | ...,
-          ...
+          fileUrl: "https://cdn.example.com/video1.mp4",
+          duration: 1800,
+          version: 1,
+          departmentScope: ["개발팀", "인사팀"],
+          resumePosition: null,         // 사용자 진행 정보 없음 (어드민 API)
+          isCompleted: null,
+          totalWatchSeconds: null,
+          progressPercent: null,
+          watchStatus: null
         }
       ]
     }
   ]
 ```
+
+**참고:**
+
+- 삭제되지 않은 교육만 조회됩니다 (`deletedAt IS NULL`).
+- `status` 파라미터로 특정 상태의 영상만 필터링할 수 있습니다.
+- 사용자 진행 정보는 포함되지 않습니다 (어드민 전용 API).
 
 **상태별 탭 필터링:**
 
@@ -196,16 +282,25 @@ GET /admin/edu/{id}
 → Response: {
     id: "교육 ID",
     title: "교육 제목",
+    description: "교육 설명",
     category: "JOB_DUTY" | "SEXUAL_HARASSMENT_PREVENTION" | ...,
     eduType: "MANDATORY" | "JOB" | "ETC",
     require: true | false,
     passScore: 80,
     passRatio: 90,
+    duration: 3600,                    // 총 길이(초)
+    startAt: "2024-01-01T00:00:00Z",  // 교육 시작 시각
+    endAt: "2024-12-31T23:59:59Z",    // 교육 종료 시각
+    departmentScope: ["전체 부서", "총무팀", "기획팀"],  // 수강 가능 부서 목록
     createdAt: "2025-12-18T17:31:00Z",
     updatedAt: "2025-12-20T17:31:00Z",
     sections: []
   }
 ```
+
+**참고:**
+
+- 삭제되지 않은 교육만 조회됩니다 (`deletedAt IS NULL`).
 
 3. 새 교육 만들기 (영상 컨텐츠 생성)
 

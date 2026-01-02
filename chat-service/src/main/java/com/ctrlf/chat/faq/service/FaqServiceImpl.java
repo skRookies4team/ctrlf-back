@@ -1,18 +1,26 @@
 package com.ctrlf.chat.faq.service;
 
-import com.ctrlf.chat.faq.dto.request.FaqCreateRequest;
+import com.ctrlf.chat.faq.dto.request.AutoFaqGenerateRequest;
+import com.ctrlf.chat.faq.dto.request.FaqDraftGenerateBatchRequest;
+import com.ctrlf.chat.faq.dto.request.FaqDraftGenerateRequest;
 import com.ctrlf.chat.faq.dto.request.FaqUpdateRequest;
+import com.ctrlf.chat.faq.dto.response.AutoFaqGenerateResponse;
+import com.ctrlf.chat.faq.exception.FaqNotFoundException;
+import com.ctrlf.chat.faq.dto.response.FaqDraftGenerateBatchResponse;
+import com.ctrlf.chat.faq.dto.response.FaqDraftGenerateResponse;
 import com.ctrlf.chat.faq.dto.response.FaqResponse;
 import com.ctrlf.chat.faq.entity.*;
-import com.ctrlf.chat.faq.exception.FaqNotFoundException;
 import com.ctrlf.chat.faq.repository.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -25,24 +33,16 @@ public class FaqServiceImpl implements FaqService {
     private final FaqAiClient faqAiClient;
 
     // =========================
-    // 기존 FAQ CRUD
+    // FAQ 조회 및 관리
     // =========================
 
     @Override
-    public UUID create(FaqCreateRequest request) {
-        Instant now = Instant.now();
-        Faq faq = new Faq();
-        faq.setQuestion(request.getQuestion());
-        faq.setAnswer(request.getAnswer());
-        faq.setDomain(request.getDomain());
-        faq.setPriority(request.getPriority());
-        faq.setIsActive(true);
-        faq.setNeedsRecategorization(false); // 기본값 설정
-        faq.setPublishedAt(now); // 기본값 설정
-        faq.setCreatedAt(now);
-        faq.setUpdatedAt(now);
-
-        return faqRepository.save(faq).getId();
+    @Transactional(readOnly = true)
+    public List<FaqResponse> getAll() {
+        return faqRepository.findByIsActiveTrueOrderByPriorityAsc()
+            .stream()
+            .map(FaqResponse::from)
+            .toList();
     }
 
     @Override
@@ -66,15 +66,6 @@ public class FaqServiceImpl implements FaqService {
 
         faq.setIsActive(false);
         faq.setUpdatedAt(Instant.now());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<FaqResponse> getAll() {
-        return faqRepository.findByIsActiveTrueOrderByPriorityAsc()
-            .stream()
-            .map(FaqResponse::from)
-            .toList();
     }
 
     // =========================
@@ -172,7 +163,8 @@ public class FaqServiceImpl implements FaqService {
                 candidate.getId().toString(), // cluster_id 대체
                 candidate.getCanonicalQuestion(),
                 sampleQuestions,  // 샘플 질문 목록 (선택, 현재는 null)
-                topDocs  // RAG 검색 결과 전달 (빈 리스트여도 AI 서비스가 처리 가능)
+                topDocs,  // RAG 검색 결과 전달 (빈 리스트여도 AI 서비스가 처리 가능)
+                candidate.getAvgIntentConfidence()  // 평균 의도 신뢰도 전달
             );
         } catch (IllegalStateException e) {
             // 이미 상세한 에러 메시지가 포함된 예외는 그대로 전파
@@ -280,5 +272,233 @@ public class FaqServiceImpl implements FaqService {
         );
 
         faqRevisionRepository.save(revision);
+    }
+
+    @Override
+    @Transactional
+    public FaqDraftGenerateBatchResponse generateDraftBatch(FaqDraftGenerateBatchRequest request) {
+        // 요청을 AI 서버 형식으로 변환
+        List<FaqAiClient.AiFaqRequest> aiRequests = request.getItems().stream()
+            .map(item -> {
+                // TopDoc 변환
+                List<FaqAiClient.TopDoc> topDocs = null;
+                if (item.getTopDocs() != null) {
+                    topDocs = item.getTopDocs().stream()
+                        .map(doc -> new FaqAiClient.TopDoc(
+                            doc.getDocId(),
+                            doc.getDocVersion(),
+                            doc.getTitle(),
+                            doc.getSnippet(),
+                            doc.getArticleLabel(),
+                            doc.getArticlePath(),
+                            doc.getScore(),
+                            doc.getPage(),
+                            doc.getDataset(),
+                            doc.getSource()
+                        ))
+                        .collect(Collectors.toList());
+                }
+
+                // Domain을 RAGFlow가 지원하는 dataset 값으로 매핑
+                String mappedDomain = mapDomainToRagflowDataset(item.getDomain());
+
+                return new FaqAiClient.AiFaqRequest(
+                    mappedDomain,
+                    item.getClusterId(),
+                    item.getCanonicalQuestion(),
+                    item.getSampleQuestions(),
+                    topDocs,
+                    item.getAvgIntentConfidence()
+                );
+            })
+            .collect(Collectors.toList());
+
+        // AI 서버에 배치 요청
+        FaqAiClient.AiFaqBatchResponse aiResponse = faqAiClient.generateBatch(aiRequests);
+
+        // 응답을 백엔드 형식으로 변환
+        List<FaqDraftGenerateResponse> responses = aiResponse.items().stream()
+            .map(aiItem -> {
+                FaqDraftGenerateResponse.FaqDraftPayload payload = null;
+                if (aiItem.faq_draft() != null) {
+                    payload = new FaqDraftGenerateResponse.FaqDraftPayload(
+                        aiItem.faq_draft().faq_draft_id(),
+                        aiItem.faq_draft().domain(),
+                        aiItem.faq_draft().cluster_id(),
+                        aiItem.faq_draft().question(),
+                        aiItem.faq_draft().answer_markdown(),
+                        aiItem.faq_draft().summary(),
+                        aiItem.faq_draft().source_doc_id(),
+                        aiItem.faq_draft().source_doc_version(),
+                        aiItem.faq_draft().source_article_label(),
+                        aiItem.faq_draft().source_article_path(),
+                        aiItem.faq_draft().answer_source(),
+                        aiItem.faq_draft().ai_confidence(),
+                        aiItem.faq_draft().created_at()
+                    );
+                }
+
+                return new FaqDraftGenerateResponse(
+                    aiItem.status(),
+                    payload,
+                    aiItem.error_message()
+                );
+            })
+            .collect(Collectors.toList());
+
+        // 성공한 항목들을 DB에 저장
+        for (int i = 0; i < responses.size(); i++) {
+            FaqDraftGenerateResponse response = responses.get(i);
+            if ("SUCCESS".equals(response.getStatus()) && response.getFaqDraft() != null) {
+                FaqDraftGenerateRequest originalRequest = request.getItems().get(i);
+                FaqDraftGenerateResponse.FaqDraftPayload draft = response.getFaqDraft();
+
+                FaqDraft faqDraft = FaqDraft.builder()
+                    .faqDraftId(draft.getFaqDraftId())
+                    .domain(originalRequest.getDomain())  // 원본 domain 사용
+                    .clusterId(draft.getClusterId())
+                    .question(draft.getQuestion())
+                    .answerMarkdown(draft.getAnswerMarkdown())
+                    .summary(draft.getSummary())
+                    .aiConfidence(draft.getAiConfidence())
+                    .status(FaqDraft.Status.DRAFT)
+                    .createdAt(java.time.LocalDateTime.now())
+                    .build();
+
+                faqDraftRepository.save(faqDraft);
+            }
+        }
+
+        return new FaqDraftGenerateBatchResponse(
+            responses,
+            aiResponse.total_count(),
+            aiResponse.success_count(),
+            aiResponse.failed_count()
+        );
+    }
+
+    @Override
+    @Transactional
+    public AutoFaqGenerateResponse generateAuto(AutoFaqGenerateRequest request) {
+        // 기본값 설정
+        String domain = request.getDomain();
+        Integer minFrequency = request.getMinFrequency() != null ? request.getMinFrequency() : 3;
+        Integer daysBack = request.getDaysBack() != null ? request.getDaysBack() : 30;
+        Integer maxCandidates = request.getMaxCandidates() != null ? request.getMaxCandidates() : 20;
+        Boolean autoGenerateDrafts = request.getAutoGenerateDrafts() != null ? request.getAutoGenerateDrafts() : true;
+
+        // AI 서버에 자동 FAQ 생성 요청 (camelCase로 전송)
+        FaqAiClient.AutoFaqGenerateRequest aiRequest = new FaqAiClient.AutoFaqGenerateRequest(
+            domain,
+            minFrequency,  // minFrequency
+            daysBack,  // daysBack
+            maxCandidates,  // maxCandidates
+            autoGenerateDrafts  // autoGenerateDrafts
+        );
+
+        FaqAiClient.AutoFaqGenerateResponse aiResponse;
+        try {
+            aiResponse = faqAiClient.generateAuto(aiRequest);
+        } catch (Exception e) {
+            return new AutoFaqGenerateResponse(
+                "FAILED",
+                0,
+                0,
+                0,
+                java.util.Collections.emptyList(),
+                String.format("AI 서비스 호출 실패: %s", e.getMessage())
+            );
+        }
+
+        // AI 서버에서 받은 FAQ 초안들을 DB에 저장
+        int savedCount = 0;
+        int failedCount = 0;
+        java.util.List<com.ctrlf.chat.faq.dto.response.FaqDraftGenerateResponse.FaqDraftPayload> savedDrafts = 
+            new java.util.ArrayList<>();
+
+        // candidates 정보는 로깅용으로만 사용 (DB 저장은 하지 않음)
+        if (aiResponse.candidates() != null && !aiResponse.candidates().isEmpty()) {
+            log.info("AI 서버에서 {}개의 FAQ 후보를 발견했습니다", aiResponse.candidates().size());
+        }
+
+        if (aiResponse.drafts() != null && !aiResponse.drafts().isEmpty()) {
+            for (FaqAiClient.FaqDraftPayload draftPayload : aiResponse.drafts()) {
+                try {
+                    // Domain을 원본 형식으로 매핑 (AI 서버는 SEC_POLICY 형식 사용)
+                    String originalDomain = mapDomainFromRagflowDataset(draftPayload.domain());
+
+                    FaqDraft faqDraft = FaqDraft.builder()
+                        .faqDraftId(draftPayload.faq_draft_id())
+                        .domain(originalDomain)
+                        .clusterId(draftPayload.cluster_id())
+                        .question(draftPayload.question())
+                        .answerMarkdown(draftPayload.answer_markdown())
+                        .summary(draftPayload.summary())
+                        .aiConfidence(draftPayload.ai_confidence())
+                        .status(FaqDraft.Status.DRAFT)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+                    faqDraftRepository.save(faqDraft);
+                    savedCount++;
+
+                    // 응답용 DTO 생성
+                    savedDrafts.add(new com.ctrlf.chat.faq.dto.response.FaqDraftGenerateResponse.FaqDraftPayload(
+                        draftPayload.faq_draft_id(),
+                        originalDomain,
+                        draftPayload.cluster_id(),
+                        draftPayload.question(),
+                        draftPayload.answer_markdown(),
+                        draftPayload.summary(),
+                        draftPayload.source_doc_id(),
+                        draftPayload.source_doc_version(),
+                        draftPayload.source_article_label(),
+                        draftPayload.source_article_path(),
+                        draftPayload.answer_source(),
+                        draftPayload.ai_confidence(),
+                        draftPayload.created_at()
+                    ));
+                } catch (Exception e) {
+                    failedCount++;
+                    // 로그만 남기고 계속 진행
+                }
+            }
+        }
+
+        return new AutoFaqGenerateResponse(
+            aiResponse.status(),
+            aiResponse.candidates_found(),
+            savedCount,
+            failedCount + aiResponse.drafts_failed(),
+            savedDrafts,
+            aiResponse.error_message()
+        );
+    }
+
+    /**
+     * RAGFlow dataset 값을 원본 domain 형식으로 역매핑
+     * 
+     * @param ragflowDomain RAGFlow dataset 값 (예: "SEC_POLICY", "POLICY")
+     * @return 원본 domain 값 (예: "SECURITY", "POLICY")
+     */
+    private String mapDomainFromRagflowDataset(String ragflowDomain) {
+        if (ragflowDomain == null || ragflowDomain.isBlank()) {
+            return "SECURITY";  // 기본값
+        }
+
+        String upperDomain = ragflowDomain.toUpperCase();
+
+        // SEC_POLICY → SECURITY
+        if ("SEC_POLICY".equals(upperDomain)) {
+            return "SECURITY";
+        }
+
+        // POLICY, TEST는 그대로 사용
+        if ("POLICY".equals(upperDomain) || "TEST".equals(upperDomain)) {
+            return upperDomain;
+        }
+
+        // 그 외는 그대로 반환
+        return ragflowDomain;
     }
 }

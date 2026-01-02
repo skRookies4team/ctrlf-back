@@ -374,7 +374,7 @@ public class RagDocumentsController {
     @PatchMapping("/policies/{documentId}/versions/{version}")
     @Operation(
         summary = "버전 수정",
-        description = "사규 버전의 change_summary나 파일을 수정합니다."
+        description = "사규 버전의 title, change_summary, 파일을 수정합니다."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "버전 수정 성공",
@@ -424,6 +424,58 @@ public class RagDocumentsController {
         @Valid @RequestBody ReplaceFileRequest req
     ) {
         return ResponseEntity.ok(ragDocumentService.replaceFile(documentId, version, req));
+    }
+
+    @GetMapping("/policies/{documentId}/versions/{version}/preprocess")
+    @Operation(
+        summary = "전처리 미리보기 조회",
+        description = "사규 버전의 전처리 상태와 미리보기를 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "전처리 미리보기 조회 성공",
+            content = @Content(schema = @Schema(implementation = PreprocessPreviewResponse.class))),
+        @ApiResponse(responseCode = "404", description = "버전을 찾을 수 없음")
+    })
+    public ResponseEntity<PreprocessPreviewResponse> getPreprocessPreview(
+        @Parameter(description = "사규 document_id", example = "POL-EDU-015") @PathVariable("documentId") String documentId,
+        @Parameter(description = "버전 번호", example = "1") @PathVariable("version") Integer version
+    ) {
+        return ResponseEntity.ok(ragDocumentService.getPreprocessPreview(documentId, version));
+    }
+
+    @PostMapping("/policies/{documentId}/versions/{version}/preprocess/retry")
+    @Operation(
+        summary = "전처리 재시도",
+        description = "사규 버전의 전처리를 재시도합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "전처리 재시도 성공",
+            content = @Content(schema = @Schema(implementation = RetryPreprocessResponse.class))),
+        @ApiResponse(responseCode = "404", description = "버전을 찾을 수 없음")
+    })
+    public ResponseEntity<RetryPreprocessResponse> retryPreprocess(
+        @Parameter(description = "사규 document_id", example = "POL-EDU-015") @PathVariable("documentId") String documentId,
+        @Parameter(description = "버전 번호", example = "1") @PathVariable("version") Integer version,
+        @Valid @RequestBody RetryPreprocessRequest req
+    ) {
+        return ResponseEntity.ok(ragDocumentService.retryPreprocess(documentId, version));
+    }
+
+    @GetMapping("/policies/{documentId}/versions/{version}/history")
+    @Operation(
+        summary = "히스토리 조회",
+        description = "사규 버전의 히스토리를 조회합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "히스토리 조회 성공",
+            content = @Content(schema = @Schema(implementation = HistoryResponse.class))),
+        @ApiResponse(responseCode = "404", description = "버전을 찾을 수 없음")
+    })
+    public ResponseEntity<HistoryResponse> getHistory(
+        @Parameter(description = "사규 document_id", example = "POL-EDU-015") @PathVariable("documentId") String documentId,
+        @Parameter(description = "버전 번호", example = "1") @PathVariable("version") Integer version
+    ) {
+        return ResponseEntity.ok(ragDocumentService.getHistory(documentId, version));
     }
 
 }

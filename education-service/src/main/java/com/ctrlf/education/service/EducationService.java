@@ -25,9 +25,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -84,6 +86,9 @@ public class EducationService {
         e.setPassScore(req.getPassScore());
         e.setPassRatio(req.getPassRatio());
         e.setRequire(req.getRequire());
+        e.setStartAt(req.getStartAt());
+        e.setEndAt(req.getEndAt());
+        e.setDepartmentScope(req.getDepartmentScope());
         UUID id = educationRepository.save(e).getId();
         return new MutationResponse<>(id);
     }
@@ -148,10 +153,12 @@ public class EducationService {
             int sumPct = 0;
 
             // 6. 교육 정보 조회 (passRatio, eduTypeCategory, version 등)
-            Education edu = educationRepository.findById(eduId).orElse(null);
+            Education edu = educationRepository.findByIdAndDeletedAtIsNull(eduId).orElse(null);
             Integer passRatio = edu != null && edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             EducationCategory eduTypeCategory = edu != null ? edu.getEduType() : null;
             Integer version = edu != null ? edu.getVersion() : null;
+            Instant startAt = edu != null ? edu.getStartAt() : null;
+            Instant endAt = edu != null ? edu.getEndAt() : null;
             for (EducationVideo v : vids) {
                 Integer resume = 0;
                 Integer total = 0;
@@ -188,13 +195,14 @@ public class EducationService {
                 // S3 URL을 presigned URL로 변환
                 String fileUrl = v.getFileUrl();
                 String presignedUrl = infraRagClient.getPresignedDownloadUrl(fileUrl);
+                
                 videoItems.add(new EducationResponses.EducationVideosResponse.VideoItem(
                     v.getId(),
                     v.getTitle(),
                     presignedUrl != null ? presignedUrl : fileUrl,
                     durationSec,
                     v.getVersion() != null ? v.getVersion() : 1,
-                    v.getDepartmentScope(),
+                    edu != null ? edu.getDepartmentScope() : null,
                     resume,
                     completedV,
                     total,
@@ -224,6 +232,8 @@ public class EducationService {
                 eduTypeCategory,
                 required != null && required,
                 version,
+                startAt,
+                endAt,
                 eduProgress,
                 watchStatus,
                 videoItems
@@ -259,6 +269,9 @@ public class EducationService {
             .passScore(e.getPassScore())
             .passRatio(e.getPassRatio())
             .duration(totalDuration)
+            .startAt(e.getStartAt())
+            .endAt(e.getEndAt())
+            .departmentScope(e.getDepartmentScope())
             .createdAt(e.getCreatedAt())
             .updatedAt(e.getUpdatedAt())
             .sections(Collections.emptyList())
@@ -284,6 +297,10 @@ public class EducationService {
         if (req.getRequire() != null) e.setRequire(req.getRequire());
         if (req.getPassScore() != null) e.setPassScore(req.getPassScore());
         if (req.getPassRatio() != null) e.setPassRatio(req.getPassRatio());
+        if (req.getVersion() != null) e.setVersion(req.getVersion());
+        if (req.getStartAt() != null) e.setStartAt(req.getStartAt());
+        if (req.getEndAt() != null) e.setEndAt(req.getEndAt());
+        if (req.getDepartmentScope() != null) e.setDepartmentScope(req.getDepartmentScope());
         educationRepository.saveAndFlush(e);
         return e.getUpdatedAt();
     }
@@ -369,7 +386,7 @@ public class EducationService {
                 presignedUrl != null ? presignedUrl : fileUrl,
                 durationSec,
                 v.getVersion() != null ? v.getVersion() : 1,
-                v.getDepartmentScope(),
+                e.getDepartmentScope(),
                 resume,
                 completed,
                 total,
@@ -381,6 +398,9 @@ public class EducationService {
         return EducationVideosResponse.builder()
             .id(e.getId())
             .title(e.getTitle())
+            .startAt(e.getStartAt())
+            .endAt(e.getEndAt())
+            .departmentScope(e.getDepartmentScope())
             .videos(items)
             .build();
     }
@@ -391,32 +411,32 @@ public class EducationService {
      * - departmentScope에 사용자 부서 중 하나라도 포함되면 접근 가능
      */
     private boolean isVideoAccessibleByDepartment(EducationVideo video, List<String> userDepartments) {
-        String deptScope = video.getDepartmentScope();
+        // Education에서 departmentScope 가져오기
+        if (video.getEducationId() == null) {
+            return true; // educationId가 없으면 접근 허용
+        }
+        Education education = educationRepository.findById(video.getEducationId()).orElse(null);
+        if (education == null) {
+            return true; // Education을 찾을 수 없으면 접근 허용
+        }
+        String[] deptScope = education.getDepartmentScope();
         // departmentScope가 없으면 모든 부서 접근 가능
-        if (deptScope == null || deptScope.isBlank()) {
+        if (deptScope == null || deptScope.length == 0) {
             return true;
         }
         // 사용자 부서가 없으면 접근 불가
         if (userDepartments == null || userDepartments.isEmpty()) {
             return false;
         }
-        // departmentScope JSON 파싱
-        try {
-            List<String> allowedDepts = objectMapper.readValue(deptScope, new TypeReference<List<String>>() {});
-            if (allowedDepts == null || allowedDepts.isEmpty()) {
-                return true; // 빈 리스트면 모든 부서 접근 가능
-            }
-            // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
-            for (String userDept : userDepartments) {
-                if (allowedDepts.contains(userDept)) {
+        // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
+        for (String userDept : userDepartments) {
+            for (String allowedDept : deptScope) {
+                if (allowedDept != null && allowedDept.equals(userDept)) {
                     return true;
                 }
             }
-            return false;
-        } catch (Exception e) {
-            // 파싱 실패 시 접근 허용 (관대하게 처리)
-            return true;
         }
+        return false;
     }
 
     /**
@@ -618,6 +638,41 @@ public class EducationService {
     // ========================
 
     /**
+     * infra-service에서 부서별 전체 사용자 수 조회.
+     */
+    private long fetchDepartmentUserCountFromInfraService(String department) {
+        try {
+            RestClient restClient = RestClient.builder()
+                .baseUrl(infraBaseUrl.endsWith("/") ? infraBaseUrl.substring(0, infraBaseUrl.length() - 1) : infraBaseUrl)
+                .build();
+            
+            String uri = "/admin/users/count";
+            if (department != null && !department.isBlank()) {
+                uri += "?department=" + java.net.URLEncoder.encode(department.trim(), java.nio.charset.StandardCharsets.UTF_8);
+            }
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restClient.get()
+                .uri(uri)
+                .retrieve()
+                .body(Map.class);
+
+                log.info("response 444: {}", response);
+            
+            if (response != null && response.containsKey("count")) {
+                Object count = response.get("count");
+                if (count instanceof Number) {
+                    return ((Number) count).longValue();
+                }
+            }
+            return 0;
+        } catch (Exception e) {
+            log.warn("부서별 사용자 수 조회 실패: department={}, error={}", department, e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    /**
      * infra-service에서 사용자 부서 정보 조회.
      */
     private String fetchUserDepartmentFromInfraService(UUID userId) {
@@ -625,8 +680,6 @@ public class EducationService {
             return null;
         }
 
-        log.info("@@@@@@@@@@@@@@@@@@ userId: {}", userId);
-        
         try {
             RestClient restClient = RestClient.builder()
                 .baseUrl(infraBaseUrl.endsWith("/") ? infraBaseUrl.substring(0, infraBaseUrl.length() - 1) : infraBaseUrl)
@@ -650,11 +703,9 @@ public class EducationService {
                 List<String> deptList = (List<String>) attributes.get("department");
                 if (deptList != null && !deptList.isEmpty()) {
                     String dept = deptList.get(0);
-                    log.info("@@@@@@@@@@@@@@@@@@ userId: {}, department: {}", userId, dept);
                     return dept;
                 }
             }
-            log.info("@@@@@@@@@@@@@@@@@@ userId: {}, department: null (attributes 또는 department가 없음)", userId);
             return null;
         } catch (Exception e) {
             log.debug("사용자 부서 정보 조회 실패: userId={}, error={}", userId, e.getMessage());
@@ -673,22 +724,29 @@ public class EducationService {
     }
 
     /**
-     * 대시보드 요약 통계 조회.
+     * 대시보드 요약 통계 조회. 추후 교육 시작일, 종료일 필터에 대한 적용을 어떻게 할지 생각해야함
      */
     public EducationResponses.DashboardSummaryResponse getDashboardSummary(Integer periodDays, String department) {
+        // 기간 필터 적용
         Instant startDate = calculateStartDate(periodDays);
         
-        // 모든 교육 진행 현황 조회 (기간 필터: updatedAt 기준으로 기간 내에 업데이트된 모든 진행 현황 포함)
+        // 기간 내에 완료된 진행 기록만 조회
         List<EducationProgress> allProgresses = educationProgressRepository.findAll().stream()
-            .filter(p -> p.getUpdatedAt() != null && p.getUpdatedAt().isAfter(startDate))
             .filter(p -> p.getDeletedAt() == null)
+            .filter(p -> p.getCompletedAt() != null && p.getCompletedAt().isAfter(startDate))
             .collect(Collectors.toList());
 
-            log.info("@@@@@@@@@@@@@@@@@@ department: {}", department);
+        // 전체 대상자 수 계산 (부서 필터 적용 시)
+        long totalTargetUsers = 0;
 
-        // 부서 필터 적용
+        log.info("department: 1 {}", department);
         if (department != null && !department.isBlank()) {
             String departmentTrimmed = department.trim();
+            // 해당 부서의 전체 사용자 수 조회
+            totalTargetUsers = fetchDepartmentUserCountFromInfraService(departmentTrimmed);
+            log.info("totalTargetUsers: 3 {}", totalTargetUsers);
+            
+            // 부서 필터 적용
             allProgresses = allProgresses.stream()
                 .filter(p -> {
                     String userDept = fetchUserDepartmentFromInfraService(p.getUserUuid());
@@ -699,42 +757,63 @@ public class EducationService {
                     return departmentTrimmed.equals(userDept.trim());
                 })
                 .collect(Collectors.toList());
+
+        } else {
+            // 부서 필터가 없으면 전체 사용자 수 조회
+            totalTargetUsers = fetchDepartmentUserCountFromInfraService(null);
+            log.info("totalTargetUsers: 2 {}", totalTargetUsers);
         }
 
-        // 전체 평균 이수율 계산 (모든 교육 진행 현황 중 완료된 비율)
-        long totalProgresses = allProgresses.size();
-        long completedProgresses = allProgresses.stream()
-            .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
-            .count();
+        // 전체 평균 이수율 계산 (전체 교육 수 대비 완료한 교육 수의 비율)
+        // 사용자별로 완료한 교육 수를 계산
+        List<Education> allEducations = educationRepository.findAll().stream()
+            .filter(e -> e.getDeletedAt() == null)
+            .collect(Collectors.toList());
+        
+        long totalEducationCount = allEducations.size();
+        
+        // 전체 평균 이수율 계산
+        // 사용자별로 완료한 교육 수를 계산하고 평균을 구함
+        double overallAverage = 0.0;
 
-        double overallAverage = totalProgresses > 0 ? (double) completedProgresses / totalProgresses * 100 : 0.0;
+        log.info("totalTargetUsers: {}", totalTargetUsers);
+        log.info("totalEducationCount: {}", totalEducationCount);
+        if (totalTargetUsers > 0 && totalEducationCount > 0) {
+            // 사용자별로 완료한 교육 수 집계
+            Map<UUID, Long> completedCountByUser = allProgresses.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
+                .collect(Collectors.groupingBy(
+                    EducationProgress::getUserUuid,
+                    Collectors.counting()
+                ));
+            
+            // 각 사용자별 완료한 교육 수 / 전체 교육 수의 합을 전체 사용자 수로 나눔
+            long totalCompletedEducations = completedCountByUser.values().stream()
+                .mapToLong(Long::longValue)
+                .sum();
+            
+            // 전체 평균 이수율 = (전체 완료한 교육 수) / (전체 사용자 수 * 전체 교육 수) * 100
+            overallAverage = (double) totalCompletedEducations / (totalTargetUsers * totalEducationCount) * 100;
+        }
 
         // 미이수자 수 계산
         // 필수 교육(require=true) 중 이수하지 않은 사용자 수
+        // 각 필수 교육별로 이수하지 않은 사용자 수를 합산 (중복 허용)
         List<Education> requiredEducations = educationRepository.findAll().stream()
             .filter(e -> e.getDeletedAt() == null)
             .filter(e -> Boolean.TRUE.equals(e.getRequire()))
             .collect(Collectors.toList());
 
-        // 필수 교육 대상 사용자 수집
-        List<UUID> allUserUuids = allProgresses.stream()
-            .map(EducationProgress::getUserUuid)
-            .distinct()
-            .collect(Collectors.toList());
-
-        // 각 필수 교육별로 이수하지 않은 사용자 카운트
         long nonCompleterCount = 0;
         for (Education reqEdu : requiredEducations) {
-            List<UUID> completedUserUuids = allProgresses.stream()
+            Set<UUID> completedUserUuids = allProgresses.stream()
                 .filter(p -> reqEdu.getId().equals(p.getEducationId()))
                 .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
                 .map(EducationProgress::getUserUuid)
-                .distinct()
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
 
-            // 필수 교육을 이수하지 않은 사용자 수 (전체 사용자 중 이수하지 않은 사용자)
-            // 간단히: 전체 사용자 수에서 이수자 수를 뺌 (실제로는 전체 사용자 수를 알아야 하지만, 현재는 진행 현황 기준)
-            long nonCompletersForEdu = allUserUuids.size() - completedUserUuids.size();
+            // 각 필수 교육별로 이수하지 않은 사용자 수
+            long nonCompletersForEdu = totalTargetUsers - completedUserUuids.size();
             if (nonCompletersForEdu > 0) {
                 nonCompleterCount += nonCompletersForEdu;
             }
@@ -746,7 +825,7 @@ public class EducationService {
             .filter(e -> e.getEduType() == EducationCategory.MANDATORY)
             .collect(Collectors.toList());
         
-        double mandatoryAverage = calculateCategoryAverage(mandatoryEducations, allProgresses);
+        double mandatoryAverage = calculateCategoryAverage(mandatoryEducations, allProgresses, totalTargetUsers);
 
         // 직무교육 평균 계산
         List<Education> jobEducations = educationRepository.findAll().stream()
@@ -754,7 +833,7 @@ public class EducationService {
             .filter(e -> e.getEduType() == EducationCategory.JOB)
             .collect(Collectors.toList());
         
-        double jobAverage = calculateCategoryAverage(jobEducations, allProgresses);
+        double jobAverage = calculateCategoryAverage(jobEducations, allProgresses, totalTargetUsers);
 
         return new EducationResponses.DashboardSummaryResponse(
             overallAverage,
@@ -766,8 +845,12 @@ public class EducationService {
 
     /**
      * 카테고리별 평균 이수율 계산.
+     * 
+     * @param educations 교육 목록
+     * @param allProgresses 전체 진행 기록 (이미 부서 필터링됨)
+     * @param totalTargetUsers 전체 대상자 수 (0이면 진행 기록 기반으로 계산)
      */
-    private double calculateCategoryAverage(List<Education> educations, List<EducationProgress> allProgresses) {
+    private double calculateCategoryAverage(List<Education> educations, List<EducationProgress> allProgresses, long totalTargetUsers) {
         if (educations.isEmpty()) {
             return 0.0;
         }
@@ -780,24 +863,22 @@ public class EducationService {
                 .filter(p -> edu.getId().equals(p.getEducationId()))
                 .collect(Collectors.toList());
 
-            if (!eduProgresses.isEmpty()) {
-                long totalUsers = eduProgresses.stream()
-                    .map(EducationProgress::getUserUuid)
-                    .distinct()
-                    .count();
-                    
-                
-                long completedUsers = eduProgresses.stream()
-                    .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
-                    .map(EducationProgress::getUserUuid)
-                    .distinct()
-                    .count();
+            // 완료한 사용자 수 계산
+            long completedUsers = eduProgresses.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
+                .map(EducationProgress::getUserUuid)
+                .distinct()
+                .count();
 
+            // 전체 대상자 수가 제공된 경우 사용, 아니면 진행 기록 기반으로 계산
+            long totalUsers = totalTargetUsers > 0 ? totalTargetUsers : eduProgresses.stream()
+                .map(EducationProgress::getUserUuid)
+                .distinct()
+                .count();
 
-                if (totalUsers > 0) {
-                    totalRate += (double) completedUsers / totalUsers * 100;
-                    count++;
-                }
+            if (totalUsers > 0) {
+                totalRate += (double) completedUsers / totalUsers * 100;
+                count++;
             }
         }
 
@@ -815,9 +896,14 @@ public class EducationService {
             .filter(p -> p.getDeletedAt() == null)
             .collect(Collectors.toList());
 
-        // 부서 필터 적용
+        // 전체 대상자 수 계산 (부서 필터 적용 시)
+        long totalTargetUsers = 0;
         if (department != null && !department.isBlank()) {
             String departmentTrimmed = department.trim();
+            // 해당 부서의 전체 사용자 수 조회
+            totalTargetUsers = fetchDepartmentUserCountFromInfraService(departmentTrimmed);
+            
+            // 부서 필터 적용
             allProgresses = allProgresses.stream()
                 .filter(p -> {
                     String userDept = fetchUserDepartmentFromInfraService(p.getUserUuid());
@@ -828,17 +914,20 @@ public class EducationService {
                     return departmentTrimmed.equals(userDept.trim());
                 })
                 .collect(Collectors.toList());
+        } else {
+            // 부서 필터가 없으면 전체 사용자 수 조회 (대략적인 추정)
+            totalTargetUsers = fetchDepartmentUserCountFromInfraService(null);
         }
 
         // 각 의무교육별 이수율 계산
         double sexualHarassment = calculateTopicCompletionRate(
-            EducationTopic.SEXUAL_HARASSMENT_PREVENTION, allProgresses);
+            EducationTopic.SEXUAL_HARASSMENT_PREVENTION, allProgresses, totalTargetUsers);
         double personalInfo = calculateTopicCompletionRate(
-            EducationTopic.PERSONAL_INFO_PROTECTION, allProgresses);
+            EducationTopic.PERSONAL_INFO_PROTECTION, allProgresses, totalTargetUsers);
         double workplaceBullying = calculateTopicCompletionRate(
-            EducationTopic.WORKPLACE_BULLYING, allProgresses);
+            EducationTopic.WORKPLACE_BULLYING, allProgresses, totalTargetUsers);
         double disabilityAwareness = calculateTopicCompletionRate(
-            EducationTopic.DISABILITY_AWARENESS, allProgresses);
+            EducationTopic.DISABILITY_AWARENESS, allProgresses, totalTargetUsers);
 
         return new EducationResponses.MandatoryCompletionResponse(
             sexualHarassment,
@@ -850,8 +939,12 @@ public class EducationService {
 
     /**
      * 주제별 이수율 계산.
+     * 
+     * @param topic 교육 주제
+     * @param allProgresses 전체 진행 기록 (이미 부서 필터링됨)
+     * @param totalTargetUsers 전체 대상자 수 (0이면 진행 기록 기반으로 계산)
      */
-    private double calculateTopicCompletionRate(EducationTopic topic, List<EducationProgress> allProgresses) {
+    private double calculateTopicCompletionRate(EducationTopic topic, List<EducationProgress> allProgresses, long totalTargetUsers) {
         List<Education> topicEducations = educationRepository.findAll().stream()
             .filter(e -> e.getDeletedAt() == null)
             .filter(e -> e.getCategory() == topic)
@@ -869,17 +962,15 @@ public class EducationService {
             .filter(p -> educationIds.contains(p.getEducationId()))
             .collect(Collectors.toList());
 
-        if (topicProgresses.isEmpty()) {
-            return 0.0;
-        }
-
-        long totalUsers = topicProgresses.stream()
+        // 완료한 사용자 수 계산
+        long completedUsers = topicProgresses.stream()
+            .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
             .map(EducationProgress::getUserUuid)
             .distinct()
             .count();
-        
-        long completedUsers = topicProgresses.stream()
-            .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
+
+        // 전체 대상자 수가 제공된 경우 사용, 아니면 진행 기록 기반으로 계산
+        long totalUsers = totalTargetUsers > 0 ? totalTargetUsers : topicProgresses.stream()
             .map(EducationProgress::getUserUuid)
             .distinct()
             .count();
@@ -956,44 +1047,62 @@ public class EducationService {
     public EducationResponses.DepartmentCompletionResponse getDepartmentCompletion(Integer periodDays) {
         Instant startDate = calculateStartDate(periodDays);
         
-        List<EducationProgress> allProgresses = educationProgressRepository.findAll().stream()
+        // 기간 내에 완료된 진행 기록만 조회
+        List<EducationProgress> completedProgresses = educationProgressRepository.findAll().stream()
             .filter(p -> p.getCompletedAt() != null && p.getCompletedAt().isAfter(startDate))
             .filter(p -> p.getDeletedAt() == null)
             .collect(Collectors.toList());
 
-        // 부서별로 그룹화
+        // 모든 진행 기록 조회 (진행 중인 것도 포함)
+        List<EducationProgress> allProgresses = educationProgressRepository.findAll().stream()
+            .filter(p -> p.getDeletedAt() == null)
+            .collect(Collectors.toList());
+
+        // infra-service에서 모든 부서 목록 조회 (진행 기록이 없는 부서도 포함하기 위해)
+        Map<String, Long> departmentUserCountMap = fetchAllDepartmentUserCountsFromInfraService();
+
+        // 부서별 진행 기록 그룹화
         Map<String, List<EducationProgress>> deptProgressMap = new HashMap<>();
+        Map<String, Set<UUID>> deptUserSet = new HashMap<>();
         
         for (EducationProgress progress : allProgresses) {
             String dept = fetchUserDepartmentFromInfraService(progress.getUserUuid());
             if (dept != null && !dept.isBlank()) {
                 deptProgressMap.computeIfAbsent(dept, k -> new ArrayList<>()).add(progress);
+                deptUserSet.computeIfAbsent(dept, k -> new HashSet<>()).add(progress.getUserUuid());
+            }
+        }
+
+        // 완료된 진행 기록도 부서별로 그룹화
+        Map<String, Set<UUID>> deptCompletedUserSet = new HashMap<>();
+        for (EducationProgress progress : completedProgresses) {
+            String dept = fetchUserDepartmentFromInfraService(progress.getUserUuid());
+            if (dept != null && !dept.isBlank() && Boolean.TRUE.equals(progress.getIsCompleted())) {
+                deptCompletedUserSet.computeIfAbsent(dept, k -> new HashSet<>()).add(progress.getUserUuid());
             }
         }
 
         List<EducationResponses.DepartmentCompletionItem> items = new ArrayList<>();
 
-        for (Map.Entry<String, List<EducationProgress>> entry : deptProgressMap.entrySet()) {
-            String dept = entry.getKey();
-            List<EducationProgress> deptProgresses = entry.getValue();
-
-            long targetCount = deptProgresses.stream()
-                .map(EducationProgress::getUserUuid)
-                .distinct()
-                .count();
-
-            long completerCount = deptProgresses.stream()
-                .filter(p -> Boolean.TRUE.equals(p.getIsCompleted()))
-                .map(EducationProgress::getUserUuid)
-                .distinct()
-                .count();
-
-            double completionRate = targetCount > 0 ? (double) completerCount / targetCount * 100 : 0.0;
-            long nonCompleterCount = targetCount - completerCount;
+        // 모든 부서에 대해 결과 생성 (진행 기록이 없는 부서도 포함)
+        for (Map.Entry<String, Long> deptEntry : departmentUserCountMap.entrySet()) {
+            String dept = deptEntry.getKey();
+            long totalTargetUsers = deptEntry.getValue();
+            
+            Set<UUID> completedUsers = deptCompletedUserSet.getOrDefault(dept, Collections.emptySet());
+            long completerCount = completedUsers.size();
+            
+            // 실제 진행 기록이 있는 사용자 수 (진행 중인 사용자 포함)
+            Set<UUID> usersWithProgress = deptUserSet.getOrDefault(dept, Collections.emptySet());
+            long actualUsersWithProgress = usersWithProgress.size();
+            
+            // 전체 대상자 수를 사용 (진행 기록이 없어도 부서의 모든 사용자가 대상)
+            double completionRate = totalTargetUsers > 0 ? (double) completerCount / totalTargetUsers * 100 : 0.0;
+            long nonCompleterCount = totalTargetUsers - completerCount;
 
             items.add(new EducationResponses.DepartmentCompletionItem(
                 dept,
-                targetCount,
+                totalTargetUsers,  // 전체 대상자 수
                 completerCount,
                 completionRate,
                 nonCompleterCount
@@ -1004,6 +1113,49 @@ public class EducationService {
         items.sort((a, b) -> Double.compare(b.getCompletionRate(), a.getCompletionRate()));
 
         return new EducationResponses.DepartmentCompletionResponse(items);
+    }
+    
+    /**
+     * infra-service에서 모든 부서별 사용자 수를 조회.
+     */
+    private Map<String, Long> fetchAllDepartmentUserCountsFromInfraService() {
+        Map<String, Long> departmentCountMap = new HashMap<>();
+        try {
+            RestClient restClient = RestClient.builder()
+                .baseUrl(infraBaseUrl.endsWith("/") ? infraBaseUrl.substring(0, infraBaseUrl.length() - 1) : infraBaseUrl)
+                .build();
+            
+            // 전체 사용자 목록 조회 (큰 페이지로)
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restClient.get()
+            .uri("/admin/users/search?page=0&size=1000")
+                .retrieve()
+                .body(Map.class);
+            
+            if (response != null && response.containsKey("items")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> users = (List<Map<String, Object>>) response.get("items");
+                if (users != null) {
+                    for (Map<String, Object> user : users) {
+                        // attributes에서 department 추출
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> attributes = (Map<String, Object>) user.get("attributes");
+                        String department = "Others";
+                        if (attributes != null) {
+                            @SuppressWarnings("unchecked")
+                            List<String> deptList = (List<String>) attributes.get("department");
+                            if (deptList != null && !deptList.isEmpty()) {
+                                department = deptList.get(0);
+                            }
+                        }
+                        departmentCountMap.put(department, departmentCountMap.getOrDefault(department, 0L) + 1);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("모든 부서별 사용자 수 조회 실패: error={}", e.getMessage());
+        }
+        return departmentCountMap;
     }
 
 }

@@ -1,8 +1,12 @@
 package com.ctrlf.chat.faq.controller;
 
+import com.ctrlf.chat.faq.dto.request.AutoFaqGenerateRequest;
 import com.ctrlf.chat.faq.dto.request.FaqCandidateCreateRequest;
+import com.ctrlf.chat.faq.dto.request.FaqDraftGenerateBatchRequest;
+import com.ctrlf.chat.faq.dto.response.AutoFaqGenerateResponse;
 import com.ctrlf.chat.faq.dto.response.FaqCandidateResponse;
 import com.ctrlf.chat.faq.dto.response.FaqDraftCreateResponse;
+import com.ctrlf.chat.faq.dto.response.FaqDraftGenerateBatchResponse;
 import com.ctrlf.chat.faq.service.FaqCandidateService;
 import com.ctrlf.chat.faq.service.FaqService;
 import java.util.List;
@@ -60,5 +64,30 @@ public class AdminFaqCandidateController {
     ) {
         UUID draftId = faqService.generateDraftFromCandidate(candidateId);
         return new FaqDraftCreateResponse(draftId);
+    }
+
+    /**
+     * FAQ 초안 배치 생성 (Phase 20-AI-2)
+     */
+    @PostMapping("/generate/batch")
+    public FaqDraftGenerateBatchResponse generateDraftBatch(
+        @RequestBody FaqDraftGenerateBatchRequest request
+    ) {
+        return faqService.generateDraftBatch(request);
+    }
+
+    /**
+     * 자동 FAQ 생성 (질문 로그 기반)
+     * 
+     * 사용자 질문 로그를 분석하여 자동으로 FAQ 후보를 선정하고 초안을 생성합니다.
+     * 
+     * @param request 자동 FAQ 생성 요청
+     * @return 자동 FAQ 생성 응답
+     */
+    @PostMapping("/auto-generate")
+    public AutoFaqGenerateResponse generateAuto(
+        @RequestBody AutoFaqGenerateRequest request
+    ) {
+        return faqService.generateAuto(request);
     }
 }
