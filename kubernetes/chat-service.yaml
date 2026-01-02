@@ -10,4 +10,4 @@ spec:
     - protocol: TCP
       port: 9005      # 외부/내부에서 접속할 포트
       targetPort: 9005 # 컨테이너 내부 포트
-  type: ClusterIP
+  type: NodePort
