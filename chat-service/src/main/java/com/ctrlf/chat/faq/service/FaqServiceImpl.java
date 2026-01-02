@@ -226,6 +226,8 @@ public class FaqServiceImpl implements FaqService {
         faq.setDomain(draft.getDomain());
         faq.setIsActive(true);
         faq.setNeedsRecategorization(false);  // 기본값 설정
+        faq.setPriority(1);  // 기본 우선순위 설정 (1~5, 기본값: 1)
+        faq.setPublishedAt(Instant.now());  // 게시 시각 설정
         faq.setCreatedAt(Instant.now());
         faq.setUpdatedAt(Instant.now());
 
@@ -413,7 +415,7 @@ public class FaqServiceImpl implements FaqService {
         // AI 서버에서 받은 FAQ 초안들을 DB에 저장
         int savedCount = 0;
         int failedCount = 0;
-        java.util.List<com.ctrlf.chat.faq.dto.response.FaqDraftGenerateResponse.FaqDraftPayload> savedDrafts = 
+        java.util.List<com.ctrlf.chat.faq.dto.response.FaqDraftGenerateResponse.FaqDraftPayload> savedDrafts =
             new java.util.ArrayList<>();
 
         // candidates 정보는 로깅용으로만 사용 (DB 저장은 하지 않음)
@@ -477,7 +479,7 @@ public class FaqServiceImpl implements FaqService {
 
     /**
      * RAGFlow dataset 값을 원본 domain 형식으로 역매핑
-     * 
+     *
      * @param ragflowDomain RAGFlow dataset 값 (예: "SEC_POLICY", "POLICY")
      * @return 원본 domain 값 (예: "SECURITY", "POLICY")
      */
