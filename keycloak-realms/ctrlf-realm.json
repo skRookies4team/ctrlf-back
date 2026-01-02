@@ -1,9 +1,6 @@
 {
   "realm": "ctrlf",
-  "sslRequired": "none",
-  "attributes": {
-    "checkLoginIframe": "false"
-  },
+
 
   "enabled": true,
   "displayName": "CTRL-F",
@@ -87,12 +84,12 @@
       "standardFlowEnabled": true,
       "redirectUris": [
         "http://front-service:5173/*",
-        "http://k8s-argocd-ctrlfing-24d9f59895-1823150137.ap-northeast-2.elb.amazonaws.com/auth/*",
-        "http://k8s-argocd-ctrlfing-24d9f59895-1823150137.ap-northeast-2.elb.amazonaws.com/*"
+        "https://8bang-ctrlf.com/auth/*",
+        "https://8bang-ctrlf.com/*"
       ],
       "webOrigins": [
         "http://front-service:5173",
-        "http://k8s-argocd-ctrlfing-24d9f59895-1823150137.ap-northeast-2.elb.amazonaws.com","+"
+        "https://8bang-ctrlf.com","+"
       ],
       "attributes": {
         "backchannel.logout.session.required": "false",
