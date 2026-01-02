@@ -18,10 +18,6 @@
         "description": "전체 시스템 관리자"
       },
       {
-        "name": "COMPLAINT_MANAGER",
-        "description": "신고 관리자"
-      },
-      {
         "name": "VIDEO_CREATOR",
         "description": "교육 영상 제작자"
       },

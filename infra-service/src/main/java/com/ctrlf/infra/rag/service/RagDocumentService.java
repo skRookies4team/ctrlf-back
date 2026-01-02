@@ -10,6 +10,8 @@ import com.ctrlf.infra.rag.client.RagAiClient;
 import com.ctrlf.infra.rag.repository.RagDocumentChunkRepository;
 import com.ctrlf.infra.rag.repository.RagFailChunkRepository;
 import com.ctrlf.infra.rag.repository.RagDocumentRepository;
+import com.ctrlf.infra.rag.repository.RagDocumentHistoryRepository;
+import com.ctrlf.infra.rag.entity.RagDocumentHistory;
 import com.ctrlf.infra.s3.service.S3Service;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -49,6 +51,7 @@ public class RagDocumentService {
     private final RagDocumentRepository documentRepository;
     private final RagDocumentChunkRepository chunkRepository;
     private final RagFailChunkRepository failChunkRepository;
+    private final RagDocumentHistoryRepository historyRepository;
     private final RagAiClient ragAiClient;
     private final S3Service s3Service;
 
@@ -425,6 +428,32 @@ public class RagDocumentService {
         }
     }
 
+    /**
+     * RagDocument를 VersionDetail로 변환하는 헬퍼 메서드
+     */
+    private VersionDetail mapToVersionDetail(RagDocument doc) {
+        return new VersionDetail(
+            doc.getId().toString(),
+            doc.getDocumentId(),
+            doc.getTitle(),
+            doc.getDomain(),
+            doc.getVersion(),
+            doc.getStatus() != null ? doc.getStatus().name() : null,
+            doc.getChangeSummary(),
+            doc.getSourceUrl(),
+            doc.getUploaderUuid(),
+            doc.getCreatedAt() != null ? doc.getCreatedAt().toString() : null,
+            doc.getProcessedAt() != null ? doc.getProcessedAt().toString() : null,
+            doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "IDLE",
+            doc.getPreprocessPages(),
+            doc.getPreprocessChars(),
+            doc.getPreprocessExcerpt(),
+            doc.getPreprocessError(),
+            doc.getReviewRequestedAt() != null ? doc.getReviewRequestedAt().toString() : null,
+            doc.getReviewItemId()
+        );
+    }
+
     // ========== Policy Management Methods ==========
 
     /**
@@ -527,19 +556,7 @@ public class RagDocumentService {
         
         RagDocument first = versions.get(0);
         List<VersionDetail> versionDetails = versions.stream()
-            .map(v -> new VersionDetail(
-                v.getId().toString(),
-                v.getDocumentId(),
-                v.getTitle(),
-                v.getDomain(),
-                v.getVersion(),
-                v.getStatus() != null ? v.getStatus().name() : null,
-                v.getChangeSummary(),
-                v.getSourceUrl(),
-                v.getUploaderUuid(),
-                v.getCreatedAt() != null ? v.getCreatedAt().toString() : null,
-                v.getProcessedAt() != null ? v.getProcessedAt().toString() : null
-            ))
+            .map(v -> mapToVersionDetail(v))
             .collect(java.util.stream.Collectors.toList());
         
         return new PolicyDetailResponse(
@@ -558,19 +575,7 @@ public class RagDocumentService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
                 "Policy version not found: " + documentId + " v" + version));
         
-        return new VersionDetail(
-            doc.getId().toString(),
-            doc.getDocumentId(),
-            doc.getTitle(),
-            doc.getDomain(),
-            doc.getVersion(),
-            doc.getStatus() != null ? doc.getStatus().name() : null,
-            doc.getChangeSummary(),
-            doc.getSourceUrl(),
-            doc.getUploaderUuid(),
-            doc.getCreatedAt() != null ? doc.getCreatedAt().toString() : null,
-            doc.getProcessedAt() != null ? doc.getProcessedAt().toString() : null
-        );
+        return mapToVersionDetail(doc);
     }
 
     /**
@@ -583,19 +588,7 @@ public class RagDocumentService {
         }
         
         return versions.stream()
-            .map(v -> new VersionDetail(
-                v.getId().toString(),
-                v.getDocumentId(),
-                v.getTitle(),
-                v.getDomain(),
-                v.getVersion(),
-                v.getStatus() != null ? v.getStatus().name() : null,
-                v.getChangeSummary(),
-                v.getSourceUrl(),
-                v.getUploaderUuid(),
-                v.getCreatedAt() != null ? v.getCreatedAt().toString() : null,
-                v.getProcessedAt() != null ? v.getProcessedAt().toString() : null
-            ))
+            .map(v -> mapToVersionDetail(v))
             .collect(java.util.stream.Collectors.toList());
     }
 
@@ -732,6 +725,10 @@ public class RagDocumentService {
                 "Policy version not found: " + documentId + " v" + version));
         
         boolean changed = false;
+        if (req.getTitle() != null && !req.getTitle().isBlank()) {
+            doc.setTitle(req.getTitle());
+            changed = true;
+        }
         if (req.getChangeSummary() != null && !req.getChangeSummary().isBlank()) {
             doc.setChangeSummary(req.getChangeSummary());
             changed = true;
@@ -783,8 +780,24 @@ public class RagDocumentService {
             }
         }
         
+        RagDocumentStatus oldStatus = doc.getStatus();
         doc.setStatus(newStatus);
+        
+        // PENDING으로 변경 시 검토 요청 시각 기록
+        if (newStatus == RagDocumentStatus.PENDING) {
+            doc.setReviewRequestedAt(Instant.now());
+            // 검토 항목 ID 생성 (예: "REVIEW-" + documentId + "-v" + version)
+            doc.setReviewItemId("REVIEW-" + documentId + "-v" + version);
+        }
+        
         doc = documentRepository.save(doc);
+        
+        // 히스토리 기록
+        String action = "STATUS_CHANGED";
+        String message = String.format("상태 변경: %s → %s", 
+            oldStatus != null ? oldStatus.name() : "null", 
+            newStatus.name());
+        addHistory(documentId, version, action, null, message);
         
         return new UpdateStatusResponse(
             doc.getId().toString(),
@@ -804,7 +817,35 @@ public class RagDocumentService {
                 "Policy version not found: " + documentId + " v" + version));
         
         doc.setSourceUrl(req.getFileUrl());
+        // 파일 교체 시 전처리 상태 초기화
+        doc.setPreprocessStatus("PROCESSING");
+        doc.setPreprocessError(null);
         doc = documentRepository.save(doc);
+        
+        // AI 서버에 전처리 요청 (파일이 있는 경우에만)
+        if (req.getFileUrl() != null && !req.getFileUrl().isBlank()) {
+            try {
+                // AI 서버에 문서 임베딩 처리 요청
+                // AI 서버는 처리 완료 후 PATCH /internal/rag/documents/{ragDocumentPk}/status 로 콜백을 보냅니다
+                RagAiClient.AiResponse aiResp = ragAiClient.ingest(
+                    doc.getId(),  // UUID (AI 서버가 콜백 시 사용할 PK)
+                    doc.getDocumentId(),
+                    doc.getVersion(),
+                    doc.getSourceUrl(),
+                    doc.getDomain()
+                );
+                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
+                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(), 
+                    aiResp.getRequestId(), aiResp.getTraceId());
+            } catch (Exception e) {
+                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}", 
+                    doc.getId(), doc.getDocumentId(), doc.getVersion(), e.getMessage(), e);
+                // AI 서버 호출 실패 시 전처리 상태를 FAILED로 설정
+                doc.setPreprocessStatus("FAILED");
+                doc.setPreprocessError("AI 서버 처리 요청 실패: " + e.getMessage());
+                documentRepository.save(doc);
+            }
+        }
         
         return new ReplaceFileResponse(
             doc.getId().toString(),
@@ -869,10 +910,28 @@ public class RagDocumentService {
             doc.setProcessedAt(Instant.now());
         }
 
-        // failReason 로깅 (엔티티에 필드가 없으므로 로그만 남김)
+        // failReason 로깅 및 전처리 상태 업데이트
         if (req.getFailReason() != null && !req.getFailReason().isBlank()) {
             log.warn("Document processing failed: id={}, documentId={}, version={}, failReason={}", 
                 doc.getId(), doc.getDocumentId(), doc.getVersion(), req.getFailReason());
+            // 실패 시 전처리 상태도 FAILED로 설정
+            doc.setPreprocessStatus("FAILED");
+            doc.setPreprocessError(req.getFailReason());
+        } else if (newStatus == RagDocumentStatus.COMPLETED) {
+            // 성공 시 전처리 상태를 READY로 설정하고 미리보기 데이터 저장
+            doc.setPreprocessStatus("READY");
+            if (req.getPreprocessPages() != null) {
+                doc.setPreprocessPages(req.getPreprocessPages());
+            }
+            if (req.getPreprocessChars() != null) {
+                doc.setPreprocessChars(req.getPreprocessChars());
+            }
+            if (req.getPreprocessExcerpt() != null && !req.getPreprocessExcerpt().isBlank()) {
+                doc.setPreprocessExcerpt(req.getPreprocessExcerpt());
+            }
+        } else if (newStatus == RagDocumentStatus.PROCESSING) {
+            // 처리 중일 때는 전처리 상태도 PROCESSING으로 설정
+            doc.setPreprocessStatus("PROCESSING");
         }
 
         doc = documentRepository.save(doc);
@@ -889,6 +948,95 @@ public class RagDocumentService {
             doc.getProcessedAt() != null ? doc.getProcessedAt().toString() : null,
             Instant.now().toString()
         );
+    }
+
+    // ========== Preprocess API Methods ==========
+
+    /**
+     * 전처리 미리보기 조회
+     */
+    public PreprocessPreviewResponse getPreprocessPreview(String documentId, Integer version) {
+        RagDocument doc = documentRepository.findByDocumentIdAndVersion(documentId, version)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "Policy version not found: " + documentId + " v" + version));
+        
+        return new PreprocessPreviewResponse(
+            doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "IDLE",
+            doc.getPreprocessPages(),
+            doc.getPreprocessChars(),
+            doc.getPreprocessExcerpt(),
+            doc.getPreprocessError()
+        );
+    }
+
+    /**
+     * 전처리 재시도
+     */
+    public RetryPreprocessResponse retryPreprocess(String documentId, Integer version) {
+        RagDocument doc = documentRepository.findByDocumentIdAndVersion(documentId, version)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "Policy version not found: " + documentId + " v" + version));
+        
+        // 전처리 상태를 PROCESSING으로 변경
+        doc.setPreprocessStatus("PROCESSING");
+        doc.setPreprocessError(null);
+        documentRepository.save(doc);
+        
+        // 히스토리 기록
+        addHistory(doc.getDocumentId(), doc.getVersion(), "PREPROCESS_RETRY", null, "전처리 재시도");
+        
+        // TODO: 실제 전처리 작업을 AI 서비스에 요청하는 로직 추가 필요
+        // ragAiClient.requestPreprocess(doc.getId().toString());
+        
+        return new RetryPreprocessResponse(
+            doc.getDocumentId(),
+            doc.getVersion(),
+            "PROCESSING",
+            "전처리를 재시도합니다."
+        );
+    }
+
+    // ========== History API Methods ==========
+
+    /**
+     * 히스토리 조회
+     */
+    public HistoryResponse getHistory(String documentId, Integer version) {
+        // 문서 존재 확인
+        RagDocument doc = documentRepository.findByDocumentIdAndVersion(documentId, version)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "Policy version not found: " + documentId + " v" + version));
+        
+        List<RagDocumentHistory> histories = historyRepository
+            .findByDocumentIdAndVersionOrderByCreatedAtDesc(documentId, version);
+        
+        List<HistoryItem> items = histories.stream()
+            .map(h -> new HistoryItem(
+                h.getId().toString(),
+                h.getDocumentId(),
+                h.getVersion(),
+                h.getAction(),
+                h.getActor(),
+                h.getMessage(),
+                h.getCreatedAt() != null ? h.getCreatedAt().toString() : null
+            ))
+            .collect(java.util.stream.Collectors.toList());
+        
+        return new HistoryResponse(documentId, version, items);
+    }
+
+    /**
+     * 히스토리 기록 헬퍼 메서드
+     */
+    private void addHistory(String documentId, Integer version, String action, String actor, String message) {
+        RagDocumentHistory history = new RagDocumentHistory();
+        history.setDocumentId(documentId);
+        history.setVersion(version);
+        history.setAction(action);
+        history.setActor(actor);
+        history.setMessage(message);
+        history.setCreatedAt(Instant.now());
+        historyRepository.save(history);
     }
 
 }
