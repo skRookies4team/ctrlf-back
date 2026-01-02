@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.time.Instant;
 
 /**
  * 교육 도메인 요청 DTO 묶음.
@@ -43,6 +44,12 @@ public final class EducationRequests {
         private Integer passScore;
         // 통과 기준 비율 (옵션, %)
         private Integer passRatio;
+        // 교육 시작 시각
+        private Instant startAt;
+        // 교육 종료 시각
+        private Instant endAt;
+        // 부서 범위
+        private String[] departmentScope;
     }
 
     /**
@@ -68,6 +75,12 @@ public final class EducationRequests {
         private Integer passRatio;
         // 교육 버전
         private Integer version;
+        // 교육 시작 날짜(시간 포함)
+        private Instant startAt;
+        // 교육 종료 날짜(시간 포함)
+        private Instant endAt;
+        // 부서 범위
+        private String[] departmentScope;
     }
 
     /**

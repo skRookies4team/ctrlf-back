@@ -26,15 +26,18 @@ Body: 있음
 
 ### Request
 
-| key         | 설명              | value 타입 | 옵션     | Nullable | 예시                                                                                                                    |
-| ----------- | ----------------- | ---------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
-| title       | 교육 제목         | string     | required | false    | "산업안전 교육"                                                                                                         |
-| description | 설명              | string     | optional | true     | "산업안전 수칙"                                                                                                         |
-| category    | 주제 카테고리     | string     | required | false    | "JOB_DUTY" (JOB_DUTY, SEXUAL_HARASSMENT_PREVENTION, PERSONAL_INFO_PROTECTION, WORKPLACE_BULLYING, DISABILITY_AWARENESS) |
-| eduType     | 교육 유형         | string     | optional | true     | "MANDATORY" (MANDATORY, JOB, ETC)                                                                                       |
-| require     | 필수 여부         | boolean    | required | false    | true                                                                                                                    |
-| passScore   | 통과 기준 점수    | number     | optional | true     | 80                                                                                                                      |
-| passRatio   | 통과 기준 비율(%) | number     | optional | true     | 90                                                                                                                      |
+| key             | 설명                | value 타입       | 옵션     | Nullable | 예시                                                                                                                    |
+| --------------- | ------------------- | ---------------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
+| title           | 교육 제목           | string           | required | false    | "산업안전 교육"                                                                                                         |
+| description     | 설명                | string           | optional | true     | "산업안전 수칙"                                                                                                         |
+| category        | 주제 카테고리       | string           | required | false    | "JOB_DUTY" (JOB_DUTY, SEXUAL_HARASSMENT_PREVENTION, PERSONAL_INFO_PROTECTION, WORKPLACE_BULLYING, DISABILITY_AWARENESS) |
+| eduType         | 교육 유형           | string           | optional | true     | "MANDATORY" (MANDATORY, JOB, ETC)                                                                                       |
+| require         | 필수 여부           | boolean          | required | false    | true                                                                                                                    |
+| passScore       | 통과 기준 점수      | number           | optional | true     | 80                                                                                                                      |
+| passRatio       | 통과 기준 비율(%)   | number           | optional | true     | 90                                                                                                                      |
+| startAt         | 교육 시작 시각      | string(ISO-8601) | optional | true     | "2024-01-01T00:00:00Z"                                                                                                  |
+| endAt           | 교육 종료 시각      | string(ISO-8601) | optional | true     | "2024-12-31T23:59:59Z"                                                                                                  |
+| departmentScope | 수강 가능 부서 목록 | string array     | optional | true     | ["전체 부서", "총무팀", "기획팀"]                                                                                       |
 
 ### Query Parameter
 
@@ -80,20 +83,23 @@ Body: 없음
 
 ### Response
 
-| key         | 설명              | value 타입       | 옵션     | Nullable | 예시                                   |
-| ----------- | ----------------- | ---------------- | -------- | -------- | -------------------------------------- |
-| id          | 교육 ID           | string(uuid)     | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title       | 제목              | string           | required | false    | "산업안전 교육"                        |
-| description | 설명              | string           | optional | true     | "산업안전 수칙"                        |
-| category    | 주제 카테고리     | string           | required | false    | "JOB_DUTY"                             |
-| eduType     | 교육 유형         | string           | optional | true     | "MANDATORY"                            |
-| require     | 필수 여부         | boolean          | optional | true     | true                                   |
-| passScore   | 통과 기준 점수    | number           | optional | true     | 80                                     |
-| passRatio   | 통과 기준 비율(%) | number           | optional | true     | 90                                     |
-| duration    | 총 길이(초)       | number           | required | false    | 3600                                   |
-| createdAt   | 생성 시각         | string(ISO-8601) | optional | true     | "2025-12-17T10:00:00Z"                 |
-| updatedAt   | 수정 시각         | string(ISO-8601) | optional | true     | "2025-12-17T10:00:00Z"                 |
-| sections    | 섹션 목록         | array(object)    | required | false    | 아래 표 참조                           |
+| key             | 설명                | value 타입       | 옵션     | Nullable | 예시                                   |
+| --------------- | ------------------- | ---------------- | -------- | -------- | -------------------------------------- |
+| id              | 교육 ID             | string(uuid)     | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 제목                | string           | required | false    | "산업안전 교육"                        |
+| description     | 설명                | string           | optional | true     | "산업안전 수칙"                        |
+| category        | 주제 카테고리       | string           | required | false    | "JOB_DUTY"                             |
+| eduType         | 교육 유형           | string           | optional | true     | "MANDATORY"                            |
+| require         | 필수 여부           | boolean          | optional | true     | true                                   |
+| passScore       | 통과 기준 점수      | number           | optional | true     | 80                                     |
+| passRatio       | 통과 기준 비율(%)   | number           | optional | true     | 90                                     |
+| duration        | 총 길이(초)         | number           | required | false    | 3600                                   |
+| startAt         | 교육 시작 시각      | string(ISO-8601) | optional | true     | "2024-01-01T00:00:00Z"                 |
+| endAt           | 교육 종료 시각      | string(ISO-8601) | optional | true     | "2024-12-31T23:59:59Z"                 |
+| departmentScope | 수강 가능 부서 목록 | string array     | optional | true     | ["전체 부서", "총무팀", "기획팀"]      |
+| createdAt       | 생성 시각           | string(ISO-8601) | optional | true     | "2025-12-17T10:00:00Z"                 |
+| updatedAt       | 수정 시각           | string(ISO-8601) | optional | true     | "2025-12-17T10:00:00Z"                 |
+| sections        | 섹션 목록           | array(object)    | required | false    | 아래 표 참조                           |
 
 sections item
 
@@ -136,15 +142,18 @@ Body: 있음
 
 ### Request
 
-| key         | 설명              | value 타입 | 옵션     | Nullable | 예시                  |
-| ----------- | ----------------- | ---------- | -------- | -------- | --------------------- |
-| title       | 교육 제목         | string     | optional | true     | "산업안전 교육(개정)" |
-| description | 설명              | string     | optional | true     | "수칙 개정"           |
-| category    | 주제 카테고리     | string     | optional | true     | "JOB_DUTY"            |
-| eduType     | 교육 유형         | string     | optional | true     | "MANDATORY"           |
-| require     | 필수 여부         | boolean    | optional | true     | true                  |
-| passScore   | 통과 기준 점수    | number     | optional | true     | 85                    |
-| passRatio   | 통과 기준 비율(%) | number     | optional | true     | 95                    |
+| key             | 설명                | value 타입       | 옵션     | Nullable | 예시                              |
+| --------------- | ------------------- | ---------------- | -------- | -------- | --------------------------------- |
+| title           | 교육 제목           | string           | optional | true     | "산업안전 교육(개정)"             |
+| description     | 설명                | string           | optional | true     | "수칙 개정"                       |
+| category        | 주제 카테고리       | string           | optional | true     | "JOB_DUTY"                        |
+| eduType         | 교육 유형           | string           | optional | true     | "MANDATORY"                       |
+| require         | 필수 여부           | boolean          | optional | true     | true                              |
+| passScore       | 통과 기준 점수      | number           | optional | true     | 85                                |
+| passRatio       | 통과 기준 비율(%)   | number           | optional | true     | 95                                |
+| startAt         | 교육 시작 시각      | string(ISO-8601) | optional | true     | "2024-01-01T00:00:00Z"            |
+| endAt           | 교육 종료 시각      | string(ISO-8601) | optional | true     | "2024-12-31T23:59:59Z"            |
+| departmentScope | 수강 가능 부서 목록 | string array     | optional | true     | ["전체 부서", "총무팀", "기획팀"] |
 
 ### Response
 
@@ -233,11 +242,14 @@ Body: 없음
 
 array of object
 
-| key    | 설명      | value 타입    | 옵션     | Nullable | 예시                                   |
-| ------ | --------- | ------------- | -------- | -------- | -------------------------------------- |
-| id     | 교육 ID   | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title  | 교육 제목 | string        | required | false    | "산업안전 교육"                        |
-| videos | 영상 목록 | array(object) | required | false    | 아래 표 참조                           |
+| key             | 설명                | value 타입       | 옵션     | Nullable | 예시                                   |
+| --------------- | ------------------- | ---------------- | -------- | -------- | -------------------------------------- |
+| id              | 교육 ID             | string(uuid)     | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 교육 제목           | string           | required | false    | "산업안전 교육"                        |
+| startAt         | 교육 시작 시각      | string(ISO-8601) | optional | true     | "2024-01-01T00:00:00Z"                 |
+| endAt           | 교육 종료 시각      | string(ISO-8601) | optional | true     | "2024-12-31T23:59:59Z"                 |
+| departmentScope | 수강 가능 부서 목록 | string array     | optional | true     | ["전체 부서", "총무팀", "기획팀"]      |
+| videos          | 영상 목록           | array(object)    | required | false    | 아래 표 참조                           |
 
 videos item
 
@@ -293,17 +305,20 @@ Body: 없음
 
 array of object
 
-| key             | 설명                                   | value 타입    | 옵션     | Nullable | 예시                                   |
-| --------------- | -------------------------------------- | ------------- | -------- | -------- | -------------------------------------- |
-| id              | 교육 ID                                | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title           | 제목                                   | string        | required | false    | "산업안전 교육"                        |
-| description     | 설명                                   | string        | optional | true     | "산업안전 수칙"                        |
-| category        | 주제 카테고리                          | string        | required | false    | "JOB_DUTY"                             |
-| eduType         | 교육 유형                              | string        | optional | true     | "MANDATORY"                            |
-| required        | 필수 여부                              | boolean       | required | false    | true                                   |
-| progressPercent | 사용자 기준 교육 진행률(%)             | number        | required | false    | 60                                     |
-| watchStatus     | 교육 시청 상태(시청전/시청중/시청완료) | string        | required | false    | "시청중"                               |
-| videos          | 교육에 포함된 영상 목록(PUBLISHED만)   | array(object) | required | false    | 아래 표 참조                           |
+| key             | 설명                                   | value 타입       | 옵션     | Nullable | 예시                                   |
+| --------------- | -------------------------------------- | ---------------- | -------- | -------- | -------------------------------------- |
+| id              | 교육 ID                                | string(uuid)     | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title           | 제목                                   | string           | required | false    | "산업안전 교육"                        |
+| description     | 설명                                   | string           | optional | true     | "산업안전 수칙"                        |
+| category        | 주제 카테고리                          | string           | required | false    | "JOB_DUTY"                             |
+| eduType         | 교육 유형                              | string           | optional | true     | "MANDATORY"                            |
+| required        | 필수 여부                              | boolean          | required | false    | true                                   |
+| version         | 교육 버전                              | number           | optional | true     | 1                                      |
+| startAt         | 교육 시작 시각                         | string(ISO-8601) | optional | true     | "2024-01-01T00:00:00Z"                 |
+| endAt           | 교육 종료 시각                         | string(ISO-8601) | optional | true     | "2024-12-31T23:59:59Z"                 |
+| progressPercent | 사용자 기준 교육 진행률(%)             | number           | required | false    | 60                                     |
+| watchStatus     | 교육 시청 상태(시청전/시청중/시청완료) | string           | required | false    | "시청중"                               |
+| videos          | 교육에 포함된 영상 목록(PUBLISHED만)   | array(object)    | required | false    | 아래 표 참조                           |
 
 videos item
 
@@ -543,19 +558,19 @@ Body: 없음
 
 ### Query Parameter
 
-| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
-| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
-| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
-| department | 부서 필터               | string     | optional | true     | "총무팀" |
+| key        | 설명                 | value 타입 | 옵션     | Nullable | 예시     |
+| ---------- | -------------------- | ---------- | -------- | -------- | -------- |
+| period     | 기간 (일수, 7/30/90) | number     | optional | true     | 30       |
+| department | 부서 필터            | string     | optional | true     | "총무팀" |
 
 ### Response
 
-| key                           | 설명                    | value 타입 | 옵션     | Nullable | 예시  |
-| ----------------------------- | ----------------------- | ---------- | -------- | -------- | ----- |
-| overallAverageCompletionRate  | 전체 평균 이수율(%)     | number     | required | false    | 85.5   |
-| nonCompleterCount             | 미이수자 수             | number     | required | false    | 15     |
-| mandatoryEducationAverage      | 4대 의무교육 평균 이수율(%) | number     | required | false    | 90.2   |
-| jobEducationAverage           | 직무교육 평균 이수율(%) | number     | required | false    | 78.3   |
+| key                          | 설명                        | value 타입 | 옵션     | Nullable | 예시 |
+| ---------------------------- | --------------------------- | ---------- | -------- | -------- | ---- |
+| overallAverageCompletionRate | 전체 평균 이수율(%)         | number     | required | false    | 85.5 |
+| nonCompleterCount            | 미이수자 수                 | number     | required | false    | 15   |
+| mandatoryEducationAverage    | 4대 의무교육 평균 이수율(%) | number     | required | false    | 90.2 |
+| jobEducationAverage          | 직무교육 평균 이수율(%)     | number     | required | false    | 78.3 |
 
 ### Status
 
@@ -587,19 +602,19 @@ Body: 없음
 
 ### Query Parameter
 
-| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
-| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
-| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
-| department | 부서 필터               | string     | optional | true     | "총무팀" |
+| key        | 설명                 | value 타입 | 옵션     | Nullable | 예시     |
+| ---------- | -------------------- | ---------- | -------- | -------- | -------- |
+| period     | 기간 (일수, 7/30/90) | number     | optional | true     | 30       |
+| department | 부서 필터            | string     | optional | true     | "총무팀" |
 
 ### Response
 
-| key                        | 설명                      | value 타입 | 옵션     | Nullable | 예시  |
-| -------------------------- | ------------------------- | ---------- | -------- | -------- | ----- |
-| sexualHarassmentPrevention | 성희롱 예방교육 이수율(%) | number     | required | false    | 95.0   |
-| personalInfoProtection     | 개인정보보호 교육 이수율(%) | number     | required | false    | 92.5   |
-| workplaceBullying          | 직장 내 괴롭힘 예방 이수율(%) | number     | required | false    | 88.3   |
-| disabilityAwareness        | 장애인 인식개선 이수율(%) | number     | required | false    | 90.1   |
+| key                        | 설명                          | value 타입 | 옵션     | Nullable | 예시 |
+| -------------------------- | ----------------------------- | ---------- | -------- | -------- | ---- |
+| sexualHarassmentPrevention | 성희롱 예방교육 이수율(%)     | number     | required | false    | 95.0 |
+| personalInfoProtection     | 개인정보보호 교육 이수율(%)   | number     | required | false    | 92.5 |
+| workplaceBullying          | 직장 내 괴롭힘 예방 이수율(%) | number     | required | false    | 88.3 |
+| disabilityAwareness        | 장애인 인식개선 이수율(%)     | number     | required | false    | 90.1 |
 
 ### Status
 
@@ -631,21 +646,21 @@ Body: 없음
 
 ### Query Parameter
 
-| key        | 설명                    | value 타입 | 옵션     | Nullable | 예시   |
-| ---------- | ----------------------- | ---------- | -------- | -------- | ------ |
-| period     | 기간 (일수, 7/30/90)    | number     | optional | true     | 30     |
-| department | 부서 필터               | string     | optional | true     | "총무팀" |
+| key        | 설명                 | value 타입 | 옵션     | Nullable | 예시     |
+| ---------- | -------------------- | ---------- | -------- | -------- | -------- |
+| period     | 기간 (일수, 7/30/90) | number     | optional | true     | 30       |
+| department | 부서 필터            | string     | optional | true     | "총무팀" |
 
 ### Response
 
 array of object
 
-| key          | 설명                      | value 타입   | 옵션     | Nullable | 예시                                   |
-| ------------ | ------------------------- | ------------ | -------- | -------- | -------------------------------------- |
-| educationId  | 교육 ID                   | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| title        | 교육 제목                 | string       | required | false    | "신입사원 온보딩 교육"                 |
-| status       | 상태 (진행 중/이수 완료)  | string       | required | false    | "진행 중"                              |
-| learnerCount | 학습자 수                 | number       | required | false    | 25                                     |
+| key          | 설명                     | value 타입   | 옵션     | Nullable | 예시                                   |
+| ------------ | ------------------------ | ------------ | -------- | -------- | -------------------------------------- |
+| educationId  | 교육 ID                  | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
+| title        | 교육 제목                | string       | required | false    | "신입사원 온보딩 교육"                 |
+| status       | 상태 (진행 중/이수 완료) | string       | required | false    | "진행 중"                              |
+| learnerCount | 학습자 수                | number       | required | false    | 25                                     |
 
 ### Status
 
@@ -678,21 +693,21 @@ Body: 없음
 
 ### Query Parameter
 
-| key    | 설명                    | value 타입 | 옵션     | Nullable | 예시 |
-| ------ | ----------------------- | ---------- | -------- | -------- | ---- |
-| period | 기간 (일수, 7/30/90)    | number     | optional | true     | 30   |
+| key    | 설명                 | value 타입 | 옵션     | Nullable | 예시 |
+| ------ | -------------------- | ---------- | -------- | -------- | ---- |
+| period | 기간 (일수, 7/30/90) | number     | optional | true     | 30   |
 
 ### Response
 
 array of object
 
-| key             | 설명          | value 타입 | 옵션     | Nullable | 예시   |
-| --------------- | ------------- | ---------- | -------- | -------- | ------ |
-| department      | 부서명        | string     | required | false    | "총무팀" |
-| targetCount     | 대상자 수     | number     | required | false    | 50     |
-| completerCount  | 이수자 수     | number     | required | false    | 45     |
-| completionRate  | 이수율(%)     | number     | required | false    | 90.0   |
-| nonCompleterCount | 미이수자 수 | number     | required | false    | 5      |
+| key               | 설명        | value 타입 | 옵션     | Nullable | 예시     |
+| ----------------- | ----------- | ---------- | -------- | -------- | -------- |
+| department        | 부서명      | string     | required | false    | "총무팀" |
+| targetCount       | 대상자 수   | number     | required | false    | 50       |
+| completerCount    | 이수자 수   | number     | required | false    | 45       |
+| completionRate    | 이수율(%)   | number     | required | false    | 90.0     |
+| nonCompleterCount | 미이수자 수 | number     | required | false    | 5        |
 
 ### Status
 

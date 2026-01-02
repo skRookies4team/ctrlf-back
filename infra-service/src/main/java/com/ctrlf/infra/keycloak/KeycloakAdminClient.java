@@ -61,7 +61,7 @@ public class KeycloakAdminClient {
     public PageResponse<Map<String, Object>> listUsers(String search, int page, int size) {
         int first = page * size;
         int max = size;
-        String url = adminApi("/users?first=" + first + "&max=" + max + (search != null && !search.isBlank() ? "&search=" + search : ""));
+        String url = adminApi("/users?briefRepresentation=false&first=" + first + "&max=" + max + (search != null && !search.isBlank() ? "&search=" + search : ""));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(getAccessToken());
         HttpEntity<Void> req = new HttpEntity<>(headers);
@@ -206,14 +206,37 @@ public class KeycloakAdminClient {
     }
 
     public Map<String, Object> getUser(String userId) {
-        String url = adminApi("/users/" + userId);
+        String url = adminApi("/users?briefRepresentation=false&max=1000");
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(getAccessToken());
         HttpEntity<Void> req = new HttpEntity<>(headers);
         try {
-            ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
-                url, HttpMethod.GET, req, new ParameterizedTypeReference<Map<String, Object>>() {});
-            return resp.getBody();
+            ResponseEntity<List<Map<String, Object>>> resp = restTemplate.exchange(
+                url, HttpMethod.GET, req, new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+            
+            List<Map<String, Object>> users = resp.getBody();
+            if (users == null) {
+                throw new IllegalStateException("사용자를 찾을 수 없습니다: " + userId);
+            }
+            
+            // userId로 필터링
+            Map<String, Object> user = users.stream()
+                .filter(u -> userId.equals(u.get("id")))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다: " + userId));
+            
+            // attributes에서 department를 추출하여 최상위 레벨에 추가
+            @SuppressWarnings("unchecked")
+            Map<String, Object> attributes = (Map<String, Object>) user.get("attributes");
+            if (attributes != null) {
+                @SuppressWarnings("unchecked")
+                List<String> departmentList = (List<String>) attributes.get("department");
+                if (departmentList != null && !departmentList.isEmpty()) {
+                    user.put("department", departmentList.get(0));
+                }
+            }
+            
+            return user;
         } catch (HttpClientErrorException.Forbidden e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 접근 권한이 없습니다. " +

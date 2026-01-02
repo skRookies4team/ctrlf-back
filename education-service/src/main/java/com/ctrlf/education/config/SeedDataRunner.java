@@ -208,17 +208,35 @@ public class SeedDataRunner implements CommandLineRunner {
         // 5가지 교육 카테고리별 시드 데이터 생성
         List<Education> educations = new ArrayList<>();
 
-        // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB
-        Education edu1 = new Education();
-        edu1.setTitle("직무 역량 강화 교육");
-        edu1.setCategory(EducationTopic.JOB_DUTY);
-        edu1.setDescription("업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.");
-        edu1.setPassScore(80);
-        edu1.setPassRatio(90);
-        edu1.setRequire(Boolean.TRUE);
-        edu1.setEduType(EducationCategory.JOB);
-        edu1.setVersion(1);
-        educations.add(edu1);
+        // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB - 8개 부서별로 생성
+        String[] departments = {"총무팀", "기획팀", "마케팅팀", "인사팀", "재무팀", "개발팀", "영업팀", "법무팀"};
+        String[] departmentDescriptions = {
+            "총무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "기획 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "마케팅 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "인사 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "재무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "개발 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "영업 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "법무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다."
+        };
+        int[] startDaysAgo = {30, 35, 40, 45, 50, 55, 60, 65}; // 각 교육마다 다른 시작일
+        
+        for (int i = 0; i < departments.length; i++) {
+            Education edu = new Education();
+            edu.setTitle(departments[i] + " 직무 역량 강화 교육");
+            edu.setCategory(EducationTopic.JOB_DUTY);
+            edu.setDescription(departmentDescriptions[i]);
+            edu.setPassScore(80);
+            edu.setPassRatio(90);
+            edu.setRequire(Boolean.TRUE);
+            edu.setEduType(EducationCategory.JOB);
+            edu.setVersion(1);
+            edu.setStartAt(Instant.now().minusSeconds(86400L * startDaysAgo[i])); // 각각 다른 시작일
+            edu.setEndAt(Instant.now().plusSeconds(86400L * (180 - startDaysAgo[i]))); // 총 180일
+            edu.setDepartmentScope(new String[]{departments[i]});
+            educations.add(edu);
+        }
 
         // 2. 성희롱 예방 교육 (SEXUAL_HARASSMENT_PREVENTION) - edu_type: MANDATORY
         Education edu2 = new Education();
@@ -230,6 +248,9 @@ public class SeedDataRunner implements CommandLineRunner {
         edu2.setRequire(Boolean.TRUE);
         edu2.setEduType(EducationCategory.MANDATORY);
         edu2.setVersion(1);
+        edu2.setStartAt(Instant.now().minusSeconds(86400 * 60)); // 60일 전 시작
+        edu2.setEndAt(Instant.now().plusSeconds(86400 * 120)); // 120일 후 종료 (총 180일)
+        edu2.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu2);
 
         // 3. 개인정보 보호 교육 (PERSONAL_INFO_PROTECTION) - edu_type: MANDATORY
@@ -242,6 +263,9 @@ public class SeedDataRunner implements CommandLineRunner {
         edu3.setRequire(Boolean.TRUE);
         edu3.setEduType(EducationCategory.MANDATORY);
         edu3.setVersion(1);
+        edu3.setStartAt(Instant.now().minusSeconds(86400 * 90)); // 90일 전 시작
+        edu3.setEndAt(Instant.now().plusSeconds(86400 * 90)); // 90일 후 종료 (총 180일)
+        edu3.setDepartmentScope(new String[]{"개발팀", "인사팀", "재무팀"}); // 특정 부서만
         educations.add(edu3);
 
         // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
@@ -254,6 +278,9 @@ public class SeedDataRunner implements CommandLineRunner {
         edu4.setRequire(Boolean.TRUE);
         edu4.setEduType(EducationCategory.MANDATORY);
         edu4.setVersion(1);
+        edu4.setStartAt(Instant.now().minusSeconds(86400 * 120)); // 120일 전 시작
+        edu4.setEndAt(Instant.now().plusSeconds(86400 * 60)); // 60일 후 종료 (총 180일)
+        edu4.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu4);
 
         // 5. 장애인 인식 개선 교육 (DISABILITY_AWARENESS) - edu_type: MANDATORY
@@ -266,6 +293,9 @@ public class SeedDataRunner implements CommandLineRunner {
         edu5.setRequire(Boolean.TRUE);
         edu5.setEduType(EducationCategory.MANDATORY);
         edu5.setVersion(1);
+        edu5.setStartAt(Instant.now().minusSeconds(86400 * 15)); // 15일 전 시작
+        edu5.setEndAt(Instant.now().plusSeconds(86400 * 165)); // 165일 후 종료 (총 180일)
+        edu5.setDepartmentScope(new String[]{"총무팀", "기획팀", "마케팅팀"}); // 특정 부서만
         educations.add(edu5);
 
         // 모든 교육 저장
@@ -274,17 +304,10 @@ public class SeedDataRunner implements CommandLineRunner {
 
         // 각 교육에 대해 스크립트 생성
         List<UUID> scriptIds = new ArrayList<>();
-        String[] scriptTitles = {
-            "직무 역량 강화 교육 영상",
-            "성희롱 예방 교육 영상",
-            "개인정보 보호 교육 영상",
-            "직장 내 괴롭힘 예방 교육 영상",
-            "장애인 인식 개선 교육 영상"
-        };
-
-        for (int i = 0; i < educations.size(); i++) {
-            UUID scriptId = insertScript(educations.get(i).getId(), null,
-                scriptTitles[i] + " 스크립트 내용입니다.", 1, scriptTitles[i]);
+        for (Education edu : educations) {
+            String scriptTitle = edu.getTitle() + " 영상";
+            UUID scriptId = insertScript(edu.getId(), null,
+                scriptTitle + " 스크립트 내용입니다.", 1, scriptTitle);
             scriptIds.add(scriptId);
         }
 
