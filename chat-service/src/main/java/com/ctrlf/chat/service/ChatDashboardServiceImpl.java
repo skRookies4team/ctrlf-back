@@ -245,18 +245,66 @@ public class ChatDashboardServiceImpl implements ChatDashboardService {
         Instant startDate = calculateStartDate(periodDays);
         List<Object[]> results = chatMessageRepository.getDomainRatio(startDate, department);
 
-        List<ChatDashboardResponse.DomainRatioItem> items = new ArrayList<>();
-        for (Object[] row : results) {
-            String domain = (String) row[0];
-            Double ratio = ((Number) row[2]).doubleValue();
-            String domainName = DOMAIN_NAME_MAP.getOrDefault(domain, "기타");
-
-            items.add(new ChatDashboardResponse.DomainRatioItem(
-                domain,
-                domainName,
-                ratio
-            ));
+        // 도메인별로 count 합산하기 위한 Map
+        Map<String, Long> domainCountMap = new java.util.HashMap<>();
+        long totalCount = 0;
+        
+        try {
+            for (Object[] row : results) {
+                if (row == null || row.length < 3) {
+                    log.warn("Invalid row in domain ratio results: {}", java.util.Arrays.toString(row));
+                    continue; // 잘못된 결과 행은 건너뛰기
+                }
+                
+                try {
+                    String domain = row[0] != null ? (String) row[0] : null;
+                    // domain이 null인 경우 "OTHER"로 처리
+                    if (domain == null || domain.isBlank()) {
+                        domain = "OTHER";
+                    }
+                    
+                    // 도메인 값 정규화 (대문자로 변환 및 공백 제거)
+                    domain = domain.toUpperCase().trim();
+                    
+                    // SEC_POLICY 같은 값도 처리
+                    if ("SEC_POLICY".equals(domain)) {
+                        domain = "SECURITY";
+                    }
+                    
+                    // count가 null인 경우 처리
+                    Long count = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+                    
+                    // 같은 domain이면 count를 합산
+                    domainCountMap.merge(domain, count, Long::sum);
+                    totalCount += count;
+                } catch (Exception e) {
+                    log.error("Error processing domain ratio row: {}", java.util.Arrays.toString(row), e);
+                    continue; // 에러가 발생한 행은 건너뛰기
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error processing domain ratio results", e);
+            // 에러가 발생해도 빈 리스트 반환
         }
+
+        // Map을 List로 변환하고 count 기준으로 정렬, 전체 대비 비율 계산
+        // 람다 표현식에서 사용하기 위해 final 변수로 복사
+        final long finalTotalCount = totalCount;
+        List<ChatDashboardResponse.DomainRatioItem> items = domainCountMap.entrySet().stream()
+            .map(entry -> {
+                String domain = entry.getKey();
+                Long count = entry.getValue();
+                // 전체 대비 비율 계산
+                Double ratio = finalTotalCount > 0 ? (count * 100.0 / finalTotalCount) : 0.0;
+                String domainName = DOMAIN_NAME_MAP.getOrDefault(domain, "기타");
+                return new ChatDashboardResponse.DomainRatioItem(
+                    domain,
+                    domainName,
+                    ratio
+                );
+            })
+            .sorted((a, b) -> Double.compare(b.getRatio(), a.getRatio())) // ratio 기준 내림차순 정렬
+            .collect(java.util.stream.Collectors.toList());
 
         return new ChatDashboardResponse.DomainRatioResponse(items);
     }
