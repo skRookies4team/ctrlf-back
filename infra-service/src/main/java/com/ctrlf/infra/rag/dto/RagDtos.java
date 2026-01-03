@@ -457,6 +457,7 @@ public final class RagDtos {
      * 검토 반려 요청 DTO.
      */
     @Getter
+    @Setter
     @NoArgsConstructor
     public static class RejectReviewRequest {
         @NotBlank
@@ -600,43 +601,6 @@ public final class RagDtos {
         private String documentId;
         private Integer version;
         private List<HistoryItem> items;
-    }
-
-    // ---------- Review ----------
-    /**
-     * 검토 승인 요청 DTO.
-     */
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class ApproveReviewRequest {
-        // 승인 요청에는 추가 필드가 없을 수 있음
-    }
-
-    /**
-     * 검토 반려 요청 DTO.
-     */
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class RejectReviewRequest {
-        @Schema(example = "내용을 수정해주세요")
-        private String reason;
-    }
-
-    /**
-     * 검토 응답 DTO.
-     */
-    @Getter
-    @AllArgsConstructor
-    public static class ReviewResponse {
-        private String id;
-        private String documentId;
-        private Integer version;
-        private String status;
-        private String rejectReason;
-        private String rejectedAt;
-        private String updatedAt;
     }
 }
 
