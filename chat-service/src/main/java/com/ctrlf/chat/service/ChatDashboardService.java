@@ -13,61 +13,45 @@ public interface ChatDashboardService {
     /**
      * 대시보드 요약 통계 조회
      * 
-     * @param periodDays 기간 (일수, 7/30/90)
-     * @param department 부서 필터 (null이면 전체)
+     * @param period 기간 (today | 7d | 30d | 90d)
+     * @param dept 부서 필터 (all 또는 dept_id)
+     * @param refresh 캐시 무시 여부
      * @return 요약 통계 응답
      */
     ChatDashboardResponse.DashboardSummaryResponse getDashboardSummary(
-        Integer periodDays,
-        String department
-    );
-
-    /**
-     * 라우트별 질문 비율 조회
-     * 
-     * @param periodDays 기간 (일수, 7/30/90)
-     * @param department 부서 필터 (null이면 전체)
-     * @return 라우트별 질문 비율 응답
-     */
-    ChatDashboardResponse.RouteRatioResponse getRouteRatio(
-        Integer periodDays,
-        String department
-    );
-
-    /**
-     * 최근 많이 질문된 키워드 Top 5 조회
-     * 
-     * @param periodDays 기간 (일수, 7/30/90)
-     * @param department 부서 필터 (null이면 전체)
-     * @return 최근 많이 질문된 키워드 응답
-     */
-    ChatDashboardResponse.TopKeywordsResponse getTopKeywords(
-        Integer periodDays,
-        String department
+        String period,
+        String dept,
+        Boolean refresh
     );
 
     /**
      * 질문 수 · 에러율 추이 조회
      * 
-     * @param periodDays 기간 (일수, 7/30/90)
-     * @param department 부서 필터 (null이면 전체)
-     * @return 질문 수 · 에러율 추이 응답
+     * @param period 기간 (today | 7d | 30d | 90d)
+     * @param dept 부서 필터 (all 또는 dept_id)
+     * @param bucket 버킷 타입 (day | week)
+     * @param refresh 캐시 무시 여부
+     * @return 추이 응답
      */
-    ChatDashboardResponse.QuestionTrendResponse getQuestionTrend(
-        Integer periodDays,
-        String department
+    ChatDashboardResponse.TrendsResponse getTrends(
+        String period,
+        String dept,
+        String bucket,
+        Boolean refresh
     );
 
     /**
      * 도메인별 질문 비율 조회
      * 
-     * @param periodDays 기간 (일수, 7/30/90)
-     * @param department 부서 필터 (null이면 전체)
+     * @param period 기간 (today | 7d | 30d | 90d)
+     * @param dept 부서 필터 (all 또는 dept_id)
+     * @param refresh 캐시 무시 여부
      * @return 도메인별 질문 비율 응답
      */
-    ChatDashboardResponse.DomainRatioResponse getDomainRatio(
-        Integer periodDays,
-        String department
+    ChatDashboardResponse.DomainShareResponse getDomainShare(
+        String period,
+        String dept,
+        Boolean refresh
     );
 }
 
