@@ -108,7 +108,7 @@ public class TelemetrySeedRunner implements CommandLineRunner {
             event.setSource("ai-gateway");
             event.setSentAt(baseTime.plusSeconds(i * 3600)); // 1시간 간격
             event.setEventType("CHAT_TURN");
-            event.setTraceId(UUID.randomUUID());
+            event.setTraceId(UUID.randomUUID().toString());
             event.setConversationId(conversationId);
             event.setTurnId(i + 1);
             event.setUserId("00000000-0000-0000-0000-000000000000");
