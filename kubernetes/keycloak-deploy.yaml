@@ -95,7 +95,7 @@ spec:
               name: ai-api-secrets
               key: AI_API_TOKEN
 ---
-# 1. Keycloak DB 서비스
+# 1. Keycloak DB 서비스1
 apiVersion: apps/v1
 kind: Deployment
 metadata:
