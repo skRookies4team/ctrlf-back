@@ -99,6 +99,13 @@ spring:
         # ============================================================
         # Infra Service (9003)
         # ============================================================
+        # /api/ai-logs 경로 (가장 구체적인 경로이므로 먼저 정의)
+        - id: infra-api-ai-logs-route
+          uri: http://localhost:9003
+          predicates:
+            - Path=/api/ai-logs/**
+          filters:
+            - StripPrefix=0 # 경로 그대로 전달
         # /internal/telemetry 경로 (AI → Backend 텔레메트리 수집)
         - id: infra-internal-telemetry-route
           uri: http://localhost:9003

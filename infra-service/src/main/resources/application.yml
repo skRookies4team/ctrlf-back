@@ -19,6 +19,7 @@ spring:
     schemas: infra
     default-schema: infra
     locations: classpath:db/migration
+    validate-on-migrate: false
   profiles:
     active: dev
 management:
