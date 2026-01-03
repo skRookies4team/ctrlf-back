@@ -99,6 +99,13 @@ spring:
         # ============================================================
         # Infra Service (9003)
         # ============================================================
+        # /internal/telemetry 경로 (AI → Backend 텔레메트리 수집)
+        - id: infra-internal-telemetry-route
+          uri: http://localhost:9003
+          predicates:
+            - Path=/internal/telemetry/**
+          filters:
+            - StripPrefix=0 # 경로 그대로 전달
         # /internal/rag/documents는 가장 구체적인 경로이므로 먼저 정의
         - id: infra-internal-rag-documents-route
           uri: http://localhost:9003
