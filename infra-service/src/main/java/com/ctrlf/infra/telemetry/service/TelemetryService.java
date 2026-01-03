@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -405,6 +407,64 @@ public class TelemetryService {
         }
 
         return result;
+    }
+
+    /**
+     * AI 로그 조회 (FAQ 생성용)
+     * 
+     * <p>CHAT_TURN 이벤트에서 domain, intent, route, question_masked 필드를 추출하여 반환합니다.</p>
+     */
+    @Transactional(readOnly = true)
+    public TelemetryDtos.AiLogResponse getAiLogs(Integer limit) {
+        int actualLimit = (limit != null && limit > 0) ? Math.min(limit, 1000) : 500;
+        Pageable pageable = PageRequest.of(0, actualLimit);
+        
+        List<TelemetryEvent> events = telemetryEventRepository
+            .findChatTurnEventsOrderByOccurredAtDesc(pageable);
+        
+        List<TelemetryDtos.AiLogItem> logItems = new ArrayList<>();
+        
+        for (TelemetryEvent event : events) {
+            try {
+                Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+                
+                String domain = getStringFromPayload(payload, "domain");
+                String intent = getStringFromPayload(payload, "intent");
+                String route = getStringFromPayload(payload, "route");
+                String questionMasked = getStringFromPayload(payload, "question_masked");
+                
+                // question_masked가 있는 경우만 추가
+                if (questionMasked != null && !questionMasked.isBlank()) {
+                    logItems.add(new TelemetryDtos.AiLogItem(
+                        domain,
+                        intent,
+                        route,
+                        questionMasked
+                    ));
+                }
+            } catch (Exception e) {
+                log.warn("AI 로그 항목 파싱 실패: eventId={}, error={}", 
+                    event.getEventId(), e.getMessage());
+            }
+        }
+        
+        return new TelemetryDtos.AiLogResponse(
+            "ok",
+            logItems.size(),
+            logItems.size(),
+            logItems
+        );
+    }
+
+    /**
+     * Payload에서 문자열 값 추출 (null-safe)
+     */
+    private String getStringFromPayload(Map<String, Object> payload, String key) {
+        Object value = payload.get(key);
+        if (value == null) {
+            return null;
+        }
+        return value.toString();
     }
 }
 

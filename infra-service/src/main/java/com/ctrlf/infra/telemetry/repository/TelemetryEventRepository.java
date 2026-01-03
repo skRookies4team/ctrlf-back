@@ -44,5 +44,14 @@ public interface TelemetryEventRepository extends JpaRepository<TelemetryEvent, 
         @Param("endDate") Instant endDate,
         @Param("deptId") String deptId
     );
+
+    /**
+     * CHAT_TURN 이벤트 최신순 조회 (limit 적용)
+     */
+    @Query("SELECT e FROM TelemetryEvent e WHERE e.eventType = 'CHAT_TURN' " +
+           "ORDER BY e.occurredAt DESC")
+    List<TelemetryEvent> findChatTurnEventsOrderByOccurredAtDesc(
+        org.springframework.data.domain.Pageable pageable
+    );
 }
 
