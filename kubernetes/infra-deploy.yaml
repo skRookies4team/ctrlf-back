@@ -46,5 +46,21 @@ spec:
             # 3. 포트 확인 (Keycloak 내부망 접속 포트)
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
               value: "http://keycloak-service:8090/auth/realms/ctrlf/protocol/openid-connect/certs"
-      nodeSelector:
-         zone: private
+
+            - name: AI_INTERNAL_TOKEN
+              valueFrom:
+                  secretKeyRef:
+                    name: ai-api-secrets
+                    key: AI_INTERNAL_TOKEN
+            - name: AI_SERVICE_TOKEN
+              valueFrom:
+                 secretKeyRef:
+                   name: ai-api-secrets
+                   key: AI_SERVICE_TOKEN
+            - name: AI_API_TOKEN
+              valueFrom:
+                 secretKeyRef:
+                   name: ai-api-secrets
+                   key: AI_API_TOKEN
+#      nodeSelector:
+#         zone: private

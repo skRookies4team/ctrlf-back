@@ -79,3 +79,18 @@ spec:
           value: "/auth"
         - name: KC_HTTP_PORT
           value: "8090"
+        - name: AI_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ai-api-secrets
+              key: AI_INTERNAL_TOKEN
+        - name: AI_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ai-api-secrets
+              key: AI_SERVICE_TOKEN
+        - name: AI_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ai-api-secrets
+              key: AI_API_TOKEN
