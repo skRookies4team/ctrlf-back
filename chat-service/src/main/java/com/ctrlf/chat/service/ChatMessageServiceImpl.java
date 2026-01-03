@@ -56,6 +56,21 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         chatMessageRepository.save(userMessage);
 
         // 2️⃣ AI Gateway 호출 (응답 시간 측정)
+        // Backend는 Frontend로부터 전달받은 model 값을 그대로 전달 (해석하지 않음)
+        String embeddingModel = request.model();
+        if (embeddingModel == null) {
+            // 요청에 model이 없으면 세션에 저장된 모델 사용 (하위 호환성)
+            embeddingModel = session.getEmbeddingModel();
+            if (embeddingModel == null) {
+                // 세션에도 없으면 기본값 사용
+                embeddingModel = "openai";
+                log.warn(
+                    "모델이 지정되지 않음. 기본값(openai) 사용: sessionId={}",
+                    request.sessionId()
+                );
+            }
+        }
+        
         long startTime = System.currentTimeMillis();
         ChatAiResponse aiResponse;
         String department = null; // TODO: JWT에서 추출
@@ -69,7 +84,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     domain,
                     "WEB",
                     request.content(),
-                    request.model()  // A/B 테스트용 model 전달
+                    embeddingModel  // Frontend에서 전달받은 model 값 그대로 전달
                 );
         } catch (Exception e) {
             log.error("[AI] call failed", e);
@@ -240,6 +255,17 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
         
         // 4️⃣ AI Gateway에 재요청 (응답 시간 측정)
+        // 재시도 시에는 세션에 저장된 모델 사용
+        String embeddingModel = session.getEmbeddingModel();
+        if (embeddingModel == null) {
+            // 세션에 모델이 없으면 기본값 사용
+            embeddingModel = "openai";
+            log.warn(
+                "세션에 모델이 할당되지 않음. 기본값(openai) 사용: sessionId={}",
+                sessionId
+            );
+        }
+        
         long startTime = System.currentTimeMillis();
         ChatAiResponse aiResponse;
         String department = null; // TODO: JWT에서 추출
@@ -251,7 +277,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 department,
                 session.getDomain(),
                 "WEB",
-                userMessage.getContent()
+                userMessage.getContent(),
+                embeddingModel  // 세션에 저장된 모델 사용
             );
         } catch (Exception e) {
             log.error("[AI] retry failed", e);

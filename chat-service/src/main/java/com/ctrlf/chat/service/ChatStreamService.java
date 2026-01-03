@@ -54,9 +54,17 @@ public class ChatStreamService {
                         sessionId, "user")
                     .orElseThrow();
 
-            // TODO: 스트리밍에서 A/B 테스트 지원을 위해서는
-            // user 메시지 저장 시 model 정보를 함께 저장하고 여기서 조회해야 함
-            // 현재는 기본값(null = openai) 사용
+            // 스트리밍 시에는 세션에 저장된 모델 사용
+            String embeddingModel = session.getEmbeddingModel();
+            if (embeddingModel == null) {
+                // 세션에 모델이 없으면 기본값 사용
+                embeddingModel = "openai";
+                log.warn(
+                    "세션에 모델이 할당되지 않음. 기본값(openai) 사용: sessionId={}",
+                    sessionId
+                );
+            }
+            
             ChatCompletionRequest req =
                 new ChatCompletionRequest(
                     "stream-" + messageId,
@@ -67,7 +75,7 @@ public class ChatStreamService {
                     session.getDomain(),
                     "WEB",
                     List.of(new Message("user", lastUser.getContent())),
-                    null  // A/B 테스트 model (현재 스트리밍에서는 기본값 사용)
+                    embeddingModel  // 세션에 할당된 모델 사용
                 );
 
             StringBuilder answerBuf = new StringBuilder();

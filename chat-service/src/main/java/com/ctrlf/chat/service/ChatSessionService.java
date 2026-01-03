@@ -63,4 +63,15 @@ public interface ChatSessionService {
      * @return 세션 정보 및 메시지 목록
      */
     ChatSessionHistoryResponse getSessionHistory(UUID sessionId);
+
+    /**
+     * 세션/컨텍스트 모델 설정
+     * 
+     * <p>Frontend에서 선택한 모델을 세션에 저장합니다.</p>
+     * <p>Backend는 모델 값을 검증하고 그대로 저장하며, 해석하지 않습니다.</p>
+     * 
+     * @param sessionId 세션 ID
+     * @param model 모델 식별자 ("openai" 또는 "sroberta")
+     */
+    void setSessionModel(UUID sessionId, String model);
 }
