@@ -3,6 +3,7 @@ package com.ctrlf.infra.telemetry.service;
 import com.ctrlf.infra.telemetry.dto.TelemetryDtos;
 import com.ctrlf.infra.telemetry.entity.TelemetryEvent;
 import com.ctrlf.infra.telemetry.repository.TelemetryEventRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TelemetryService {
 
     private final TelemetryEventRepository telemetryEventRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * 텔레메트리 이벤트 수집 (배치 처리, Idempotent)
@@ -426,7 +428,7 @@ public class TelemetryService {
         
         for (TelemetryEvent event : events) {
             try {
-                Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+                Map<String, Object> payload = parsePayload(event.getPayload());
                 
                 String domain = getStringFromPayload(payload, "domain");
                 String intent = getStringFromPayload(payload, "intent");
@@ -454,6 +456,35 @@ public class TelemetryService {
             logItems.size(),
             logItems
         );
+    }
+
+    /**
+     * Payload 파싱 (JSON 문자열 또는 Map 지원)
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parsePayload(Object payload) {
+        if (payload == null) {
+            return new java.util.HashMap<>();
+        }
+        
+        // 이미 Map인 경우
+        if (payload instanceof Map) {
+            return (Map<String, Object>) payload;
+        }
+        
+        // JSON 문자열인 경우 역직렬화
+        if (payload instanceof String) {
+            try {
+                return objectMapper.readValue((String) payload, Map.class);
+            } catch (Exception e) {
+                log.warn("Payload JSON 역직렬화 실패: {}", e.getMessage());
+                return new java.util.HashMap<>();
+            }
+        }
+        
+        // 기타 타입인 경우 빈 Map 반환
+        log.warn("지원하지 않는 payload 타입: {}", payload.getClass().getName());
+        return new java.util.HashMap<>();
     }
 
     /**
