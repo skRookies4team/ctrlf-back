@@ -68,13 +68,29 @@ public class RagDocument {
     @Column(name = "processed_at")
     private Instant processedAt;
 
-    /** 전처리 상태 (IDLE, PROCESSING, READY, FAILED), REACDY 면 검토 가능한 상태*/
+    /** 전처리 상태 (IDLE, PROCESSING, READY, FAILED), READY면 검토 가능한 상태 */
     @Column(name = "preprocess_status", length = 20, columnDefinition = "varchar(20) DEFAULT 'IDLE'")
     private String preprocessStatus;
+
+    /** 전처리된 페이지 수 */
+    @Column(name = "preprocess_pages")
+    private Integer preprocessPages;
+
+    /** 전처리된 문자 수 */
+    @Column(name = "preprocess_chars")
+    private Integer preprocessChars;
+
+    /** 전처리 미리보기 텍스트 */
+    @Column(name = "preprocess_excerpt", columnDefinition = "text")
+    private String preprocessExcerpt;
 
     /** 전처리 실패 사유 */
     @Column(name = "preprocess_error", columnDefinition = "text")
     private String preprocessError;
+
+    /** 문서 전체 텍스트 (Milvus에서 조회한 임베딩 완료 후 원문) */
+    @Column(name = "content", columnDefinition = "text")
+    private String content;
 
     /** 검토 요청 시각 */
     @Column(name = "review_requested_at")

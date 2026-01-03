@@ -44,6 +44,9 @@ app:
     description: 인프라 설정
     security:
       enabled: true
+  internal:
+    # AI 서버 내부 API 인증 토큰 (AI의 BACKEND_INTERNAL_TOKEN과 동일하게 설정)
+    token: ${INTERNAL_API_TOKEN:dev-internal-token}
   s3:
     bucket: ctrl-s3
     ttlSeconds: 36000 # 업로드용 TTL (기본값: 10분)

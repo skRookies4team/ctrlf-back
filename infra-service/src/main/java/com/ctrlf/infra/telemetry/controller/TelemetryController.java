@@ -57,10 +57,10 @@ public class TelemetryController {
     })
     public ResponseEntity<TelemetryDtos.TelemetryEventResponse> collectEvents(
         @Parameter(description = "내부 인증 토큰", required = true)
-        @RequestHeader(value = "X-Internal-Token", required = false) String internalToken,
+        @RequestHeader(value = "X-Internal-Token") String internalToken,
         @Valid @RequestBody TelemetryDtos.TelemetryEventRequest request
     ) {
-        // TODO: X-Internal-Token 검증 로직 추가
+        // X-Internal-Token 검증은 InternalTokenFilter에서 처리
         TelemetryDtos.TelemetryEventResponse response = telemetryService.collectEvents(request);
         return ResponseEntity.ok(response);
     }
