@@ -479,12 +479,11 @@ public class RagDocumentService {
             doc.getCreatedAt() != null ? doc.getCreatedAt().toString() : null,
             doc.getProcessedAt() != null ? doc.getProcessedAt().toString() : null,
             doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "IDLE",
-            doc.getPreprocessPages(),
-            doc.getPreprocessChars(),
-            doc.getPreprocessExcerpt(),
             doc.getPreprocessError(),
             doc.getReviewRequestedAt() != null ? doc.getReviewRequestedAt().toString() : null,
-            doc.getReviewItemId()
+            doc.getReviewItemId(),
+            doc.getRejectReason(),
+            doc.getRejectedAt() != null ? doc.getRejectedAt().toString() : null
         );
     }
 
@@ -646,6 +645,14 @@ public class RagDocumentService {
         doc.setUploaderUuid(uploaderUuid.toString());
         doc.setCreatedAt(Instant.now());
         
+        // 파일이 있으면 전처리 상태를 PROCESSING으로 설정
+        if (req.getFileUrl() != null && !req.getFileUrl().isBlank()) {
+            doc.setPreprocessStatus("PROCESSING");
+            doc.setPreprocessError(null);
+        } else {
+            doc.setPreprocessStatus("IDLE");
+        }
+        
         doc = documentRepository.save(doc);
         
         // AI 서버에 처리 요청 (파일이 있는 경우에만)
@@ -669,6 +676,7 @@ public class RagDocumentService {
                     RagDocumentStatus status = RagDocumentStatus.fromString(aiResp.getStatus());
                     if (status != null) {
                         doc.setStatus(status);
+                        documentRepository.save(doc);
                     } else {
                         // 변환 실패 시 기본값 유지 (DRAFT)
                         log.warn("AI 서버 응답의 status를 변환할 수 없음: status={}, documentId={}", 
@@ -678,7 +686,10 @@ public class RagDocumentService {
             } catch (Exception e) {
                 log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}", 
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), e.getMessage(), e);
-                // AI 서버 호출 실패해도 사규 생성은 성공으로 처리 (비동기 재시도 가능)
+                // AI 서버 호출 실패 시 전처리 상태를 FAILED로 설정
+                doc.setPreprocessStatus("FAILED");
+                doc.setPreprocessError("AI 서버 처리 요청 실패: " + e.getMessage());
+                documentRepository.save(doc);
             }
         }
         
@@ -703,11 +714,31 @@ public class RagDocumentService {
         }
         
         RagDocument latest = existingVersions.get(0);
-        int newVersion = latest.getVersion() != null ? latest.getVersion() + 1 : 1;
+        
+        // 버전 번호 결정: 요청에 있으면 사용, 없으면 자동 증가
+        int newVersion;
+        if (req.getVersion() != null) {
+            newVersion = req.getVersion();
+            // 버전 번호 검증: 최신 버전보다 작거나 같으면 에러
+            int latestVersion = latest.getVersion() != null ? latest.getVersion() : 0;
+            if (newVersion <= latestVersion) {
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, 
+                    String.format("버전 번호는 최신 버전(%d)보다 커야 합니다. 요청한 버전: %d", latestVersion, newVersion)
+                );
+            }
+        } else {
+            newVersion = latest.getVersion() != null ? latest.getVersion() + 1 : 1;
+        }
+
+        log.info("@@@@ START @@@@");
         
         RagDocument newVersionDoc = new RagDocument();
         newVersionDoc.setDocumentId(documentId);
-        newVersionDoc.setTitle(latest.getTitle());
+        // 제목 결정: 요청에 있으면 사용, 없으면 최신 버전의 제목 사용
+        newVersionDoc.setTitle(req.getTitle() != null && !req.getTitle().isBlank() 
+            ? req.getTitle() 
+            : latest.getTitle());
         newVersionDoc.setDomain(latest.getDomain());
         newVersionDoc.setVersion(newVersion);
         newVersionDoc.setStatus(RagDocumentStatus.DRAFT);
@@ -715,8 +746,21 @@ public class RagDocumentService {
         newVersionDoc.setSourceUrl(req.getFileUrl());
         newVersionDoc.setUploaderUuid(uploaderUuid.toString());
         newVersionDoc.setCreatedAt(Instant.now());
+
+        log.info("@@@ File URL: {}", req.getFileUrl());
+        
+        // 파일이 있으면 전처리 상태를 PROCESSING으로 설정
+        if (req.getFileUrl() != null && !req.getFileUrl().isBlank()) {
+            newVersionDoc.setPreprocessStatus("PROCESSING");
+            newVersionDoc.setPreprocessError(null);
+            log.info("Setting preprocessStatus to PROCESSING for new version: documentId={}, version={}, fileUrl={}", 
+                documentId, newVersion, req.getFileUrl());
+        } else {
+            newVersionDoc.setPreprocessStatus("IDLE");
+        }
         
         newVersionDoc = documentRepository.save(newVersionDoc);
+        log.info("After save - preprocessStatus: {}", newVersionDoc.getPreprocessStatus());
         
         // AI 서버에 처리 요청 (파일이 있는 경우에만)
         if (req.getFileUrl() != null && !req.getFileUrl().isBlank()) {
@@ -733,11 +777,32 @@ public class RagDocumentService {
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
                     newVersionDoc.getId(), newVersionDoc.getDocumentId(), newVersionDoc.getVersion(), 
                     aiResp.isReceived(), aiResp.getStatus(), aiResp.getRequestId(), aiResp.getTraceId());
+
+                // AI 서버 응답의 status를 enum으로 변환하여 설정
+                if (aiResp.getStatus() != null) {
+                    RagDocumentStatus status = RagDocumentStatus.fromString(aiResp.getStatus());
+                    if (status != null) {
+                        newVersionDoc.setStatus(status);
+                        // preprocessStatus가 PROCESSING으로 유지되도록 명시적으로 확인
+                        if (newVersionDoc.getPreprocessStatus() == null || !"PROCESSING".equals(newVersionDoc.getPreprocessStatus())) {
+                            newVersionDoc.setPreprocessStatus("PROCESSING");
+                        }
+                        newVersionDoc = documentRepository.save(newVersionDoc);
+                        log.info("After AI response save - preprocessStatus: {}", newVersionDoc.getPreprocessStatus());
+                    } else {
+                        // 변환 실패 시 기본값 유지 (DRAFT)
+                        log.warn("AI 서버 응답의 status를 변환할 수 없음: status={}, documentId={}", 
+                            aiResp.getStatus(), newVersionDoc.getDocumentId());
+                    }
+                }
             } catch (Exception e) {
                 log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}", 
                     newVersionDoc.getId(), newVersionDoc.getDocumentId(), newVersionDoc.getVersion(), 
                     e.getMessage(), e);
-                // AI 서버 호출 실패해도 버전 생성은 성공으로 처리 (비동기 재시도 가능)
+                // AI 서버 호출 실패 시 전처리 상태를 FAILED로 설정
+                newVersionDoc.setPreprocessStatus("FAILED");
+                newVersionDoc.setPreprocessError("AI 서버 처리 요청 실패: " + e.getMessage());
+                documentRepository.save(newVersionDoc);
             }
         }
         
@@ -759,6 +824,8 @@ public class RagDocumentService {
                 "Policy version not found: " + documentId + " v" + version));
         
         boolean changed = false;
+        boolean fileUrlChanged = false;
+        
         if (req.getTitle() != null && !req.getTitle().isBlank()) {
             doc.setTitle(req.getTitle());
             changed = true;
@@ -768,6 +835,11 @@ public class RagDocumentService {
             changed = true;
         }
         if (req.getFileUrl() != null && !req.getFileUrl().isBlank()) {
+            // 파일 URL이 변경되었는지 확인
+            String oldFileUrl = doc.getSourceUrl();
+            if (!req.getFileUrl().equals(oldFileUrl)) {
+                fileUrlChanged = true;
+            }
             doc.setSourceUrl(req.getFileUrl());
             changed = true;
         }
@@ -776,7 +848,45 @@ public class RagDocumentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "no fields to update");
         }
         
+        // 파일 URL이 변경되면 전처리 상태 초기화
+        if (fileUrlChanged) {
+            doc.setPreprocessStatus("PROCESSING");
+            doc.setPreprocessError(null);
+        }
+        
         doc = documentRepository.save(doc);
+
+        log.info("@@@@@@@@@@@@@@");
+        log.info("@@@@@@@@@@@@@@");
+        log.info("@@@@@@@@@@@@@@");
+        log.info("@@@@@@@@@@@@@@");
+        log.info("fileUrlChanged: {}", fileUrlChanged);
+        log.info("doc.getDomain(): {}", doc.getDomain());
+        log.info("doc.getSourceUrl(): {}", doc.getSourceUrl());
+        // 파일 URL이 변경되면 AI 서버에 전처리 요청
+        if (fileUrlChanged && doc.getSourceUrl() != null && !doc.getSourceUrl().isBlank()) {
+            try {
+                // AI 서버에 문서 임베딩 처리 요청
+                // AI 서버는 처리 완료 후 PATCH /internal/rag/documents/{ragDocumentPk}/status 로 콜백을 보냅니다
+                RagAiClient.AiResponse aiResp = ragAiClient.ingest(
+                    doc.getId(),  // UUID (AI 서버가 콜백 시 사용할 PK)
+                    doc.getDocumentId(),
+                    doc.getVersion(),
+                    doc.getSourceUrl(),
+                    doc.getDomain()
+                );
+                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
+                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(), 
+                    aiResp.getRequestId(), aiResp.getTraceId());
+            } catch (Exception e) {
+                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}", 
+                    doc.getId(), doc.getDocumentId(), doc.getVersion(), e.getMessage(), e);
+                // AI 서버 호출 실패 시 전처리 상태를 FAILED로 설정
+                doc.setPreprocessStatus("FAILED");
+                doc.setPreprocessError("AI 서버 처리 요청 실패: " + e.getMessage());
+                documentRepository.save(doc);
+            }
+        }
         
         return new UpdateVersionResponse(
             doc.getId().toString(),
@@ -799,7 +909,7 @@ public class RagDocumentService {
         RagDocumentStatus newStatus = RagDocumentStatus.fromString(newStatusStr);
         if (newStatus == null || !newStatus.isPolicyManagementStatus()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                "Invalid status: " + newStatusStr + ". Allowed: ACTIVE, DRAFT, PENDING, ARCHIVED");
+                "Invalid status: " + newStatusStr + ". Allowed: ACTIVE, DRAFT, PENDING, ARCHIVED, REJECTED");
         }
         
         // ACTIVE로 변경 시, 같은 document_id의 다른 ACTIVE 버전들을 DRAFT로 변경
@@ -809,7 +919,7 @@ public class RagDocumentService {
                 .collect(java.util.stream.Collectors.toList());
             
             for (RagDocument active : activeVersions) {
-                active.setStatus(RagDocumentStatus.DRAFT);
+                active.setStatus(RagDocumentStatus.ARCHIVED);
                 documentRepository.save(active);
             }
         }
@@ -838,6 +948,98 @@ public class RagDocumentService {
             doc.getDocumentId(),
             doc.getVersion(),
             doc.getStatus() != null ? doc.getStatus().name() : null,
+            Instant.now().toString()
+        );
+    }
+
+    /**
+     * 검토 승인
+     */
+    public ReviewResponse approveReview(String documentId, Integer version, ApproveReviewRequest req) {
+        RagDocument doc = documentRepository.findByDocumentIdAndVersion(documentId, version)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "Policy version not found: " + documentId + " v" + version));
+        
+        // PENDING 상태인지 확인
+        if (doc.getStatus() != RagDocumentStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "Only PENDING status can be approved. Current status: " + 
+                (doc.getStatus() != null ? doc.getStatus().name() : "null"));
+        }
+        
+        // 같은 document_id의 다른 ACTIVE 버전들을 ARCHIVED로 변경
+        List<RagDocument> activeVersions = documentRepository.findByDocumentId(documentId).stream()
+            .filter(v -> v.getStatus() == RagDocumentStatus.ACTIVE && !v.getVersion().equals(version))
+            .collect(java.util.stream.Collectors.toList());
+        
+        for (RagDocument active : activeVersions) {
+            active.setStatus(RagDocumentStatus.ARCHIVED);
+            documentRepository.save(active);
+        }
+        
+        // 상태를 ACTIVE로 변경
+        RagDocumentStatus oldStatus = doc.getStatus();
+        doc.setStatus(RagDocumentStatus.ACTIVE);
+        doc.setRejectReason(null); // 승인 시 반려 사유 제거
+        doc.setRejectedAt(null);
+        
+        doc = documentRepository.save(doc);
+        
+        // 히스토리 기록
+        String action = "REVIEW_APPROVED";
+        String message = String.format("검토 승인: %s → ACTIVE", oldStatus.name());
+        addHistory(documentId, version, action, null, message);
+        
+        log.info("Review approved: documentId={}, version={}", documentId, version);
+        
+        return new ReviewResponse(
+            doc.getId().toString(),
+            doc.getDocumentId(),
+            doc.getVersion(),
+            doc.getStatus().name(),
+            doc.getRejectReason(),
+            doc.getRejectedAt() != null ? doc.getRejectedAt().toString() : null,
+            Instant.now().toString()
+        );
+    }
+
+    /**
+     * 검토 반려
+     */
+    public ReviewResponse rejectReview(String documentId, Integer version, RejectReviewRequest req) {
+        RagDocument doc = documentRepository.findByDocumentIdAndVersion(documentId, version)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "Policy version not found: " + documentId + " v" + version));
+        
+        // PENDING 상태인지 확인
+        if (doc.getStatus() != RagDocumentStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "Only PENDING status can be rejected. Current status: " + 
+                (doc.getStatus() != null ? doc.getStatus().name() : "null"));
+        }
+        
+        // 상태를 REJECTED로 변경
+        RagDocumentStatus oldStatus = doc.getStatus();
+        doc.setStatus(RagDocumentStatus.REJECTED);
+        doc.setRejectReason(req.getReason());
+        doc.setRejectedAt(Instant.now());
+        
+        doc = documentRepository.save(doc);
+        
+        // 히스토리 기록
+        String action = "REVIEW_REJECTED";
+        String message = String.format("검토 반려: %s → REJECTED (사유: %s)", oldStatus.name(), req.getReason());
+        addHistory(documentId, version, action, null, message);
+        
+        log.info("Review rejected: documentId={}, version={}, reason={}", documentId, version, req.getReason());
+        
+        return new ReviewResponse(
+            doc.getId().toString(),
+            doc.getDocumentId(),
+            doc.getVersion(),
+            doc.getStatus().name(),
+            doc.getRejectReason(),
+            doc.getRejectedAt() != null ? doc.getRejectedAt().toString() : null,
             Instant.now().toString()
         );
     }
@@ -900,6 +1102,12 @@ public class RagDocumentService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
                 "Document not found: " + ragDocumentPk));
 
+        // 업데이트 전 상태 로깅
+        log.info("Document update request received: id={}, documentId={}, version={}, currentStatus={}, newStatus={}, processedAt={}", 
+            doc.getId(), doc.getDocumentId(), doc.getVersion(), 
+            doc.getStatus() != null ? doc.getStatus().name() : "null",
+            req.getStatus(), req.getProcessedAt());
+
         // documentId 검증 (AI 서버가 보낸 값과 일치하는지 확인)
         if (req.getDocumentId() != null && !req.getDocumentId().isBlank()) {
             if (!req.getDocumentId().equals(doc.getDocumentId())) {
@@ -909,10 +1117,12 @@ public class RagDocumentService {
         }
 
         // version 검증 (AI 서버가 보낸 값과 일치하는지 확인)
+        // version이 제공된 경우에만 검증 (null이면 검증 생략)
         if (req.getVersion() != null) {
             if (!req.getVersion().equals(doc.getVersion())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                    "Version mismatch: expected " + doc.getVersion() + ", got " + req.getVersion());
+                    String.format("Version mismatch: document %s has version %d, but request specifies version %d", 
+                        ragDocumentPk, doc.getVersion(), req.getVersion()));
             }
         }
 
@@ -952,26 +1162,28 @@ public class RagDocumentService {
             doc.setPreprocessStatus("FAILED");
             doc.setPreprocessError(req.getFailReason());
         } else if (newStatus == RagDocumentStatus.COMPLETED) {
-            // 성공 시 전처리 상태를 READY로 설정하고 미리보기 데이터 저장
+            // 성공 시 전처리 상태를 READY로 설정
             doc.setPreprocessStatus("READY");
-            if (req.getPreprocessPages() != null) {
-                doc.setPreprocessPages(req.getPreprocessPages());
-            }
-            if (req.getPreprocessChars() != null) {
-                doc.setPreprocessChars(req.getPreprocessChars());
-            }
-            if (req.getPreprocessExcerpt() != null && !req.getPreprocessExcerpt().isBlank()) {
-                doc.setPreprocessExcerpt(req.getPreprocessExcerpt());
-            }
         } else if (newStatus == RagDocumentStatus.PROCESSING) {
             // 처리 중일 때는 전처리 상태도 PROCESSING으로 설정
             doc.setPreprocessStatus("PROCESSING");
         }
 
+        // 저장 전 상태 로깅
+        log.info("Before save - Document state: id={}, documentId={}, version={}, status={}, preprocessStatus={}, processedAt={}", 
+            doc.getId(), doc.getDocumentId(), doc.getVersion(), 
+            doc.getStatus() != null ? doc.getStatus().name() : "null",
+            doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "null",
+            doc.getProcessedAt() != null ? doc.getProcessedAt().toString() : "null");
+
         doc = documentRepository.save(doc);
 
-        log.info("Document status updated: id={}, documentId={}, version={}, status={}, processedAt={}, failReason={}", 
-            doc.getId(), doc.getDocumentId(), doc.getVersion(), doc.getStatus(), doc.getProcessedAt(), 
+        // 저장 후 상태 로깅
+        log.info("After save - Document state: id={}, documentId={}, version={}, status={}, preprocessStatus={}, processedAt={}, failReason={}", 
+            doc.getId(), doc.getDocumentId(), doc.getVersion(), 
+            doc.getStatus() != null ? doc.getStatus().name() : "null",
+            doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "null",
+            doc.getProcessedAt() != null ? doc.getProcessedAt().toString() : "null",
             req.getFailReason() != null ? req.getFailReason() : "N/A");
 
         return new InternalUpdateStatusResponse(
@@ -996,9 +1208,6 @@ public class RagDocumentService {
         
         return new PreprocessPreviewResponse(
             doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "IDLE",
-            doc.getPreprocessPages(),
-            doc.getPreprocessChars(),
-            doc.getPreprocessExcerpt(),
             doc.getPreprocessError()
         );
     }
