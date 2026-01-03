@@ -2,12 +2,15 @@ package com.ctrlf.chat.controller;
 
 import com.ctrlf.chat.dto.request.ChatSessionCreateRequest;
 import com.ctrlf.chat.dto.request.ChatSessionUpdateRequest;
+import com.ctrlf.chat.dto.request.SessionModelSetRequest;
 import com.ctrlf.chat.dto.response.ChatSessionHistoryResponse;
 import com.ctrlf.chat.dto.response.ChatSessionResponse;
 import com.ctrlf.chat.service.ChatSessionService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -104,5 +107,25 @@ public class ChatSessionController {
     @GetMapping("/{sessionId}/history")
     public ChatSessionHistoryResponse history(@PathVariable UUID sessionId) {
         return chatSessionService.getSessionHistory(sessionId);
+    }
+
+    /**
+     * 세션/컨텍스트 모델 설정
+     * 
+     * <p>Frontend에서 선택한 모델을 세션에 설정합니다.</p>
+     * <p>이 요청은 질문과 무관하게 세션/컨텍스트를 설정합니다.</p>
+     * <p>Backend는 모델 값을 검증하고 그대로 저장하며, 해석하지 않습니다.</p>
+     * 
+     * @param sessionId 세션 ID
+     * @param request 모델 설정 요청 ("openai" 또는 "sroberta")
+     * @return 200 OK
+     */
+    @PostMapping("/{sessionId}/model")
+    public ResponseEntity<Void> setModel(
+        @PathVariable UUID sessionId,
+        @Valid @RequestBody SessionModelSetRequest request
+    ) {
+        chatSessionService.setSessionModel(sessionId, request.model());
+        return ResponseEntity.ok().build();
     }
 }

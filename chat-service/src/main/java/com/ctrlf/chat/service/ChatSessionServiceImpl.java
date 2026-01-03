@@ -36,6 +36,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         session.setTitle(request.title());
         session.setDomain(request.domain());
         session.setUserUuid(request.userUuid());
+        // 모델은 Frontend에서 POST /api/chat/sessions/{sessionId}/model로 설정
 
         ChatSession saved = chatSessionRepository.save(session);
 
@@ -155,6 +156,22 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             session.getId(),
             session.getTitle(),
             messages
+        );
+    }
+
+    @Override
+    public void setSessionModel(UUID sessionId, String model) {
+        ChatSession session = chatSessionRepository.findActiveById(sessionId);
+        if (session == null) {
+            throw new ChatSessionNotFoundException();
+        }
+
+        // Backend는 모델 값을 검증하고 그대로 저장 (해석하지 않음)
+        session.setEmbeddingModel(model);
+        log.debug(
+            "세션 모델 설정: sessionId={}, model={}",
+            sessionId,
+            model
         );
     }
 }
