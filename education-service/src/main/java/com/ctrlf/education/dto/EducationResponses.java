@@ -96,6 +96,8 @@ public final class EducationResponses {
             private Integer duration;
             /** 영상 버전 */
             private Integer version;
+            /** 영상 상태 */
+            private String status;
             /** 수강 가능한 부서 목록 */
             private String[] departmentScope;
             /** 사용자 이어보기 위치(초) */

@@ -302,6 +302,7 @@ public class AdminEducationController {
                     v.getFileUrl(),
                     v.getDuration() != null ? v.getDuration() : 0,
                     v.getVersion() != null ? v.getVersion() : 1,
+                    v.getStatus(),
                     e.getDepartmentScope(),
                     null, // resumePosition
                     null, // isCompleted

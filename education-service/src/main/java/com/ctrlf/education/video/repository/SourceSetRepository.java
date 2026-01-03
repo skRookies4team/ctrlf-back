@@ -23,4 +23,10 @@ public interface SourceSetRepository extends JpaRepository<SourceSet, UUID> {
      */
     @Query("SELECT ss FROM SourceSet ss WHERE ss.educationId = :educationId AND ss.deletedAt IS NULL")
     List<SourceSet> findByEducationIdAndNotDeleted(@Param("educationId") UUID educationId);
+
+    /**
+     * 비디오 ID로 소스셋 조회 (삭제되지 않은 것만).
+     */
+    @Query("SELECT ss FROM SourceSet ss WHERE ss.videoId = :videoId AND ss.deletedAt IS NULL")
+    List<SourceSet> findByVideoIdAndNotDeleted(@Param("videoId") UUID videoId);
 }
