@@ -26,3 +26,32 @@ spec:
       targetPort: 8090
   selector:
     app: keycloak # Keycloak Deployment의 labels와 맞춰야 함
+---
+# 1-1. Keycloak DB를 위한 서비스 (이름이 KC_DB_URL과 일치해야 함)
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-db
+  namespace: ctrl
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: keycloak-db # DB Deployment의 labels와 맞춰야 함
+---
+# 2-1. Keycloak 서버를 외부에 노출하기 위한 서비스
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-service
+  namespace: ctrl
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  type: LoadBalancer # 또는 NodePort
+  ports:
+    - port: 8090
+      targetPort: 8090
+  selector:
+    app: keycloak # Keycloak Deployment의 labels와 맞춰야 함
