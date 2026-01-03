@@ -1,6 +1,9 @@
 {
   "realm": "ctrlf",
-
+  "sslRequired": "none",
+  "attributes": {
+    "checkLoginIframe": "false"
+  },
 
   "enabled": true,
   "displayName": "CTRL-F",
