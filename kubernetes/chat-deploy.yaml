@@ -90,5 +90,7 @@ spec:
                 secretKeyRef:
                   name: ai-api-secrets
                   key: AI_API_TOKEN
+      imagePullSecrets:
+        - name: ecr-registry-helper
 #      nodeSelector:
 #         zone: private
