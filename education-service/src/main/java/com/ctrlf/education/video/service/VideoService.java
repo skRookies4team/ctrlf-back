@@ -34,6 +34,8 @@ import com.ctrlf.education.video.entity.VideoGenerationJob;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
 import com.ctrlf.education.video.repository.EducationVideoReviewRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
+import com.ctrlf.education.video.repository.SourceSetRepository;
+import com.ctrlf.education.video.entity.SourceSet;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -83,6 +85,7 @@ public class VideoService {
     private final EducationRepository educationRepository;
     private final VideoAiClient videoAiClient;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final SourceSetRepository sourceSetRepository;
 
     @Value("${ctrlf.infra.base-url:http://localhost:9003}")
     private String infraBaseUrl;
@@ -428,8 +431,17 @@ public class VideoService {
     @Transactional
     public void deleteVideoContent(UUID videoId) {
         findVideoOrThrow(videoId);
+        
+        // source_set에서 video_id 참조를 먼저 해제 (외래키 제약 조건 해결)
+        List<SourceSet> sourceSets = sourceSetRepository.findByVideoIdAndNotDeleted(videoId);
+        for (SourceSet sourceSet : sourceSets) {
+            sourceSet.setVideoId(null);
+            sourceSetRepository.save(sourceSet);
+            log.debug("SourceSet의 video_id 참조 해제. sourceSetId={}, videoId={}", sourceSet.getId(), videoId);
+        }
+        
         videoRepository.deleteById(videoId);
-        log.info("영상 컨텐츠 삭제. videoId={}", videoId);
+        log.info("영상 컨텐츠 삭제. videoId={}, 해제된 sourceSet 수={}", videoId, sourceSets.size());
     }
 
     /**
