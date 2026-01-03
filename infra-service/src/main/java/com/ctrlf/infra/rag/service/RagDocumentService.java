@@ -1208,6 +1208,9 @@ public class RagDocumentService {
         
         return new PreprocessPreviewResponse(
             doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "IDLE",
+            doc.getPreprocessPages(),
+            doc.getPreprocessChars(),
+            doc.getPreprocessExcerpt(),
             doc.getPreprocessError()
         );
     }

@@ -6,6 +6,7 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * RAG 관련 요청/응답 DTO 모음.
@@ -361,6 +362,7 @@ public final class RagDtos {
      * 새 버전 생성 요청 DTO.
      */
     @Getter
+    @Setter
     @NoArgsConstructor
     public static class CreateVersionRequest {
         @Schema(example = "s3://ctrl-s3/docs/policy_v2.pdf")
@@ -368,6 +370,12 @@ public final class RagDtos {
 
         @Schema(example = "퀴즈 리포트 및 배포 캘린더 추가")
         private String changeSummary;
+
+        @Schema(example = "새 버전 제목")
+        private String title;
+
+        @Schema(example = "2")
+        private Integer version;
     }
 
     /**
@@ -570,6 +578,43 @@ public final class RagDtos {
         private String documentId;
         private Integer version;
         private List<HistoryItem> items;
+    }
+
+    // ---------- Review ----------
+    /**
+     * 검토 승인 요청 DTO.
+     */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class ApproveReviewRequest {
+        // 승인 요청에는 추가 필드가 없을 수 있음
+    }
+
+    /**
+     * 검토 반려 요청 DTO.
+     */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class RejectReviewRequest {
+        @Schema(example = "내용을 수정해주세요")
+        private String reason;
+    }
+
+    /**
+     * 검토 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class ReviewResponse {
+        private String id;
+        private String documentId;
+        private Integer version;
+        private String status;
+        private String rejectReason;
+        private String rejectedAt;
+        private String updatedAt;
     }
 }
 

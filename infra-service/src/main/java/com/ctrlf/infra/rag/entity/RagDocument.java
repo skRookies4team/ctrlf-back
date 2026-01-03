@@ -95,5 +95,13 @@ public class RagDocument {
     /** 검토 항목 ID */
     @Column(name = "review_item_id", length = 100, columnDefinition = "varchar(100)")
     private String reviewItemId;
+
+    /** 반려 사유 */
+    @Column(name = "reject_reason", columnDefinition = "text")
+    private String rejectReason;
+
+    /** 반려 시각 */
+    @Column(name = "rejected_at")
+    private Instant rejectedAt;
 }
 
