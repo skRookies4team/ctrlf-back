@@ -13,7 +13,7 @@ import org.springframework.web.client.RestClient;
  * <p>MSA 환경에서 모든 서비스에서 공통으로 사용하는 AI 서버 호출 함수입니다.</p>
  * <p>자동으로 다음 헤더를 추가합니다:
  * <ul>
- *   <li>X-Internal-Token (설정값에서 읽음, app.ai.token)</li>
+ *   <li>X-Internal-Token (환경변수 AI_INTERNAL_TOKEN 또는 app.ai.token 설정값에서 읽음)</li>
  *   <li>X-Trace-Id (자동 생성 또는 전달)</li>
  *   <li>X-User-Id (JWT에서 자동 추출)</li>
  *   <li>X-Dept-Id (JWT에서 자동 추출)</li>
@@ -49,7 +49,7 @@ public class AiRestClient {
 
     private final RestClient restClient;
 
-    @Value("${app.ai.token:}")
+    @Value("${AI_INTERNAL_TOKEN:${app.ai.token:}}")
     private String internalToken;
 
     /**
@@ -103,6 +103,11 @@ public class AiRestClient {
         
         // POST 요청 생성 및 헤더 추가
         RestClient.RequestBodySpec requestSpec = restClient.post().uri(uri);
+        
+        // X-Internal-Token 헤더 추가 (환경변수 또는 설정값에서 읽음)
+        if (internalToken != null && !internalToken.isBlank()) {
+            requestSpec.header("X-Internal-Token", internalToken);
+        }
         
         // 필수 헤더 추가
         requestSpec.header("X-Trace-Id", traceId.toString());
@@ -158,6 +163,11 @@ public class AiRestClient {
         
         // GET 요청 생성 및 헤더 추가
         RestClient.RequestHeadersSpec<?> requestSpec = restClient.get().uri(uri);
+        
+        // X-Internal-Token 헤더 추가 (환경변수 또는 설정값에서 읽음)
+        if (internalToken != null && !internalToken.isBlank()) {
+            requestSpec.header("X-Internal-Token", internalToken);
+        }
         
         // 필수 헤더 추가
         requestSpec.header("X-Trace-Id", traceId.toString());
