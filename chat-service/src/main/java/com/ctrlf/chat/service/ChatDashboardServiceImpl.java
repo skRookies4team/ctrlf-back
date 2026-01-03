@@ -1,14 +1,18 @@
 package com.ctrlf.chat.service;
 
 import com.ctrlf.chat.dto.response.ChatDashboardResponse;
-import com.ctrlf.chat.repository.ChatFeedbackRepository;
 import com.ctrlf.chat.repository.ChatMessageRepository;
+import com.ctrlf.chat.telemetry.entity.TelemetryEvent;
+import com.ctrlf.chat.telemetry.repository.TelemetryEventRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 챗봇 관리자 대시보드 서비스 구현체
+ * 
+ * <p>텔레메트리 이벤트 기반으로 대시보드 데이터를 제공합니다.</p>
  * 
  * @author CtrlF Team
  * @since 1.0.0
@@ -27,297 +33,335 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChatDashboardServiceImpl implements ChatDashboardService {
 
     private final ChatMessageRepository chatMessageRepository;
-    private final ChatFeedbackRepository chatFeedbackRepository;
+    private final TelemetryEventRepository telemetryEventRepository;
 
-    private static final Map<String, String> ROUTE_NAME_MAP = Map.of(
-        "RAG", "RAG 기반 내부 규정",
-        "LLM", "LLM 단독 답변",
-        "INCIDENT", "Incident 신고 라우트",
-        "FAQ", "FAQ 템플릿 응답",
-        "OTHER", "기타/실험 라우트"
-    );
-
-    private static final Map<String, String> DOMAIN_NAME_MAP = Map.of(
-        "SECURITY", "규정 안내",
+    private static final Map<String, String> DOMAIN_LABEL_MAP = Map.of(
         "POLICY", "규정 안내",
         "FAQ", "FAQ",
         "EDUCATION", "교육",
         "QUIZ", "퀴즈",
-        "OTHER", "기타"
+        "ETC", "기타"
     );
 
     @Override
     public ChatDashboardResponse.DashboardSummaryResponse getDashboardSummary(
-        Integer periodDays,
-        String department
+        String period,
+        String dept,
+        Boolean refresh
     ) {
-        // 기본값: 최근 30일
-        if (periodDays == null) {
-            periodDays = 30;
+        // 기본값 처리
+        if (period == null || period.isBlank()) {
+            period = "30d";
+        }
+        if (dept == null || dept.isBlank()) {
+            dept = "all";
         }
 
-        Instant startDate = calculateStartDate(periodDays);
+        // 기간 계산
+        Instant[] periodRange = calculatePeriodRange(period);
+        Instant startDate = periodRange[0];
+        Instant endDate = periodRange[1];
+        long periodDays = (endDate.toEpochMilli() - startDate.toEpochMilli()) / (1000 * 60 * 60 * 24);
+        if (periodDays == 0) {
+            periodDays = 1; // today인 경우
+        }
+
+        // dept 필터 변환
+        String deptId = "all".equals(dept) ? "all" : dept;
+
+        // CHAT_TURN 이벤트 조회
+        List<TelemetryEvent> chatTurnEvents = telemetryEventRepository
+            .findByEventTypeAndPeriodAndDept("CHAT_TURN", startDate, endDate, deptId);
+
+        // 오늘 질문 수 (CHAT_TURN 이벤트 개수)
         Instant todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant todayEnd = todayStart.plusSeconds(24 * 60 * 60);
+        List<TelemetryEvent> todayEvents = telemetryEventRepository
+            .findByEventTypeAndPeriodAndDept("CHAT_TURN", todayStart, todayEnd, deptId);
+        Long todayQuestionCount = (long) todayEvents.size();
 
-        // 오늘 질문 수
-        Long todayQuestionCount = chatMessageRepository.countTodayQuestions(department);
+        // 기간 내 질문 수
+        Long periodQuestionCount = (long) chatTurnEvents.size();
 
-        // 평균 응답 시간 (밀리초)
-        Long averageResponseTime = chatMessageRepository.getAverageResponseTime(startDate, department);
-        if (averageResponseTime == null) {
-            averageResponseTime = 0L;
+        // 기간 내 일평균 질문 수
+        Long periodDailyAvgQuestionCount = periodDays > 0 
+            ? periodQuestionCount / periodDays 
+            : 0L;
+
+        // 활성 사용자 수 (고유 userId 개수)
+        Set<String> uniqueUserIds = chatTurnEvents.stream()
+            .map(TelemetryEvent::getUserId)
+            .collect(Collectors.toSet());
+        Long activeUsers = (long) uniqueUserIds.size();
+
+        // 평균 응답 시간 (latencyMsTotal)
+        double totalLatency = 0.0;
+        int latencyCount = 0;
+        for (TelemetryEvent event : chatTurnEvents) {
+            Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+            Object latencyObj = payload.get("latencyMsTotal");
+            if (latencyObj instanceof Number) {
+                totalLatency += ((Number) latencyObj).doubleValue();
+                latencyCount++;
+            }
+        }
+        Long avgLatencyMs = latencyCount > 0 ? (long) (totalLatency / latencyCount) : 0L;
+
+        // PII 감지 비율 (piiDetectedInput 또는 piiDetectedOutput)
+        int piiDetectedCount = 0;
+        int totalCount = chatTurnEvents.size();
+        for (TelemetryEvent event : chatTurnEvents) {
+            Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+            Boolean piiInput = (Boolean) payload.get("piiDetectedInput");
+            Boolean piiOutput = (Boolean) payload.get("piiDetectedOutput");
+            if (Boolean.TRUE.equals(piiInput) || Boolean.TRUE.equals(piiOutput)) {
+                piiDetectedCount++;
+            }
+        }
+        Double piiDetectRate = totalCount > 0 ? (double) piiDetectedCount / totalCount : 0.0;
+
+        // 에러율 (errorCode가 null이 아닌 경우)
+        int errorCount = 0;
+        for (TelemetryEvent event : chatTurnEvents) {
+            Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+            Object errorCode = payload.get("errorCode");
+            if (errorCode != null) {
+                errorCount++;
+            }
+        }
+        Double errorRate = totalCount > 0 ? (double) errorCount / totalCount : 0.0;
+
+        // 만족도/불만족도 계산 (텔레메트리 FEEDBACK 이벤트 기반)
+        List<TelemetryEvent> feedbackEvents = telemetryEventRepository
+            .findByEventTypeAndPeriodAndDept("FEEDBACK", startDate, endDate, deptId);
+        
+        long likeCount = 0;
+        long dislikeCount = 0;
+        for (TelemetryEvent event : feedbackEvents) {
+            Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+            String feedback = (String) payload.get("feedback");
+            if ("like".equals(feedback)) {
+                likeCount++;
+            } else if ("dislike".equals(feedback)) {
+                dislikeCount++;
+            }
+        }
+        
+        Double satisfactionRate = null;
+        Double dislikeRate = null;
+        long totalFeedback = likeCount + dislikeCount;
+        if (totalFeedback > 0) {
+            satisfactionRate = (double) likeCount / totalFeedback;
+            dislikeRate = (double) dislikeCount / totalFeedback;
         }
 
-        // PII 감지 비율 (%)
-        Double piiDetectionRate = chatMessageRepository.getPiiDetectionRate(startDate, department);
-        if (piiDetectionRate == null) {
-            piiDetectionRate = 0.0;
+        // RAG 사용 비율 (ragUsed)
+        int ragUsedCount = 0;
+        for (TelemetryEvent event : chatTurnEvents) {
+            Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+            Boolean ragUsed = (Boolean) payload.get("ragUsed");
+            if (Boolean.TRUE.equals(ragUsed)) {
+                ragUsedCount++;
+            }
         }
-
-        // 에러율 (%)
-        Double errorRate = chatMessageRepository.getErrorRate(startDate, department);
-        if (errorRate == null) {
-            errorRate = 0.0;
-        }
-
-        // 최근 7일 질문 수
-        Instant last7DaysStart = calculateStartDate(7);
-        Long last7DaysQuestionCount = chatMessageRepository.countQuestionsByPeriod(
-            last7DaysStart,
-            department
-        );
-
-        // 활성 사용자 수 (최근 30일 기준)
-        Instant last30DaysStart = calculateStartDate(30);
-        Long activeUserCount = chatMessageRepository.countActiveUsers(
-            last30DaysStart,
-            department
-        );
-
-        // 응답 만족도 (%)
-        Double satisfactionRate = chatFeedbackRepository.getSatisfactionRate(
-            startDate,
-            department
-        );
-        if (satisfactionRate == null) {
-            satisfactionRate = 0.0;
-        }
-
-        // RAG 사용 비율 (%)
-        Double ragUsageRate = chatMessageRepository.getRagUsageRate(startDate, department);
-        if (ragUsageRate == null) {
-            ragUsageRate = 0.0;
-        }
+        Double ragUsageRate = totalCount > 0 ? (double) ragUsedCount / totalCount : 0.0;
 
         return new ChatDashboardResponse.DashboardSummaryResponse(
+            period,
+            dept,
             todayQuestionCount,
-            averageResponseTime,
-            piiDetectionRate,
+            periodQuestionCount,
+            periodDailyAvgQuestionCount,
+            activeUsers,
+            avgLatencyMs,
+            piiDetectRate,
             errorRate,
-            last7DaysQuestionCount,
-            activeUserCount,
             satisfactionRate,
+            dislikeRate,
             ragUsageRate
         );
     }
 
     @Override
-    public ChatDashboardResponse.RouteRatioResponse getRouteRatio(
-        Integer periodDays,
-        String department
+    public ChatDashboardResponse.TrendsResponse getTrends(
+        String period,
+        String dept,
+        String bucket,
+        Boolean refresh
     ) {
-        if (periodDays == null) {
-            periodDays = 30;
+        // 기본값 처리
+        if (period == null || period.isBlank()) {
+            period = "30d";
+        }
+        if (dept == null || dept.isBlank()) {
+            dept = "all";
+        }
+        if (bucket == null || bucket.isBlank()) {
+            bucket = "week";
         }
 
-        Instant startDate = calculateStartDate(periodDays);
-        List<Object[]> results = chatMessageRepository.getRouteRatio(startDate, department);
+        // 기간 계산
+        Instant[] periodRange = calculatePeriodRange(period);
+        Instant startDate = periodRange[0];
+        Instant endDate = periodRange[1];
 
-        List<ChatDashboardResponse.RouteRatioItem> items = new ArrayList<>();
-        for (Object[] row : results) {
-            String routeType = (String) row[0];
-            Double ratio = ((Number) row[2]).doubleValue();
-            String routeName = ROUTE_NAME_MAP.getOrDefault(routeType, "기타/실험 라우트");
+        // dept 필터 변환
+        String deptId = "all".equals(dept) ? "all" : dept;
 
-            items.add(new ChatDashboardResponse.RouteRatioItem(
-                routeType,
-                routeName,
-                ratio
-            ));
+        // CHAT_TURN 이벤트 조회
+        List<TelemetryEvent> chatTurnEvents = telemetryEventRepository
+            .findByEventTypeAndPeriodAndDept("CHAT_TURN", startDate, endDate, deptId);
+
+        // bucket별 집계
+        Map<String, List<TelemetryEvent>> bucketMap = new HashMap<>();
+        for (TelemetryEvent event : chatTurnEvents) {
+            String bucketKey = "day".equals(bucket) 
+                ? getDayKey(event.getOccurredAt())
+                : getWeekKey(event.getOccurredAt());
+            bucketMap.computeIfAbsent(bucketKey, k -> new ArrayList<>()).add(event);
         }
 
-        return new ChatDashboardResponse.RouteRatioResponse(items);
-    }
-
-    @Override
-    public ChatDashboardResponse.TopKeywordsResponse getTopKeywords(
-        Integer periodDays,
-        String department
-    ) {
-        if (periodDays == null) {
-            periodDays = 30;
-        }
-
-        Instant startDate = calculateStartDate(periodDays);
-        List<Object[]> results = chatMessageRepository.getTopKeywords(
-            startDate,
-            department,
-            5
-        );
-
-        List<ChatDashboardResponse.TopKeywordItem> items = new ArrayList<>();
-        for (Object[] row : results) {
-            String keyword = (String) row[0];
-            Long questionCount = ((Number) row[1]).longValue();
-
-            items.add(new ChatDashboardResponse.TopKeywordItem(
-                keyword,
-                questionCount
-            ));
-        }
-
-        return new ChatDashboardResponse.TopKeywordsResponse(items);
-    }
-
-    @Override
-    public ChatDashboardResponse.QuestionTrendResponse getQuestionTrend(
-        Integer periodDays,
-        String department
-    ) {
-        if (periodDays == null) {
-            periodDays = 30;
-        }
-
-        Instant startDate = calculateStartDate(periodDays);
-        List<Object[]> results = chatMessageRepository.getQuestionTrend(startDate, department);
-
-        List<ChatDashboardResponse.QuestionTrendItem> items = new ArrayList<>();
-        long totalQuestionCount = 0;
-        double totalErrorRate = 0.0;
-        int periodCount = 0;
-
-        int weekNumber = 1;
-        for (Object[] row : results) {
-            String weekStart = (String) row[0];
-            Long questionCount = ((Number) row[1]).longValue();
-            Double errorRate = ((Number) row[2]).doubleValue();
-            if (errorRate == null) {
-                errorRate = 0.0;
+        // 시리즈 데이터 생성
+        List<ChatDashboardResponse.TrendsSeriesItem> series = new ArrayList<>();
+        for (Map.Entry<String, List<TelemetryEvent>> entry : bucketMap.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .collect(Collectors.toList())) {
+            String bucketStart = entry.getKey();
+            List<TelemetryEvent> events = entry.getValue();
+            Long questionCount = (long) events.size();
+            
+            // 에러율 계산
+            int errorCount = 0;
+            for (TelemetryEvent event : events) {
+                Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+                Object errorCode = payload.get("errorCode");
+                if (errorCode != null) {
+                    errorCount++;
+                }
             }
+            Double errorRate = questionCount > 0 ? (double) errorCount / questionCount : 0.0;
 
-            totalQuestionCount += questionCount;
-            totalErrorRate += errorRate;
-            periodCount++;
-
-            items.add(new ChatDashboardResponse.QuestionTrendItem(
-                weekNumber + "주",
+            series.add(new ChatDashboardResponse.TrendsSeriesItem(
+                bucketStart,
                 questionCount,
                 errorRate
             ));
-
-            weekNumber++;
         }
 
-        long averageQuestionCountPerPeriod = periodCount > 0
-            ? totalQuestionCount / periodCount
-            : 0L;
-        double averageErrorRate = periodCount > 0
-            ? totalErrorRate / periodCount
-            : 0.0;
-
-        return new ChatDashboardResponse.QuestionTrendResponse(
-            totalQuestionCount,
-            averageQuestionCountPerPeriod,
-            averageErrorRate,
-            items
-        );
+        return new ChatDashboardResponse.TrendsResponse(bucket, series);
     }
 
     @Override
-    public ChatDashboardResponse.DomainRatioResponse getDomainRatio(
-        Integer periodDays,
-        String department
+    public ChatDashboardResponse.DomainShareResponse getDomainShare(
+        String period,
+        String dept,
+        Boolean refresh
     ) {
-        if (periodDays == null) {
-            periodDays = 30;
+        // 기본값 처리
+        if (period == null || period.isBlank()) {
+            period = "30d";
+        }
+        if (dept == null || dept.isBlank()) {
+            dept = "all";
         }
 
-        Instant startDate = calculateStartDate(periodDays);
-        List<Object[]> results = chatMessageRepository.getDomainRatio(startDate, department);
+        // 기간 계산
+        Instant[] periodRange = calculatePeriodRange(period);
+        Instant startDate = periodRange[0];
+        Instant endDate = periodRange[1];
 
-        // 도메인별로 count 합산하기 위한 Map
-        Map<String, Long> domainCountMap = new java.util.HashMap<>();
-        long totalCount = 0;
-        
-        try {
-            for (Object[] row : results) {
-                if (row == null || row.length < 3) {
-                    log.warn("Invalid row in domain ratio results: {}", java.util.Arrays.toString(row));
-                    continue; // 잘못된 결과 행은 건너뛰기
-                }
-                
-                try {
-                    String domain = row[0] != null ? (String) row[0] : null;
-                    // domain이 null인 경우 "OTHER"로 처리
-                    if (domain == null || domain.isBlank()) {
-                        domain = "OTHER";
-                    }
-                    
-                    // 도메인 값 정규화 (대문자로 변환 및 공백 제거)
-                    domain = domain.toUpperCase().trim();
-                    
-                    // SEC_POLICY 같은 값도 처리
-                    if ("SEC_POLICY".equals(domain)) {
-                        domain = "SECURITY";
-                    }
-                    
-                    // count가 null인 경우 처리
-                    Long count = row[1] != null ? ((Number) row[1]).longValue() : 0L;
-                    
-                    // 같은 domain이면 count를 합산
-                    domainCountMap.merge(domain, count, Long::sum);
-                    totalCount += count;
-                } catch (Exception e) {
-                    log.error("Error processing domain ratio row: {}", java.util.Arrays.toString(row), e);
-                    continue; // 에러가 발생한 행은 건너뛰기
-                }
+        // dept 필터 변환
+        String deptId = "all".equals(dept) ? "all" : dept;
+
+        // CHAT_TURN 이벤트 조회
+        List<TelemetryEvent> chatTurnEvents = telemetryEventRepository
+            .findByEventTypeAndPeriodAndDept("CHAT_TURN", startDate, endDate, deptId);
+
+        // 도메인별 질문 수 집계
+        Map<String, Long> domainCountMap = new HashMap<>();
+        for (TelemetryEvent event : chatTurnEvents) {
+            Map<String, Object> payload = (Map<String, Object>) event.getPayload();
+            String domain = (String) payload.get("domain");
+            if (domain == null || domain.isBlank()) {
+                domain = "ETC";
             }
-        } catch (Exception e) {
-            log.error("Error processing domain ratio results", e);
-            // 에러가 발생해도 빈 리스트 반환
+            domain = domain.toUpperCase().trim();
+            if ("SECURITY".equals(domain) || "SEC_POLICY".equals(domain)) {
+                domain = "POLICY";
+            }
+            domainCountMap.merge(domain, 1L, Long::sum);
         }
 
-        // Map을 List로 변환하고 count 기준으로 정렬, 전체 대비 비율 계산
-        // 람다 표현식에서 사용하기 위해 final 변수로 복사
+        long totalCount = chatTurnEvents.size();
+
+        // Map을 List로 변환하고 share 계산
         final long finalTotalCount = totalCount;
-        List<ChatDashboardResponse.DomainRatioItem> items = domainCountMap.entrySet().stream()
+        List<ChatDashboardResponse.DomainShareItem> items = domainCountMap.entrySet().stream()
             .map(entry -> {
                 String domain = entry.getKey();
-                Long count = entry.getValue();
-                // 전체 대비 비율 계산
-                Double ratio = finalTotalCount > 0 ? (count * 100.0 / finalTotalCount) : 0.0;
-                String domainName = DOMAIN_NAME_MAP.getOrDefault(domain, "기타");
-                return new ChatDashboardResponse.DomainRatioItem(
+                Long questionCount = entry.getValue();
+                // share는 0~1 범위
+                Double share = finalTotalCount > 0 ? (questionCount.doubleValue() / finalTotalCount) : 0.0;
+                String label = DOMAIN_LABEL_MAP.getOrDefault(domain, "기타");
+                return new ChatDashboardResponse.DomainShareItem(
                     domain,
-                    domainName,
-                    ratio
+                    label,
+                    questionCount,
+                    share
                 );
             })
-            .sorted((a, b) -> Double.compare(b.getRatio(), a.getRatio())) // ratio 기준 내림차순 정렬
-            .collect(java.util.stream.Collectors.toList());
+            .sorted((a, b) -> Double.compare(b.getShare(), a.getShare())) // share 기준 내림차순 정렬
+            .collect(Collectors.toList());
 
-        return new ChatDashboardResponse.DomainRatioResponse(items);
+        return new ChatDashboardResponse.DomainShareResponse(items);
     }
 
     /**
-     * 기간(일수)에 따른 시작 날짜 계산
+     * 기간 문자열을 Instant 범위로 변환
      * 
-     * @param periodDays 기간 일수
-     * @return 시작 시각
+     * @param period 기간 (today | 7d | 30d | 90d)
+     * @return [시작 시각, 종료 시각]
      */
-    private Instant calculateStartDate(Integer periodDays) {
-        LocalDate startDate = LocalDate.now().minusDays(periodDays);
-        return startDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+    private Instant[] calculatePeriodRange(String period) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate;
+
+        switch (period) {
+            case "today":
+                startDate = endDate;
+                break;
+            case "7d":
+                startDate = endDate.minusDays(7);
+                break;
+            case "30d":
+                startDate = endDate.minusDays(30);
+                break;
+            case "90d":
+                startDate = endDate.minusDays(90);
+                break;
+            default:
+                startDate = endDate.minusDays(30);
+        }
+
+        return new Instant[] {
+            startDate.atStartOfDay(ZoneId.systemDefault()).toInstant(),
+            endDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+        };
+    }
+
+    /**
+     * 일별 버킷 키 생성 (YYYY-MM-DD)
+     */
+    private String getDayKey(Instant instant) {
+        return instant.atZone(ZoneId.systemDefault()).toLocalDate().toString();
+    }
+
+    /**
+     * 주별 버킷 키 생성 (YYYY-MM-DD, 주의 시작일)
+     */
+    private String getWeekKey(Instant instant) {
+        LocalDate date = instant.atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate weekStart = date.minusDays(date.getDayOfWeek().getValue() - 1);
+        return weekStart.toString();
     }
 }
-

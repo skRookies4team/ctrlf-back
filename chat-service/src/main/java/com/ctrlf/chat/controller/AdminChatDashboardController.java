@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Chat-Admin", description = "챗봇 관리자 대시보드 통계 API (ADMIN)")
 @RestController
-@RequestMapping("/admin/dashboard")
+@RequestMapping("/admin/dashboard/chat")
 @SecurityRequirement(name = "bearer-jwt")
 @RequiredArgsConstructor
 public class AdminChatDashboardController {
@@ -37,7 +37,7 @@ public class AdminChatDashboardController {
     @GetMapping("/summary")
     @Operation(
         summary = "대시보드 요약 통계 조회",
-        description = "오늘 질문 수, 평균 응답 시간, PII 감지 비율, 에러율, 최근 7일 질문 수, 활성 사용자 수, 응답 만족도, RAG 사용 비율을 조회합니다."
+        description = "챗봇 탭 상단 요약 카드 데이터를 조회합니다."
     )
     @ApiResponses({
         @ApiResponse(
@@ -47,96 +47,62 @@ public class AdminChatDashboardController {
         )
     })
     public ResponseEntity<ChatDashboardResponse.DashboardSummaryResponse> getDashboardSummary(
-        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
-        @RequestParam(value = "period", required = false) Integer period,
-        @Parameter(description = "부서 필터", example = "총무팀")
-        @RequestParam(value = "department", required = false) String department
+        @Parameter(description = "기간 (today | 7d | 30d | 90d)", example = "30d")
+        @RequestParam(value = "period", required = false, defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all 또는 dept_id)", example = "all")
+        @RequestParam(value = "dept", required = false, defaultValue = "all") String dept,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", required = false, defaultValue = "false") Boolean refresh
     ) {
-        return ResponseEntity.ok(chatDashboardService.getDashboardSummary(period, department));
+        return ResponseEntity.ok(chatDashboardService.getDashboardSummary(period, dept, refresh));
     }
 
-    @GetMapping("/route-ratio")
-    @Operation(
-        summary = "라우트별 질문 비율 조회",
-        description = "RAG, LLM, Incident, FAQ, 기타 라우트별 질문 비율을 조회합니다."
-    )
-    @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "성공",
-            content = @Content(schema = @Schema(implementation = ChatDashboardResponse.RouteRatioResponse.class))
-        )
-    })
-    public ResponseEntity<ChatDashboardResponse.RouteRatioResponse> getRouteRatio(
-        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
-        @RequestParam(value = "period", required = false) Integer period,
-        @Parameter(description = "부서 필터", example = "총무팀")
-        @RequestParam(value = "department", required = false) String department
-    ) {
-        return ResponseEntity.ok(chatDashboardService.getRouteRatio(period, department));
-    }
-
-    @GetMapping("/top-keywords")
-    @Operation(
-        summary = "최근 많이 질문된 키워드 Top 5 조회",
-        description = "최근 많이 질문된 키워드와 질문 횟수를 조회합니다."
-    )
-    @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "성공",
-            content = @Content(schema = @Schema(implementation = ChatDashboardResponse.TopKeywordsResponse.class))
-        )
-    })
-    public ResponseEntity<ChatDashboardResponse.TopKeywordsResponse> getTopKeywords(
-        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
-        @RequestParam(value = "period", required = false) Integer period,
-        @Parameter(description = "부서 필터", example = "총무팀")
-        @RequestParam(value = "department", required = false) String department
-    ) {
-        return ResponseEntity.ok(chatDashboardService.getTopKeywords(period, department));
-    }
-
-    @GetMapping("/question-trend")
+    @GetMapping("/trends")
     @Operation(
         summary = "질문 수 · 에러율 추이 조회",
-        description = "주간별 질문 수와 에러율 추이를 조회합니다."
+        description = "질문 수와 에러율 추이를 조회합니다."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "성공",
-            content = @Content(schema = @Schema(implementation = ChatDashboardResponse.QuestionTrendResponse.class))
+            content = @Content(schema = @Schema(implementation = ChatDashboardResponse.TrendsResponse.class))
         )
     })
-    public ResponseEntity<ChatDashboardResponse.QuestionTrendResponse> getQuestionTrend(
-        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
-        @RequestParam(value = "period", required = false) Integer period,
-        @Parameter(description = "부서 필터", example = "총무팀")
-        @RequestParam(value = "department", required = false) String department
+    public ResponseEntity<ChatDashboardResponse.TrendsResponse> getTrends(
+        @Parameter(description = "기간 (today | 7d | 30d | 90d)", example = "30d")
+        @RequestParam(value = "period", required = false, defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all 또는 dept_id)", example = "all")
+        @RequestParam(value = "dept", required = false, defaultValue = "all") String dept,
+        @Parameter(description = "버킷 타입 (day | week)", example = "week")
+        @RequestParam(value = "bucket", required = false, defaultValue = "week") String bucket,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", required = false, defaultValue = "false") Boolean refresh
     ) {
-        return ResponseEntity.ok(chatDashboardService.getQuestionTrend(period, department));
+        return ResponseEntity.ok(chatDashboardService.getTrends(period, dept, bucket, refresh));
     }
 
-    @GetMapping("/domain-ratio")
+    @GetMapping("/domain-share")
     @Operation(
         summary = "도메인별 질문 비율 조회",
-        description = "규정, FAQ, 교육, 퀴즈, 기타 도메인별 질문 비율을 조회합니다."
+        description = "도메인별 질문 비율(규정/FAQ/교육/퀴즈/기타)을 조회합니다."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "성공",
-            content = @Content(schema = @Schema(implementation = ChatDashboardResponse.DomainRatioResponse.class))
+            content = @Content(schema = @Schema(implementation = ChatDashboardResponse.DomainShareResponse.class))
         )
     })
-    public ResponseEntity<ChatDashboardResponse.DomainRatioResponse> getDomainRatio(
-        @Parameter(description = "기간 (일수, 7/30/90)", example = "30")
-        @RequestParam(value = "period", required = false) Integer period,
-        @Parameter(description = "부서 필터", example = "총무팀")
-        @RequestParam(value = "department", required = false) String department
+    public ResponseEntity<ChatDashboardResponse.DomainShareResponse> getDomainShare(
+        @Parameter(description = "기간 (today | 7d | 30d | 90d)", example = "30d")
+        @RequestParam(value = "period", required = false, defaultValue = "30d") String period,
+        @Parameter(description = "부서 필터 (all 또는 dept_id)", example = "all")
+        @RequestParam(value = "dept", required = false, defaultValue = "all") String dept,
+        @Parameter(description = "캐시 무시 여부", example = "false")
+        @RequestParam(value = "refresh", required = false, defaultValue = "false") Boolean refresh
     ) {
-        return ResponseEntity.ok(chatDashboardService.getDomainRatio(period, department));
+        return ResponseEntity.ok(chatDashboardService.getDomainShare(period, dept, refresh));
     }
 }
 

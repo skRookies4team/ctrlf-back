@@ -245,25 +245,52 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     );
 
     /**
-     * 주간 질문 수 및 에러율 추이 조회
+     * 일별 질문 수 및 에러율 추이 조회
      */
     @Query(
         value = """
             SELECT 
-                TO_CHAR(DATE_TRUNC('week', m.created_at), 'YYYY-MM-DD') as week_start,
+                TO_CHAR(DATE_TRUNC('day', m.created_at), 'YYYY-MM-DD') as bucket_start,
                 COUNT(*) as question_count,
                 COUNT(CASE WHEN m.is_error = true THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as error_rate
             FROM chat.chat_message m
             WHERE m.role = 'assistant'
               AND m.created_at >= :startDate
+              AND m.created_at < :endDate
               AND (:department IS NULL OR m.department = :department)
-            GROUP BY DATE_TRUNC('week', m.created_at)
-            ORDER BY week_start ASC
+            GROUP BY DATE_TRUNC('day', m.created_at)
+            ORDER BY bucket_start ASC
             """,
         nativeQuery = true
     )
-    List<Object[]> getQuestionTrend(
+    List<Object[]> getQuestionTrendByDay(
         @Param("startDate") Instant startDate,
+        @Param("endDate") Instant endDate,
+        @Param("department") String department
+    );
+
+    /**
+     * 주별 질문 수 및 에러율 추이 조회
+     */
+    @Query(
+        value = """
+            SELECT 
+                TO_CHAR(DATE_TRUNC('week', m.created_at), 'YYYY-MM-DD') as bucket_start,
+                COUNT(*) as question_count,
+                COUNT(CASE WHEN m.is_error = true THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as error_rate
+            FROM chat.chat_message m
+            WHERE m.role = 'assistant'
+              AND m.created_at >= :startDate
+              AND m.created_at < :endDate
+              AND (:department IS NULL OR m.department = :department)
+            GROUP BY DATE_TRUNC('week', m.created_at)
+            ORDER BY bucket_start ASC
+            """,
+        nativeQuery = true
+    )
+    List<Object[]> getQuestionTrendByWeek(
+        @Param("startDate") Instant startDate,
+        @Param("endDate") Instant endDate,
         @Param("department") String department
     );
 

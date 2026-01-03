@@ -20,21 +20,29 @@ public final class ChatDashboardResponse {
     @Getter
     @AllArgsConstructor
     public static class DashboardSummaryResponse {
+        /** 기간 (today | 7d | 30d | 90d) */
+        private String period;
+        /** 부서 필터 (all 또는 dept_id) */
+        private String dept;
         /** 오늘 질문 수 */
         private Long todayQuestionCount;
+        /** 기간 내 질문 수 */
+        private Long periodQuestionCount;
+        /** 기간 내 일평균 질문 수 */
+        private Long periodDailyAvgQuestionCount;
+        /** 활성 사용자 수 */
+        private Long activeUsers;
         /** 평균 응답 시간 (밀리초) */
-        private Long averageResponseTime;
-        /** PII 감지 비율 (%) */
-        private Double piiDetectionRate;
-        /** 에러율 (%) */
+        private Long avgLatencyMs;
+        /** PII 감지 비율 */
+        private Double piiDetectRate;
+        /** 에러율 */
         private Double errorRate;
-        /** 최근 7일 질문 수 */
-        private Long last7DaysQuestionCount;
-        /** 활성 사용자 수 (최근 30일 기준) */
-        private Long activeUserCount;
-        /** 응답 만족도 (%) */
+        /** 만족도 (like / (like + dislike)) */
         private Double satisfactionRate;
-        /** RAG 사용 비율 (%) */
+        /** 불만족도 (dislike / (like + dislike)) */
+        private Double dislikeRate;
+        /** RAG 사용 비율 */
         private Double ragUsageRate;
     }
 
@@ -83,16 +91,16 @@ public final class ChatDashboardResponse {
     }
 
     /**
-     * 질문 수 · 에러율 추이 항목
+     * 질문 수 · 에러율 추이 시리즈 항목
      */
     @Getter
     @AllArgsConstructor
-    public static class QuestionTrendItem {
-        /** 기간 라벨 (예: "1주", "2주") */
-        private String periodLabel;
+    public static class TrendsSeriesItem {
+        /** 버킷 시작일 (YYYY-MM-DD) */
+        private String bucketStart;
         /** 질문 수 */
         private Long questionCount;
-        /** 에러율 (%) */
+        /** 에러율 */
         private Double errorRate;
     }
 
@@ -101,14 +109,11 @@ public final class ChatDashboardResponse {
      */
     @Getter
     @AllArgsConstructor
-    public static class QuestionTrendResponse {
-        /** 기간 총 질문 수 */
-        private Long totalQuestionCount;
-        /** 구간당 평균 질문 수 */
-        private Long averageQuestionCountPerPeriod;
-        /** 평균 에러율 (%) */
-        private Double averageErrorRate;
-        private List<QuestionTrendItem> items;
+    public static class TrendsResponse {
+        /** 버킷 타입 (day | week) */
+        private String bucket;
+        /** 시리즈 데이터 */
+        private List<TrendsSeriesItem> series;
     }
 
     /**
@@ -116,13 +121,15 @@ public final class ChatDashboardResponse {
      */
     @Getter
     @AllArgsConstructor
-    public static class DomainRatioItem {
+    public static class DomainShareItem {
         /** 도메인 */
         private String domain;
-        /** 도메인 이름 */
-        private String domainName;
-        /** 비율 (%) */
-        private Double ratio;
+        /** 도메인 라벨 */
+        private String label;
+        /** 질문 수 */
+        private Long questionCount;
+        /** 비율 (0~1) */
+        private Double share;
     }
 
     /**
@@ -130,8 +137,8 @@ public final class ChatDashboardResponse {
      */
     @Getter
     @AllArgsConstructor
-    public static class DomainRatioResponse {
-        private List<DomainRatioItem> items;
+    public static class DomainShareResponse {
+        private List<DomainShareItem> items;
     }
 }
 
