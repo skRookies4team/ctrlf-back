@@ -1164,6 +1164,12 @@ public class RagDocumentService {
         } else if (newStatus == RagDocumentStatus.COMPLETED) {
             // 성공 시 전처리 상태를 READY로 설정
             doc.setPreprocessStatus("READY");
+            // Milvus에서 조회한 문서 전체 텍스트 저장
+            if (req.getContent() != null && !req.getContent().isBlank()) {
+                doc.setContent(req.getContent());
+                log.info("Document content saved: id={}, documentId={}, contentLength={}",
+                    doc.getId(), doc.getDocumentId(), req.getContent().length());
+            }
         } else if (newStatus == RagDocumentStatus.PROCESSING) {
             // 처리 중일 때는 전처리 상태도 PROCESSING으로 설정
             doc.setPreprocessStatus("PROCESSING");
@@ -1203,12 +1209,16 @@ public class RagDocumentService {
      */
     public PreprocessPreviewResponse getPreprocessPreview(String documentId, Integer version) {
         RagDocument doc = documentRepository.findByDocumentIdAndVersion(documentId, version)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Policy version not found: " + documentId + " v" + version));
-        
+
         return new PreprocessPreviewResponse(
             doc.getPreprocessStatus() != null ? doc.getPreprocessStatus() : "IDLE",
-            doc.getPreprocessError()
+            doc.getPreprocessPages(),
+            doc.getPreprocessChars(),
+            doc.getPreprocessExcerpt(),
+            doc.getPreprocessError(),
+            doc.getContent()
         );
     }
 

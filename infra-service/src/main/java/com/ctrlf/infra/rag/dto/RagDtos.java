@@ -526,6 +526,9 @@ public final class RagDtos {
 
         @Schema(example = "POL-EDU-015", description = "문서 ID")
         private String documentId;
+
+        @Schema(description = "Milvus에서 조회한 문서 전체 텍스트 (임베딩 완료 후)")
+        private String content;
     }
 
     /**
@@ -551,7 +554,12 @@ public final class RagDtos {
     @AllArgsConstructor
     public static class PreprocessPreviewResponse {
         private String preprocessStatus; // "IDLE", "PROCESSING", "READY", "FAILED"
+        private Integer preprocessPages;
+        private Integer preprocessChars;
+        private String preprocessExcerpt;
         private String preprocessError;
+        @Schema(description = "Milvus에서 조회한 문서 전체 텍스트 (임베딩 완료 후 원문)")
+        private String content;
     }
 
     /**

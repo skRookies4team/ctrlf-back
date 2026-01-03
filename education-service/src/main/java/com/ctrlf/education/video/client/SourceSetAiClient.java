@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -14,8 +15,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.util.UUID;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+
 /**
- * 소스셋 AI 서버 호출 클라이언트 (RestClient 방식).
+ * 소스셋 AI 서버 호출 클라이언트 (AiRestClientBuilder 사용).
  * 
  * <p>기능:
  * <ul>
@@ -25,6 +30,14 @@ import org.springframework.web.client.RestClientException;
  * <p>엔드포인트:
  * <ul>
  *   <li>POST /internal/ai/source-sets/{sourceSetId}/start - 소스셋 작업 시작</li>
+ * </ul>
+ * 
+ * <p>다음 헤더가 자동으로 추가됩니다:
+ * <ul>
+ *   <li>X-Internal-Token (환경변수 AI_INTERNAL_TOKEN 또는 app.ai.token 설정값에서 읽음)</li>
+ *   <li>X-Trace-Id (자동 생성)</li>
+ *   <li>X-User-Id (JWT에서 자동 추출)</li>
+ *   <li>X-Dept-Id (JWT에서 자동 추출)</li>
  * </ul>
  */
 @Component
@@ -37,15 +50,15 @@ public class SourceSetAiClient {
     private final ObjectMapper objectMapper;
 
     /**
-     * RestClient를 구성하여 초기화합니다.
+     * AiRestClientBuilder를 사용하여 초기화합니다.
      * 
-     * @param baseUrl AI 서버 베이스 URL
-     * @param internalToken 내부 인증 토큰(옵션)
+     * @param baseUrl AI 서버 베이스 URL (app.video.ai.base-url 설정값 사용)
+     * @param internalToken 내부 인증 토큰 (환경변수 AI_INTERNAL_TOKEN 또는 app.ai.token 설정값에서 읽음)
      * @param objectMapper JSON 직렬화용 ObjectMapper
      */
     public SourceSetAiClient(
         @Value("${app.video.ai.base-url:http://localhost:8000}") String baseUrl,
-        @Value("${app.video.ai.token:}") String internalToken,
+        @Value("${AI_INTERNAL_TOKEN:${app.ai.token:}}") String internalToken,
         ObjectMapper objectMapper
     ) {
         this.objectMapper = objectMapper;
@@ -60,12 +73,13 @@ public class SourceSetAiClient {
             .baseUrl(this.baseUrl)
             .requestFactory(requestFactory);
         
-        // 내부 토큰이 있으면 헤더 추가
+        // X-Internal-Token 헤더 자동 추가 (설정값이 있으면)
         if (internalToken != null && !internalToken.isBlank()) {
             builder.defaultHeader("X-Internal-Token", internalToken);
         }
         
         this.restClient = builder.build();
+        
         log.info("SourceSetAiClient 초기화 완료: baseUrl={}", this.baseUrl);
     }
 
@@ -97,11 +111,22 @@ public class SourceSetAiClient {
         }
         
         try {
-            // JSON 문자열을 직접 body로 전송 (RestClient가 객체를 직렬화할 때 문제가 있을 수 있음)
+            // JWT에서 정보 추출
+            UUID traceId = UUID.randomUUID();
+            Jwt jwt = getJwtFromContext();
+            String userId = jwt != null ? jwt.getSubject() : "";
+            String deptId = extractDeptId(jwt);
+            
+            // POST 요청 생성 및 헤더 추가
+            // body를 ByteArrayResource로 감싸서 Content-Length가 올바르게 설정되도록 함
+            byte[] bodyBytes = requestBodyJson.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             StartResponse response = restClient.post()
                 .uri(uri)
+                .header("X-Trace-Id", traceId.toString())
+                .header("X-User-Id", userId)
+                .header("X-Dept-Id", deptId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(requestBodyJson)
+                .body(new ByteArrayResource(bodyBytes))
                 .retrieve()
                 .body(StartResponse.class);
             
@@ -125,5 +150,50 @@ public class SourceSetAiClient {
             log.error("FastAPI 요청 실패: POST {} (sourceSetId={}), error={}", fullUrl, sourceSetId, e.getMessage());
             throw e;
         }
+    }
+
+    /**
+     * SecurityContext에서 JWT를 가져옵니다.
+     * 
+     * @return JWT 토큰 (없으면 null)
+     */
+    private Jwt getJwtFromContext() {
+        try {
+            Object principal = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+            if (principal instanceof Jwt) {
+                return (Jwt) principal;
+            }
+        } catch (Exception e) {
+            // SecurityContext가 없거나 JWT가 없으면 null 반환
+        }
+        return null;
+    }
+
+    /**
+     * JWT에서 부서 ID를 추출합니다.
+     * 
+     * @param jwt JWT 토큰
+     * @return 부서 ID (없으면 빈 문자열)
+     */
+    private String extractDeptId(Jwt jwt) {
+        if (jwt == null) return "";
+
+        Object deptClaim = jwt.getClaim("department");
+        if (deptClaim == null) return "";
+
+        if (deptClaim instanceof String) {
+            return (String) deptClaim;
+        }
+
+        if (deptClaim instanceof java.util.List) {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> deptList = (java.util.List<String>) deptClaim;
+            return deptList.isEmpty() ? "" : deptList.get(0);
+        }
+
+        return "";
     }
 }
