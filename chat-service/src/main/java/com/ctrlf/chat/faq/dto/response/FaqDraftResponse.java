@@ -13,6 +13,7 @@ public class FaqDraftResponse {
     private UUID id;
     private String domain;
     private String question;
+    private String answerMarkdown;
     private String summary;
     private FaqDraft.Status status;
     private LocalDateTime createdAt;
@@ -22,6 +23,7 @@ public class FaqDraftResponse {
             .id(draft.getId())
             .domain(draft.getDomain())
             .question(draft.getQuestion())
+            .answerMarkdown(draft.getAnswerMarkdown())
             .summary(draft.getSummary())
             .status(draft.getStatus())
             .createdAt(draft.getCreatedAt())

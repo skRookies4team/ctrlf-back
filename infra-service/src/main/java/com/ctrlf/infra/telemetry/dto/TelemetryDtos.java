@@ -1,6 +1,7 @@
 package com.ctrlf.infra.telemetry.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -147,6 +148,31 @@ public final class TelemetryDtos {
     public static class ModelLatencyItem {
         private String model;
         private Double avgLatencyMs;
+    }
+
+    /**
+     * AI 로그 조회 응답
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class AiLogResponse {
+        private String status;
+        private Integer totalCount;
+        private Integer returnedCount;
+        private List<AiLogItem> logs;
+    }
+
+    /**
+     * AI 로그 항목
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class AiLogItem {
+        private String domain;
+        private String intent;
+        private String route;
+        @JsonProperty("question_masked")
+        private String questionMasked;
     }
 }
 
