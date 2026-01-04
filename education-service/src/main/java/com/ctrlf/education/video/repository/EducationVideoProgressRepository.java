@@ -39,6 +39,13 @@ public interface EducationVideoProgressRepository extends JpaRepository<Educatio
      * 특정 비디오의 모든 진행 이력을 삭제합니다.
      */
     void deleteByVideoId(UUID videoId);
+
+    /**
+     * 사용자의 가장 최근 시청 기록을 조회합니다 (이어보기용).
+     * updatedAt 기준 내림차순 정렬하여 첫 번째 결과 반환.
+     */
+    @Query("SELECT p FROM EducationVideoProgress p WHERE p.userUuid = :userUuid AND p.deletedAt IS NULL ORDER BY p.updatedAt DESC")
+    List<EducationVideoProgress> findLatestByUserUuid(@Param("userUuid") UUID userUuid);
 }
 
 

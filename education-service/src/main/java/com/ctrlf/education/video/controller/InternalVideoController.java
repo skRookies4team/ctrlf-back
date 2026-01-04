@@ -1,5 +1,6 @@
 package com.ctrlf.education.video.controller;
 
+import com.ctrlf.education.video.dto.VideoDtos.LastVideoProgressResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteCallback;
 import com.ctrlf.education.video.dto.VideoDtos.VideoCompleteResponse;
 import com.ctrlf.education.video.service.VideoService;
@@ -15,9 +16,11 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -60,6 +63,37 @@ public class InternalVideoController {
         @Valid @RequestBody VideoCompleteCallback callback
     ) {
         return ResponseEntity.ok(videoService.handleVideoComplete(jobId, callback));
+    }
+
+    /**
+     * 사용자의 마지막 시청 영상 정보를 조회합니다 (이어보기용).
+     * (infra-service → education-service)
+     *
+     * @param userId 사용자 UUID (X-User-Id 헤더)
+     * @return 마지막 시청 영상 정보 (없으면 404)
+     */
+    @Operation(summary = "마지막 시청 영상 조회 (이어보기)",
+        description = "사용자의 마지막 시청 영상 정보를 조회합니다. Q4 (교육 이어보기) 인텐트 처리용.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = LastVideoProgressResponse.class))),
+        @ApiResponse(responseCode = "404", description = "시청 기록 없음",
+            content = @Content),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류")
+    })
+    @GetMapping("/last-progress")
+    public ResponseEntity<LastVideoProgressResponse> getLastVideoProgress(
+        @Parameter(description = "사용자 UUID", required = true)
+        @RequestHeader("X-User-Id") String userId
+    ) {
+        UUID userUuid = UUID.fromString(userId);
+        LastVideoProgressResponse response = videoService.getLastVideoProgress(userUuid);
+
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(response);
     }
 }
 

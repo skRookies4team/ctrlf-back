@@ -572,4 +572,19 @@ public final class VideoDtos {
         @Schema(description = "스크립트 ID") UUID scriptId,
         @Schema(description = "스크립트 버전") Integer scriptVersion
     ) {}
+
+    // ========================
+    // 마지막 시청 영상 조회 DTOs (Q4 이어보기용)
+    // ========================
+
+    @Schema(description = "마지막 시청 영상 정보 (이어보기용)")
+    public record LastVideoProgressResponse(
+        @Schema(description = "교육 ID") String education_id,
+        @Schema(description = "영상 ID") String video_id,
+        @Schema(description = "교육 제목") String education_title,
+        @Schema(description = "영상 제목") String video_title,
+        @Schema(description = "마지막 시청 위치(초)") Integer resume_position_seconds,
+        @Schema(description = "진행률(%)") Integer progress_percent,
+        @Schema(description = "영상 전체 길이(초)") Integer duration
+    ) {}
 }
