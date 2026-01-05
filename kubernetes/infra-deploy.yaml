@@ -32,17 +32,17 @@ spec:
               value: "keycloak"
 
             # 1. Flyway가 기존 DB를 무시하고 진행하게 설정
-#            - name: SPRING_FLYWAY_ENABLED
-#              value: "false"
-#            - name: SPRING_FLYWAY_BASELINE_ON_MIGRATE
-#              value: "false"
+            - name: SPRING_FLYWAY_ENABLED
+              value: "false"
+            - name: SPRING_FLYWAY_BASELINE_ON_MIGRATE
+              value: "false"
 
             # 2. Hibernate는 구조 검증만 수행 (싸움 방지)
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: "update"
 
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              value: "https://8bang-ctrlf.com/auth/realms/ctrlf"
+              value: "http://keycloak-service:8090/auth/realms/ctrlf"
             # 3. 포트 확인 (Keycloak 내부망 접속 포트)
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
               value: "http://keycloak-service:8090/auth/realms/ctrlf/protocol/openid-connect/certs"
