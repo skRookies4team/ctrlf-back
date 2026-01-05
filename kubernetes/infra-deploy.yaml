@@ -41,8 +41,8 @@ spec:
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: "update"
 
-            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              value: "http://keycloak-service:8090/auth/realms/ctrlf"
+#            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+#              value: "http://keycloak-service:8090/auth/realms/ctrlf"
             # 3. 포트 확인 (Keycloak 내부망 접속 포트)
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
               value: "http://keycloak-service:8090/auth/realms/ctrlf/protocol/openid-connect/certs"
