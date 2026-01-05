@@ -23,7 +23,7 @@ spring:
     out-of-order: true
     create-schemas: true
   profiles:
-    active: prod
+    active: dev
 management:
   endpoints:
     web:
