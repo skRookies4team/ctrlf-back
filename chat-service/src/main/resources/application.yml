@@ -17,7 +17,7 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: false
   profiles:
-    active: dev
+    active: prod
 management:
   endpoints:
     web:
