@@ -38,7 +38,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     public ChatMessageSendResponse sendMessage(
         ChatMessageSendRequest request,
         UUID userId,
-        String domain
+        String domain,
+        String department
     ) {
         // 0️⃣ 세션 존재 여부 검증
         ChatSession session = chatSessionRepository.findActiveById(request.sessionId());
@@ -55,9 +56,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         // 키워드 추출 및 설정
         String keyword = extractKeyword(request.content());
         userMessage.setKeyword(keyword);
-        // PII 감지는 AI 응답 후에 설정 (아래에서 처리)
-        // TODO: JWT에서 department 추출하여 설정
-        // userMessage.setDepartment(department);
+        // department 설정
+        userMessage.setDepartment(department);
         chatMessageRepository.save(userMessage);
 
         // 2️⃣ AI Gateway 호출 (응답 시간 측정)
@@ -78,7 +78,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         
         long startTime = System.currentTimeMillis();
         ChatAiResponse aiResponse;
-        String department = null; // TODO: JWT에서 추출
         try {
             aiResponse =
                 chatAiClient.ask(
@@ -218,7 +217,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     @Override
-    public ChatMessage retryMessage(UUID sessionId, UUID messageId) {
+    public ChatMessage retryMessage(UUID sessionId, UUID messageId, String department) {
         // 1️⃣ 재시도할 메시지 조회 (assistant 메시지여야 함)
         ChatMessage targetMessage = chatMessageRepository.findById(messageId)
             .orElseThrow(() -> new IllegalArgumentException("메시지를 찾을 수 없습니다: " + messageId));
@@ -273,7 +272,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         
         long startTime = System.currentTimeMillis();
         ChatAiResponse aiResponse;
-        String department = null; // TODO: JWT에서 추출
         try {
             aiResponse = chatAiClient.ask(
                 sessionId,
