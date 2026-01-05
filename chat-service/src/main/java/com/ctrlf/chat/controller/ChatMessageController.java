@@ -88,4 +88,61 @@ public class ChatMessageController {
             chatMessageService.retryMessage(sessionId, messageId)
         );
     }
+
+    /**
+     * 관리자용 질문 로그 조회 (FAQ 자동 생성용)
+     * 
+     * <p>AI 서버에서 FAQ 자동 생성을 위해 질문 로그를 조회할 때 사용합니다.</p>
+     * <p>여러 사용자 간의 질문 빈도를 분석하기 위해 user role 메시지만 조회합니다.</p>
+     * 
+     * @param domain 도메인 필터 (선택)
+     * @param daysBack 최근 N일간의 데이터 (기본값: 30)
+     * @return 질문 로그 목록
+     */
+    @GetMapping("/admin/messages")
+    public ResponseEntity<com.ctrlf.chat.dto.response.AdminMessageLogResponse> getAdminMessages(
+        @RequestParam(required = false) String domain,
+        @RequestParam(required = false, defaultValue = "30") Integer daysBack
+    ) {
+        return ResponseEntity.ok(
+            chatMessageService.getAdminMessages(domain, daysBack)
+        );
+    }
+}
+
+/**
+ * 내부 서비스 간 통신용 채팅 메시지 컨트롤러
+ * 
+ * <p>AI 서버 등 내부 서비스에서 호출하는 API를 제공합니다.</p>
+ * <p>/internal/** 경로는 인증이 필요 없습니다.</p>
+ * 
+ * @author CtrlF Team
+ * @since 1.0.0
+ */
+@RestController
+@RequestMapping("/internal/chat")
+@RequiredArgsConstructor
+class InternalChatMessageController {
+
+    private final ChatMessageService chatMessageService;
+
+    /**
+     * 내부 서비스용 질문 로그 조회 (FAQ 자동 생성용)
+     * 
+     * <p>AI 서버에서 FAQ 자동 생성을 위해 질문 로그를 조회할 때 사용합니다.</p>
+     * <p>이 엔드포인트는 인증이 필요 없으며, 내부 서비스 간 통신용입니다.</p>
+     * 
+     * @param domain 도메인 필터 (선택)
+     * @param daysBack 최근 N일간의 데이터 (기본값: 30)
+     * @return 질문 로그 목록
+     */
+    @GetMapping("/admin/messages")
+    public ResponseEntity<com.ctrlf.chat.dto.response.AdminMessageLogResponse> getAdminMessages(
+        @RequestParam(required = false) String domain,
+        @RequestParam(required = false, defaultValue = "30") Integer daysBack
+    ) {
+        return ResponseEntity.ok(
+            chatMessageService.getAdminMessages(domain, daysBack)
+        );
+    }
 }

@@ -211,6 +211,14 @@ spring:
           filters:
             - StripPrefix=0 # 경로 그대로 전달
 
+        # Chat 서비스 내부 API (chat-service)
+        - id: internal-chat-route
+          uri: http://localhost:9005
+          predicates:
+            - Path=/internal/chat/**
+          filters:
+            - StripPrefix=0 # 경로 그대로 전달
+
         # AI 서버로의 요청 (백엔드 → AI 서버)
         - id: internal-ai-route
           uri: http://localhost:8000

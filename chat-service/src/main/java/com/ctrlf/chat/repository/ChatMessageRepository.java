@@ -323,4 +323,39 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
         @Param("startDate") Instant startDate,
         @Param("department") String department
     );
+
+    // ========================
+    // 관리자용 질문 로그 조회 (FAQ 자동 생성용)
+    // ========================
+
+    /**
+     * 관리자용 질문 로그 조회 (FAQ 자동 생성용)
+     * 
+     * <p>AI 서버에서 FAQ 자동 생성을 위해 질문 로그를 조회할 때 사용합니다.</p>
+     * <p>여러 사용자 간의 질문 빈도를 분석하기 위해 user role 메시지만 조회합니다.</p>
+     */
+    @Query(
+        value = """
+            SELECT 
+                m.id,
+                m.session_id,
+                m.content,
+                m.keyword,
+                m.created_at,
+                s.domain,
+                s.user_uuid
+            FROM chat.chat_message m
+            INNER JOIN chat.chat_session s ON s.id = m.session_id
+            WHERE m.role = 'user'
+              AND s.deleted = false
+              AND m.created_at >= :startDate
+              AND (:domain IS NULL OR UPPER(TRIM(s.domain)) = UPPER(TRIM(:domain)))
+            ORDER BY m.created_at DESC
+            """,
+        nativeQuery = true
+    )
+    List<Object[]> findUserMessagesForFaqGeneration(
+        @Param("startDate") Instant startDate,
+        @Param("domain") String domain
+    );
 }
