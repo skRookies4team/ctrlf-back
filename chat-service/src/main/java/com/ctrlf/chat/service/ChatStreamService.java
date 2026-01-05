@@ -64,7 +64,10 @@ public class ChatStreamService {
                     sessionId
                 );
             }
-            
+
+            // 세션에 저장된 LLM 모델 사용 (관리자 대시보드에서 설정)
+            String llmModel = session.getLlmModel();
+
             ChatCompletionRequest req =
                 new ChatCompletionRequest(
                     "stream-" + messageId,
@@ -75,7 +78,8 @@ public class ChatStreamService {
                     session.getDomain(),
                     "WEB",
                     List.of(new Message("user", lastUser.getContent())),
-                    embeddingModel  // 세션에 할당된 모델 사용
+                    embeddingModel,  // 세션에 할당된 임베딩 모델
+                    llmModel         // 관리자 대시보드에서 선택한 LLM 모델
                 );
 
             StringBuilder answerBuf = new StringBuilder();

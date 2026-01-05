@@ -174,4 +174,26 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             model
         );
     }
+
+    @Override
+    public void setSessionLlmModel(UUID sessionId, String llmModel) {
+        ChatSession session = chatSessionRepository.findActiveById(sessionId);
+        if (session == null) {
+            throw new ChatSessionNotFoundException();
+        }
+
+        // 유효한 LLM 모델 값 검증
+        if (llmModel != null && !llmModel.equals("exaone") && !llmModel.equals("openai")) {
+            throw new IllegalArgumentException(
+                "유효하지 않은 LLM 모델입니다: " + llmModel + " (허용값: exaone, openai)"
+            );
+        }
+
+        session.setLlmModel(llmModel);
+        log.debug(
+            "세션 LLM 모델 설정: sessionId={}, llmModel={}",
+            sessionId,
+            llmModel
+        );
+    }
 }

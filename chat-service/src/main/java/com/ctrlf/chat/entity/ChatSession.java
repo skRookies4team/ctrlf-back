@@ -56,6 +56,10 @@ public class ChatSession {
     @Column(name = "embedding_model", length = 20)
     private String embeddingModel;
 
+    /** LLM 모델 선택 ("exaone" 또는 "openai") - 관리자 대시보드에서 설정 */
+    @Column(name = "llm_model", length = 20)
+    private String llmModel;
+
     /**
      * 엔티티 저장 전 실행되는 콜백
      * 생성 시각, 수정 시각을 현재 시간으로 설정하고 삭제 플래그를 false로 초기화합니다.
