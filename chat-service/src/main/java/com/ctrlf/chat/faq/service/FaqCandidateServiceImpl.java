@@ -10,9 +10,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -40,22 +42,58 @@ public class FaqCandidateServiceImpl implements FaqCandidateService {
     @Override
     @Transactional(readOnly = true)
     public List<FaqCandidateResponse> getCandidates(String domain, String status) {
+        log.info("[FAQ 후보 목록 조회] 서비스 호출: domain={}, status={}", domain, status);
+        
         List<FaqCandidate> candidates;
 
-        if (domain != null && status != null) {
-            candidates = faqCandidateRepository.findByDomainAndStatus(
-                domain,
-                FaqCandidate.CandidateStatus.valueOf(status)
-            );
-        } else if (domain != null) {
-            candidates = faqCandidateRepository.findByDomain(domain);
-        } else {
+        try {
+            if (domain != null && status != null) {
+                log.debug("[FAQ 후보 목록 조회] 도메인+상태로 조회: domain={}, status={}", domain, status);
+                FaqCandidate.CandidateStatus candidateStatus = FaqCandidate.CandidateStatus.valueOf(status.toUpperCase());
+                candidates = faqCandidateRepository.findByDomainAndStatus(domain, candidateStatus);
+            } else if (domain != null) {
+                log.debug("[FAQ 후보 목록 조회] 도메인으로 조회: domain={}", domain);
+                candidates = faqCandidateRepository.findByDomain(domain);
+            } else if (status != null) {
+                log.debug("[FAQ 후보 목록 조회] 상태로 조회: status={}", status);
+                FaqCandidate.CandidateStatus candidateStatus = FaqCandidate.CandidateStatus.valueOf(status.toUpperCase());
+                candidates = faqCandidateRepository.findAll().stream()
+                    .filter(c -> c.getStatus() == candidateStatus)
+                    .toList();
+            } else {
+                log.debug("[FAQ 후보 목록 조회] 전체 조회");
+                candidates = faqCandidateRepository.findAll();
+            }
+            
+            log.info("[FAQ 후보 목록 조회] DB 조회 완료: totalCount={}", candidates.size());
+            
+            if (!candidates.isEmpty()) {
+                log.debug("[FAQ 후보 목록 조회] 조회된 후보 샘플 (최대 3개): {}", 
+                    candidates.stream()
+                        .limit(3)
+                        .map(c -> String.format("{id=%s, question='%s', domain=%s, status=%s}", 
+                            c.getId(),
+                            c.getCanonicalQuestion() != null && c.getCanonicalQuestion().length() > 50 
+                                ? c.getCanonicalQuestion().substring(0, 50) + "..." 
+                                : c.getCanonicalQuestion(),
+                            c.getDomain(),
+                            c.getStatus()))
+                        .toList());
+            }
+        } catch (IllegalArgumentException e) {
+            log.error("[FAQ 후보 목록 조회] 잘못된 status 값: status={}, error={}", status, e.getMessage());
+            // 잘못된 status 값이면 전체 조회로 fallback
             candidates = faqCandidateRepository.findAll();
+            log.info("[FAQ 후보 목록 조회] 잘못된 status로 인해 전체 조회로 변경: totalCount={}", candidates.size());
         }
 
-        return candidates.stream()
+        List<FaqCandidateResponse> response = candidates.stream()
             .map(FaqCandidateResponse::from)
             .toList();
+        
+        log.info("[FAQ 후보 목록 조회] DTO 변환 완료: responseCount={}", response.size());
+        
+        return response;
     }
 
     @Override
