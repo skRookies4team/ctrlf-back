@@ -5,6 +5,8 @@ import com.ctrlf.chat.dto.response.ChatMessageCursorResponse;
 import com.ctrlf.chat.dto.response.ChatMessageSendResponse;
 import com.ctrlf.chat.entity.ChatMessage;
 import com.ctrlf.chat.service.ChatMessageService;
+import com.ctrlf.common.security.SecurityUtils;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -43,9 +45,16 @@ public class ChatMessageController {
     ) {
         UUID userId = UUID.fromString(jwt.getSubject());
         String domain = jwt.getClaimAsString("domain");
+        
+        // JWT에서 department 추출 (첫 번째 부서 사용)
+        String department = null;
+        List<String> departments = SecurityUtils.extractDepartments(jwt);
+        if (departments != null && !departments.isEmpty()) {
+            department = departments.get(0);
+        }
 
         return ResponseEntity.ok(
-            chatMessageService.sendMessage(request, userId, domain)
+            chatMessageService.sendMessage(request, userId, domain, department)
         );
     }
 
@@ -82,10 +91,18 @@ public class ChatMessageController {
     @PostMapping("/sessions/{sessionId}/messages/{messageId}/retry")
     public ResponseEntity<ChatMessage> retryMessage(
         @PathVariable UUID sessionId,
-        @PathVariable UUID messageId
+        @PathVariable UUID messageId,
+        @AuthenticationPrincipal Jwt jwt
     ) {
+        // JWT에서 department 추출 (첫 번째 부서 사용)
+        String department = null;
+        List<String> departments = SecurityUtils.extractDepartments(jwt);
+        if (departments != null && !departments.isEmpty()) {
+            department = departments.get(0);
+        }
+        
         return ResponseEntity.ok(
-            chatMessageService.retryMessage(sessionId, messageId)
+            chatMessageService.retryMessage(sessionId, messageId, department)
         );
     }
 

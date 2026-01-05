@@ -22,12 +22,14 @@ public interface ChatMessageService {
      * @param request 메시지 전송 요청
      * @param userId 사용자 ID
      * @param domain 업무 도메인
+     * @param department 사용자 부서
      * @return AI 응답 메시지 정보
      */
     ChatMessageSendResponse sendMessage(
         ChatMessageSendRequest request,
         UUID userId,
-        String domain
+        String domain,
+        String department
     );
 
     /**
@@ -49,9 +51,10 @@ public interface ChatMessageService {
      * 
      * @param sessionId 세션 ID
      * @param messageId 재시도할 메시지 ID
+     * @param department 사용자 부서
      * @return 재시도 결과 메시지
      */
-    ChatMessage retryMessage(UUID sessionId, UUID messageId);
+    ChatMessage retryMessage(UUID sessionId, UUID messageId, String department);
 
     /**
      * 관리자용 질문 로그 조회 (FAQ 자동 생성용)
