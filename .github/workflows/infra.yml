@@ -52,7 +52,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
 
-      #   # 5. Kubernetes Manifest 파일 업데이트 (태그 자동 변경)
+      #   # 5. Kubernetes Manifest 파일 업데이트 (태그 자동 변경).
       # - name: Update Kubernetes resources
       #   run: |
       #     # 현재 파일 내용 확인 (디버깅용)
