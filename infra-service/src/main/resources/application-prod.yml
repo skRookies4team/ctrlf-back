@@ -23,3 +23,7 @@ app:
       base-url: http://ai-service:8000
       token: changeme
       timeout-seconds: 50
+  api:
+    education-service:
+      base-url: http://education-service:9002
+      timeout-seconds: 10

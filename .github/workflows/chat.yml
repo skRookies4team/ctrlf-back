@@ -2,7 +2,7 @@ name: CI Chat Service
 
 on:
   push:
-    branches: [ "infra" ]
+    branches: [ "hia_hun" ]
     paths:
       - 'chat-service/**'
       - 'build.gradle'

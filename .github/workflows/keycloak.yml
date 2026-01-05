@@ -2,7 +2,7 @@ name: CI Keycloak Service
 
 on:
   push:
-    branches: [ "infra" ]
+    branches: [ "hia_hun" ]
     paths:
       - 'keycloak/**'
       - 'keycloak-realms/**'
