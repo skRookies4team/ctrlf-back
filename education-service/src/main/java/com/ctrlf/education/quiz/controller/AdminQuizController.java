@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Quiz-Admin", description = "퀴즈 관리자 대시보드 통계 API (ADMIN)")
 @RestController
-@RequestMapping("/admin/dashboard/quiz")
+@RequestMapping("/api-edu/admin/dashboard/quiz")
 @SecurityRequirement(name = "bearer-jwt")
 @RequiredArgsConstructor
 public class AdminQuizController {

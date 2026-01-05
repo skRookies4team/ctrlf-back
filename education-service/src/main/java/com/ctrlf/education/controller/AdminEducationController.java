@@ -47,7 +47,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Tag(name = "Education-Admin", description = "교육 리소스 관리 API (ADMIN)")
 @SecurityRequirement(name = "bearer-jwt")
-@RequestMapping("/admin")
+@RequestMapping("/api-edu/admin")
 // @PreAuthorize("hasRole('SYSTEM_ADMIN')") 추후 추가
 public class AdminEducationController {
 

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/quiz")
+@RequestMapping("/api-edu/quiz")
 @RequiredArgsConstructor
 public class QuizController {
 

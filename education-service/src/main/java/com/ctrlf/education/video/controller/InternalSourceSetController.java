@@ -40,7 +40,7 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 @Tag(name = "Internal - SourceSet", description = "소스셋 내부 API (FastAPI ↔ Spring)")
 @RestController
-@RequestMapping("/internal")
+@RequestMapping("/api-edu/internal")
 @SecurityRequirement(name = "internal-token")
 @RequiredArgsConstructor
 public class InternalSourceSetController {

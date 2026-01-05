@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Internal - Education", description = "교육 내부 API (Personalization용)")
 @RestController
-@RequestMapping("/internal/education")
+@RequestMapping("/api-edu/internal/education")
 @SecurityRequirement(name = "internal-token")
 @RequiredArgsConstructor
 @Slf4j

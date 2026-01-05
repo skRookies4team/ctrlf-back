@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Admin-Dashboard-Metrics", description = "관리자 대시보드 지표 탭 API (ADMIN)")
 @RestController
-@RequestMapping("/admin/dashboard/metrics")
+@RequestMapping("/api-infra/admin/dashboard/metrics")
 @SecurityRequirement(name = "bearer-jwt")
 @RequiredArgsConstructor
 public class AdminMetricsDashboardController {

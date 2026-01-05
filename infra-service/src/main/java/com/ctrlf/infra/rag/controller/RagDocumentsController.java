@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/rag/documents")
+@RequestMapping("/api-infra/rag/documents")
 @RequiredArgsConstructor
 @Tag(name = "RAG - Documents", description = "RAG 문서 관리 API")
 /**

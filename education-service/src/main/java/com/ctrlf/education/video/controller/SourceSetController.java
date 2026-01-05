@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Video - SourceSet", description = "소스셋 관리 API")
 @RestController
-@RequestMapping("/video/source-sets")
+@RequestMapping("/api-edu/video/source-sets")
 @SecurityRequirement(name = "bearer-jwt")
 @RequiredArgsConstructor
 public class SourceSetController {

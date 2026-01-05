@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Internal - Video", description = "영상 생성 내부 API (AI 서버 ↔ Spring)")
 @RestController
-@RequestMapping("/internal/video")
+@RequestMapping("/api-edu/internal/video")
 @SecurityRequirement(name = "internal-token")
 @RequiredArgsConstructor
 public class InternalVideoController {

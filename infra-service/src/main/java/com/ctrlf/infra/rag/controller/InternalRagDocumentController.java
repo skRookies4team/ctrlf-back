@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/internal/rag/documents")
+@RequestMapping("/api-infra/internal/rag/documents")
 @RequiredArgsConstructor
 @Tag(name = "Internal RAG - Documents", description = "RAG 문서 내부 API (AI 서버 → Backend)")
 /**

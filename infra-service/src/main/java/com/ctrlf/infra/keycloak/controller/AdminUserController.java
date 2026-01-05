@@ -33,7 +33,7 @@ import java.util.Map;
  * Base URL: /admin/users
  */
 @RestController
-@RequestMapping("/admin/users")
+@RequestMapping("/api-infra/admin/users")
 @Tag(name = "Admin Users", description = "Keycloak 관리 사용자 API")
 public class AdminUserController {
 

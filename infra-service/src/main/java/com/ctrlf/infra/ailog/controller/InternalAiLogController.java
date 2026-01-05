@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "AI-Logs-Internal", description = "AI 로그 수신 API (Internal)")
 @RestController
-@RequestMapping("/internal/ai/logs")
+@RequestMapping("/api-infra/internal/ai/logs")
 @RequiredArgsConstructor
 public class InternalAiLogController {
 

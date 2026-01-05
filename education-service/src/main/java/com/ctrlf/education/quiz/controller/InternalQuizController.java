@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Internal - Quiz", description = "퀴즈 내부 API (Personalization용)")
 @RestController
-@RequestMapping("/internal/quiz")
+@RequestMapping("/api-edu/internal/quiz")
 @SecurityRequirement(name = "internal-token")
 @RequiredArgsConstructor
 @Slf4j

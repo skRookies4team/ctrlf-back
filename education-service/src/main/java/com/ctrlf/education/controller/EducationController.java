@@ -47,7 +47,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Education", description = "교육 리소스 API")
 @SecurityRequirement(name = "bearer-jwt")
 @RequiredArgsConstructor
-@RequestMapping
+@RequestMapping("/api-edu")
 public class EducationController {
 
     private final EducationService educationService;

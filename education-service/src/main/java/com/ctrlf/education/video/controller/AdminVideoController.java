@@ -42,7 +42,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @Tag(name = "Education-Admin Video", description = "교육 영상 메타 관리 API (ADMIN)")
 @RestController
-@RequestMapping("/admin/videos")
+@RequestMapping("/api-edu/admin/videos")
 @SecurityRequirement(name = "bearer-jwt")
 @RequiredArgsConstructor
 public class AdminVideoController {

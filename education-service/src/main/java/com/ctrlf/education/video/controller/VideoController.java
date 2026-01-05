@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  */
 @Tag(name = "Video", description = "영상 생성 관련 API")
 @RestController
-@RequestMapping("/video")
+@RequestMapping("/api-edu/video")
 @RequiredArgsConstructor
 public class VideoController {
 
