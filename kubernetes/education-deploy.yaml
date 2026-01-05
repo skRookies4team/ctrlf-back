@@ -23,6 +23,12 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://keycloak-db:5432/keycloak"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "keycloak"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "keycloak"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
               value: "https://8bang-ctrlf.com/auth/realms/ctrlf"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI

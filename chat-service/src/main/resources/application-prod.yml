@@ -7,7 +7,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://keycloak-service:8090/realms/ctrlf
+          issuer-uri: http://keycloak-service:8090/auth/realms/ctrlf
 ai:
   gateway:
     url: http://ai-service:8000
