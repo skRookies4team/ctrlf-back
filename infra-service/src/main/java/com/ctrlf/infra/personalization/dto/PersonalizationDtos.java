@@ -174,5 +174,25 @@ public final class PersonalizationDtos {
     public static class Q20Metrics {
         private int todo_count;
     }
+
+    // ---------- Q4: 교육 이어보기 (마지막 시청 영상) ----------
+    @Getter
+    @AllArgsConstructor
+    public static class Q4VideoItem {
+        private String education_id;
+        private String video_id;
+        private String education_title;
+        private String video_title;
+        private Integer resume_position_seconds;
+        private Integer progress_percent;
+        private Integer duration;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class Q4Metrics {
+        private int progress_percent;
+        private int total_watch_seconds;
+    }
 }
 

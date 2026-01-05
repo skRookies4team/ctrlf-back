@@ -21,6 +21,7 @@ import com.ctrlf.education.video.dto.VideoDtos.VideoMetaUpdateRequest;
 import com.ctrlf.education.video.dto.VideoDtos.VideoRetryResponse;
 import com.ctrlf.education.video.dto.VideoDtos.AuditHistoryItem;
 import com.ctrlf.education.video.dto.VideoDtos.AuditHistoryResponse;
+import com.ctrlf.education.video.dto.VideoDtos.LastVideoProgressResponse;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewDetailResponse;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueItem;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueResponse;
@@ -28,6 +29,7 @@ import com.ctrlf.education.video.dto.VideoDtos.ReviewStatsResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
+import com.ctrlf.education.video.entity.EducationVideoProgress;
 import com.ctrlf.education.video.entity.EducationVideoReview;
 import com.ctrlf.education.video.entity.RejectionStage;
 import com.ctrlf.education.video.entity.VideoGenerationJob;
@@ -1140,6 +1142,52 @@ public class VideoService {
             education != null && education.getEduType() != null ? education.getEduType().name() : "",
             video.getScriptId(),
             scriptVersion
+        );
+    }
+
+    // ========================
+    // 마지막 시청 영상 조회 (Q4 이어보기용)
+    // ========================
+
+    /**
+     * 사용자의 마지막 시청 영상 정보를 조회합니다 (이어보기용).
+     *
+     * @param userUuid 사용자 UUID
+     * @return 마지막 시청 영상 정보 (없으면 null)
+     */
+    @Transactional(readOnly = true)
+    public LastVideoProgressResponse getLastVideoProgress(UUID userUuid) {
+        List<EducationVideoProgress> progressList = videoProgressRepository.findLatestByUserUuid(userUuid);
+
+        if (progressList.isEmpty()) {
+            log.debug("No video progress found for user: {}", userUuid);
+            return null;
+        }
+
+        // 가장 최근 시청 기록
+        EducationVideoProgress progress = progressList.get(0);
+
+        // 영상 정보 조회
+        EducationVideo video = videoRepository.findById(progress.getVideoId()).orElse(null);
+        if (video == null) {
+            log.warn("Video not found for progress: videoId={}", progress.getVideoId());
+            return null;
+        }
+
+        // 교육 정보 조회
+        Education education = educationRepository.findById(progress.getEducationId()).orElse(null);
+
+        log.info("Found last video progress: userUuid={}, educationId={}, videoId={}, position={}",
+            userUuid, progress.getEducationId(), progress.getVideoId(), progress.getLastPositionSeconds());
+
+        return new LastVideoProgressResponse(
+            progress.getEducationId().toString(),
+            progress.getVideoId().toString(),
+            education != null ? education.getTitle() : "",
+            video.getTitle(),
+            progress.getLastPositionSeconds(),
+            progress.getProgress(),
+            video.getDuration()
         );
     }
 }

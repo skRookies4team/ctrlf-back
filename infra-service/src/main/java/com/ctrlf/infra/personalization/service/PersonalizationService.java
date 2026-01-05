@@ -2,15 +2,22 @@ package com.ctrlf.infra.personalization.service;
 
 import static com.ctrlf.infra.personalization.dto.PersonalizationDtos.*;
 
+import com.ctrlf.infra.personalization.client.EducationServiceClient;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.DepartmentStatsItem;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.LastVideoProgressItem;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.MyAttemptItem;
 import com.ctrlf.infra.personalization.dto.PersonalizationDtos;
 import com.ctrlf.infra.personalization.util.PeriodCalculator;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,8 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class PersonalizationService {
 
-    private static final DateTimeFormatter ISO_FORMATTER = 
+    private static final DateTimeFormatter ISO_FORMATTER =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss").withZone(ZoneId.systemDefault());
+
+    private final EducationServiceClient educationServiceClient;
 
     /**
      * 개인화 facts를 조회합니다.
@@ -55,13 +64,14 @@ public class PersonalizationService {
             ResolveResponse response = switch (subIntentId) {
                 case "Q1" -> handleQ1(userId, periodStart, periodEnd, updatedAt);
                 case "Q3" -> handleQ3(userId, periodStart, periodEnd, updatedAt);
+                case "Q4" -> handleQ4(userId, periodStart, periodEnd, updatedAt);
                 case "Q5" -> handleQ5(userId, periodStart, periodEnd, updatedAt, targetDeptId);
                 case "Q6" -> handleQ6(userId, periodStart, periodEnd, updatedAt);
                 case "Q9" -> handleQ9(userId, periodStart, periodEnd, updatedAt);
                 case "Q11" -> handleQ11(userId, periodStart, periodEnd, updatedAt);
                 case "Q14" -> handleQ14(userId, periodStart, periodEnd, updatedAt);
                 case "Q20" -> handleQ20(userId, periodStart, periodEnd, updatedAt);
-                default -> createErrorResponse(subIntentId, periodStart, periodEnd, updatedAt, 
+                default -> createErrorResponse(subIntentId, periodStart, periodEnd, updatedAt,
                     "NOT_IMPLEMENTED", "현재 데모 범위에서는 지원하지 않는 질문이에요.");
             };
             return response;
@@ -100,7 +110,7 @@ public class PersonalizationService {
     private ResolveResponse handleQ3(String userId, String periodStart, String periodEnd, String updatedAt) {
         // TODO: education-service에서 이번 달 마감 필수 교육 조회
         log.warn("Q3 handler: Stub implementation - userId={}", userId);
-        
+
         Q3Metrics metrics = new Q3Metrics(2);
         List<Object> items = new ArrayList<>();
         items.add(new Q3EducationItem("EDU001", "개인정보보호 교육", "2025-01-31", 13));
@@ -115,46 +125,192 @@ public class PersonalizationService {
         );
     }
 
-    // ---------- Q5: 내 평균 vs 부서/전사 평균 ----------
-    private ResolveResponse handleQ5(String userId, String periodStart, String periodEnd, String updatedAt, String targetDeptId) {
-        // TODO: quiz-service에서 평균 점수 조회
-        log.warn("Q5 handler: Stub implementation - userId={}, targetDeptId={}", userId, targetDeptId);
-        
-        Q5Metrics metrics = new Q5Metrics(85.5, 82.3, 80.1);
-        Map<String, Object> extra = new HashMap<>();
-        extra.put("target_dept_id", targetDeptId != null ? targetDeptId : "D001");
-        extra.put("target_dept_name", targetDeptId != null ? "개발팀" : "내 부서");
+    // ---------- Q4: 교육 이어보기 (마지막 시청 영상) ----------
+    private ResolveResponse handleQ4(String userId, String periodStart, String periodEnd, String updatedAt) {
+        log.info("Q4 handler: userId={}", userId);
 
-        return new ResolveResponse(
-            "Q5", periodStart, periodEnd, updatedAt,
-            Map.of(
-                "my_average", metrics.getMy_average(),
-                "dept_average", metrics.getDept_average(),
-                "company_average", metrics.getCompany_average()
-            ),
-            List.of(),
-            extra,
-            null
-        );
+        try {
+            UUID userUuid = UUID.fromString(userId);
+
+            // education-service에서 마지막 시청 영상 조회
+            LastVideoProgressItem lastProgress = educationServiceClient.getLastVideoProgress(userUuid);
+
+            if (lastProgress == null) {
+                // 시청 기록 없음
+                return new ResolveResponse(
+                    "Q4", periodStart, periodEnd, updatedAt,
+                    Map.of("progress_percent", 0, "total_watch_seconds", 0),
+                    List.of(),
+                    Map.of(),
+                    new ErrorInfo("NOT_FOUND", "시청 기록이 없습니다.")
+                );
+            }
+
+            // 성공 응답 생성
+            Q4VideoItem videoItem = new Q4VideoItem(
+                lastProgress.getEducation_id(),
+                lastProgress.getVideo_id(),
+                lastProgress.getEducation_title(),
+                lastProgress.getVideo_title(),
+                lastProgress.getResume_position_seconds(),
+                lastProgress.getProgress_percent(),
+                lastProgress.getDuration()
+            );
+
+            int progressPercent = lastProgress.getProgress_percent() != null ? lastProgress.getProgress_percent() : 0;
+            int resumeSeconds = lastProgress.getResume_position_seconds() != null ? lastProgress.getResume_position_seconds() : 0;
+
+            return new ResolveResponse(
+                "Q4", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "progress_percent", progressPercent,
+                    "total_watch_seconds", resumeSeconds
+                ),
+                List.of(videoItem),
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q4", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q4 handler: userId={}", userId, e);
+            return createErrorResponse("Q4", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
-    // ---------- Q6: 가장 많이 틀린 보안 토픽 TOP3 ----------
-    private ResolveResponse handleQ6(String userId, String periodStart, String periodEnd, String updatedAt) {
-        // TODO: quiz-service에서 오답률 높은 토픽 조회
-        log.warn("Q6 handler: Stub implementation - userId={}", userId);
-        
-        List<Object> items = new ArrayList<>();
-        items.add(new Q6TopicItem(1, "피싱 메일 식별", 35.2));
-        items.add(new Q6TopicItem(2, "비밀번호 정책", 28.5));
-        items.add(new Q6TopicItem(3, "데이터 암호화", 22.1));
+    // ---------- Q5: 내 평균 vs 부서/전사 평균 ----------
+    private ResolveResponse handleQ5(String userId, String periodStart, String periodEnd, String updatedAt, String targetDeptId) {
+        log.info("Q5 handler: userId={}, targetDeptId={}", userId, targetDeptId);
 
-        return new ResolveResponse(
-            "Q6", periodStart, periodEnd, updatedAt,
-            Map.of(),
-            items,
-            Map.of(),
-            null
-        );
+        try {
+            UUID userUuid = UUID.fromString(userId);
+
+            // 1. 사용자의 퀴즈 응시 내역 조회
+            List<MyAttemptItem> myAttempts = educationServiceClient.getMyAttempts(userUuid);
+
+            // 2. 내 평균 점수 계산 (best attempt 기준)
+            double myAverage = myAttempts.stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsBestScore()) && a.getScore() != null)
+                .mapToInt(MyAttemptItem::getScore)
+                .average()
+                .orElse(0.0);
+
+            // 3. 부서별 통계 조회
+            List<DepartmentStatsItem> deptStats = educationServiceClient.getDepartmentStats(null);
+
+            // 4. 부서/전사 평균 계산
+            double deptAverage = 0.0;
+            double companyAverage = 0.0;
+            String targetDeptName = "전체";
+
+            if (!deptStats.isEmpty()) {
+                // 전사 평균
+                companyAverage = deptStats.stream()
+                    .filter(d -> d.getAverageScore() != null)
+                    .mapToInt(DepartmentStatsItem::getAverageScore)
+                    .average()
+                    .orElse(0.0);
+
+                // 특정 부서 또는 첫 번째 부서 평균
+                if (targetDeptId != null) {
+                    deptAverage = deptStats.stream()
+                        .filter(d -> targetDeptId.equals(d.getDepartmentName()))
+                        .findFirst()
+                        .map(d -> d.getAverageScore() != null ? d.getAverageScore().doubleValue() : 0.0)
+                        .orElse(companyAverage);
+                    targetDeptName = targetDeptId;
+                } else if (!deptStats.isEmpty()) {
+                    DepartmentStatsItem firstDept = deptStats.get(0);
+                    deptAverage = firstDept.getAverageScore() != null ? firstDept.getAverageScore() : 0.0;
+                    targetDeptName = firstDept.getDepartmentName();
+                }
+            }
+
+            Map<String, Object> extra = new HashMap<>();
+            extra.put("target_dept_id", targetDeptId != null ? targetDeptId : "ALL");
+            extra.put("target_dept_name", targetDeptName);
+            extra.put("attempt_count", myAttempts.size());
+
+            return new ResolveResponse(
+                "Q5", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "my_average", Math.round(myAverage * 10) / 10.0,
+                    "dept_average", Math.round(deptAverage * 10) / 10.0,
+                    "company_average", Math.round(companyAverage * 10) / 10.0
+                ),
+                List.of(),
+                extra,
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q5", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q5 handler: userId={}", userId, e);
+            return createErrorResponse("Q5", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
+    }
+
+    // ---------- Q6: 가장 많이 틀린 보안 토픽 TOP3 (가장 낮은 점수 교육) ----------
+    private ResolveResponse handleQ6(String userId, String periodStart, String periodEnd, String updatedAt) {
+        log.info("Q6 handler: userId={}", userId);
+
+        try {
+            UUID userUuid = UUID.fromString(userId);
+
+            // 1. 사용자의 퀴즈 응시 내역 조회
+            List<MyAttemptItem> myAttempts = educationServiceClient.getMyAttempts(userUuid);
+
+            // 2. 교육별 최저 점수 계산 (best attempt 기준, 점수가 낮을수록 오답률 높음)
+            Map<UUID, MyAttemptItem> lowestByEducation = new HashMap<>();
+            for (MyAttemptItem attempt : myAttempts) {
+                if (Boolean.TRUE.equals(attempt.getIsBestScore()) && attempt.getScore() != null) {
+                    UUID educationId = attempt.getEducationId();
+                    if (!lowestByEducation.containsKey(educationId) ||
+                        attempt.getScore() < lowestByEducation.get(educationId).getScore()) {
+                        lowestByEducation.put(educationId, attempt);
+                    }
+                }
+            }
+
+            // 3. 점수가 낮은 순으로 정렬하여 TOP 3 추출
+            List<MyAttemptItem> sortedByScore = lowestByEducation.values().stream()
+                .sorted(Comparator.comparingInt(MyAttemptItem::getScore))
+                .limit(3)
+                .collect(Collectors.toList());
+
+            // 4. 결과 생성 (점수를 오답률로 변환: 100 - score)
+            List<Object> items = new ArrayList<>();
+            int rank = 1;
+            for (MyAttemptItem attempt : sortedByScore) {
+                double wrongRate = 100.0 - attempt.getScore();
+                items.add(new Q6TopicItem(rank++, attempt.getEducationTitle(), Math.round(wrongRate * 10) / 10.0));
+            }
+
+            Map<String, Object> extra = new HashMap<>();
+            extra.put("total_educations", lowestByEducation.size());
+
+            return new ResolveResponse(
+                "Q6", periodStart, periodEnd, updatedAt,
+                Map.of("topic_count", items.size()),
+                items,
+                extra,
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q6", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q6 handler: userId={}", userId, e);
+            return createErrorResponse("Q6", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- Q9: 이번 주 교육/퀴즈 할 일 ----------
