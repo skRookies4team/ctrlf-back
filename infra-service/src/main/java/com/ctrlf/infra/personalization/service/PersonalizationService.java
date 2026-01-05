@@ -4,6 +4,7 @@ import static com.ctrlf.infra.personalization.dto.PersonalizationDtos.*;
 
 import com.ctrlf.infra.personalization.client.EducationServiceClient;
 import com.ctrlf.infra.personalization.client.EducationServiceClient.DepartmentStatsItem;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.LastVideoProgressItem;
 import com.ctrlf.infra.personalization.client.EducationServiceClient.MyAttemptItem;
 import com.ctrlf.infra.personalization.dto.PersonalizationDtos;
 import com.ctrlf.infra.personalization.util.PeriodCalculator;
@@ -63,13 +64,14 @@ public class PersonalizationService {
             ResolveResponse response = switch (subIntentId) {
                 case "Q1" -> handleQ1(userId, periodStart, periodEnd, updatedAt);
                 case "Q3" -> handleQ3(userId, periodStart, periodEnd, updatedAt);
+                case "Q4" -> handleQ4(userId, periodStart, periodEnd, updatedAt);
                 case "Q5" -> handleQ5(userId, periodStart, periodEnd, updatedAt, targetDeptId);
                 case "Q6" -> handleQ6(userId, periodStart, periodEnd, updatedAt);
                 case "Q9" -> handleQ9(userId, periodStart, periodEnd, updatedAt);
                 case "Q11" -> handleQ11(userId, periodStart, periodEnd, updatedAt);
                 case "Q14" -> handleQ14(userId, periodStart, periodEnd, updatedAt);
                 case "Q20" -> handleQ20(userId, periodStart, periodEnd, updatedAt);
-                default -> createErrorResponse(subIntentId, periodStart, periodEnd, updatedAt, 
+                default -> createErrorResponse(subIntentId, periodStart, periodEnd, updatedAt,
                     "NOT_IMPLEMENTED", "현재 데모 범위에서는 지원하지 않는 질문이에요.");
             };
             return response;
@@ -108,7 +110,7 @@ public class PersonalizationService {
     private ResolveResponse handleQ3(String userId, String periodStart, String periodEnd, String updatedAt) {
         // TODO: education-service에서 이번 달 마감 필수 교육 조회
         log.warn("Q3 handler: Stub implementation - userId={}", userId);
-        
+
         Q3Metrics metrics = new Q3Metrics(2);
         List<Object> items = new ArrayList<>();
         items.add(new Q3EducationItem("EDU001", "개인정보보호 교육", "2025-01-31", 13));
@@ -121,6 +123,62 @@ public class PersonalizationService {
             Map.of(),
             null
         );
+    }
+
+    // ---------- Q4: 교육 이어보기 (마지막 시청 영상) ----------
+    private ResolveResponse handleQ4(String userId, String periodStart, String periodEnd, String updatedAt) {
+        log.info("Q4 handler: userId={}", userId);
+
+        try {
+            UUID userUuid = UUID.fromString(userId);
+
+            // education-service에서 마지막 시청 영상 조회
+            LastVideoProgressItem lastProgress = educationServiceClient.getLastVideoProgress(userUuid);
+
+            if (lastProgress == null) {
+                // 시청 기록 없음
+                return new ResolveResponse(
+                    "Q4", periodStart, periodEnd, updatedAt,
+                    Map.of("progress_percent", 0, "total_watch_seconds", 0),
+                    List.of(),
+                    Map.of(),
+                    new ErrorInfo("NOT_FOUND", "시청 기록이 없습니다.")
+                );
+            }
+
+            // 성공 응답 생성
+            Q4VideoItem videoItem = new Q4VideoItem(
+                lastProgress.getEducation_id(),
+                lastProgress.getVideo_id(),
+                lastProgress.getEducation_title(),
+                lastProgress.getVideo_title(),
+                lastProgress.getResume_position_seconds(),
+                lastProgress.getProgress_percent(),
+                lastProgress.getDuration()
+            );
+
+            int progressPercent = lastProgress.getProgress_percent() != null ? lastProgress.getProgress_percent() : 0;
+            int resumeSeconds = lastProgress.getResume_position_seconds() != null ? lastProgress.getResume_position_seconds() : 0;
+
+            return new ResolveResponse(
+                "Q4", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "progress_percent", progressPercent,
+                    "total_watch_seconds", resumeSeconds
+                ),
+                List.of(videoItem),
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q4", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q4 handler: userId={}", userId, e);
+            return createErrorResponse("Q4", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- Q5: 내 평균 vs 부서/전사 평균 ----------

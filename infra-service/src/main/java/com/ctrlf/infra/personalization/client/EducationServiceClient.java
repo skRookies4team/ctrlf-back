@@ -92,6 +92,25 @@ public class EducationServiceClient {
         }
     }
 
+    /**
+     * 사용자의 마지막 시청 영상 정보를 조회합니다 (Q4 이어보기용).
+     *
+     * @param userUuid 사용자 UUID
+     * @return 마지막 시청 영상 정보 (없으면 null)
+     */
+    public LastVideoProgressItem getLastVideoProgress(UUID userUuid) {
+        try {
+            return restClient.get()
+                .uri("/internal/video/last-progress")
+                .header("X-User-Id", userUuid.toString())
+                .retrieve()
+                .body(LastVideoProgressItem.class);
+        } catch (RestClientException e) {
+            log.warn("Failed to get last-video-progress: userUuid={}, error={}", userUuid, e.getMessage());
+            return null;
+        }
+    }
+
     // ---------- Response DTOs (education-service 응답과 일치) ----------
 
     @Getter
@@ -114,5 +133,17 @@ public class EducationServiceClient {
         private Integer averageScore;
         private Integer progressPercent;
         private Integer participantCount;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class LastVideoProgressItem {
+        private String education_id;
+        private String video_id;
+        private String education_title;
+        private String video_title;
+        private Integer resume_position_seconds;
+        private Integer progress_percent;
+        private Integer duration;
     }
 }
