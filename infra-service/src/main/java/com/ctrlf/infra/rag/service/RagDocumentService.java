@@ -109,10 +109,11 @@ public class RagDocumentService {
                     d.getDocumentId(),
                     d.getVersion(),
                     d.getSourceUrl(),
-                    d.getDomain()
+                    d.getDomain(),
+                    d.getDepartment()
                 );
             } catch (Exception e) {
-                log.warn("AI 서버 재처리 요청 실패: id={}, documentId={}, error={}", 
+                log.warn("AI 서버 재처리 요청 실패: id={}, documentId={}, error={}",
                     d.getId(), d.getDocumentId(), e.getMessage());
             }
         }
@@ -161,7 +162,8 @@ public class RagDocumentService {
                     d.getDocumentId(),
                     d.getVersion(),
                     d.getSourceUrl(),
-                    d.getDomain()
+                    d.getDomain(),
+                    d.getDepartment()
                 );
                 received = aiResp.isReceived();
                 requestId = aiResp.getRequestId();
@@ -171,8 +173,8 @@ public class RagDocumentService {
                         status = RagDocumentStatus.REPROCESSING;
                     }
                 }
-                log.info("AI 서버 재처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
-                    d.getId(), d.getDocumentId(), d.getVersion(), received, aiResp.getStatus(), 
+                log.info("AI 서버 재처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
+                    d.getId(), d.getDocumentId(), d.getVersion(), received, aiResp.getStatus(),
                     aiResp.getRequestId(), aiResp.getTraceId());
             } catch (Exception e) {
                 log.warn("AI 서버 재처리 요청 실패: id={}, documentId={}, error={}", 
@@ -665,10 +667,11 @@ public class RagDocumentService {
                     doc.getDocumentId(),
                     doc.getVersion(),
                     doc.getSourceUrl(),
-                    doc.getDomain()
+                    doc.getDomain(),
+                    doc.getDepartment()
                 );
-                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
-                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(), 
+                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
+                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
                     aiResp.getRequestId(), aiResp.getTraceId());
 
                 // AI 서버 응답의 status를 enum으로 변환하여 설정
@@ -679,12 +682,12 @@ public class RagDocumentService {
                         documentRepository.save(doc);
                     } else {
                         // 변환 실패 시 기본값 유지 (DRAFT)
-                        log.warn("AI 서버 응답의 status를 변환할 수 없음: status={}, documentId={}", 
+                        log.warn("AI 서버 응답의 status를 변환할 수 없음: status={}, documentId={}",
                             aiResp.getStatus(), doc.getDocumentId());
                     }
                 }
             } catch (Exception e) {
-                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}", 
+                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), e.getMessage(), e);
                 // AI 서버 호출 실패 시 전처리 상태를 FAILED로 설정
                 doc.setPreprocessStatus("FAILED");
@@ -692,7 +695,7 @@ public class RagDocumentService {
                 documentRepository.save(doc);
             }
         }
-        
+
         return new CreatePolicyResponse(
             doc.getId().toString(),
             doc.getDocumentId(),
@@ -772,10 +775,11 @@ public class RagDocumentService {
                     newVersionDoc.getDocumentId(),
                     newVersionDoc.getVersion(),
                     newVersionDoc.getSourceUrl(),
-                    newVersionDoc.getDomain()
+                    newVersionDoc.getDomain(),
+                    newVersionDoc.getDepartment()
                 );
-                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
-                    newVersionDoc.getId(), newVersionDoc.getDocumentId(), newVersionDoc.getVersion(), 
+                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
+                    newVersionDoc.getId(), newVersionDoc.getDocumentId(), newVersionDoc.getVersion(),
                     aiResp.isReceived(), aiResp.getStatus(), aiResp.getRequestId(), aiResp.getTraceId());
 
                 // AI 서버 응답의 status를 enum으로 변환하여 설정
@@ -873,13 +877,14 @@ public class RagDocumentService {
                     doc.getDocumentId(),
                     doc.getVersion(),
                     doc.getSourceUrl(),
-                    doc.getDomain()
+                    doc.getDomain(),
+                    doc.getDepartment()
                 );
-                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
-                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(), 
+                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
+                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
                     aiResp.getRequestId(), aiResp.getTraceId());
             } catch (Exception e) {
-                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}", 
+                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), e.getMessage(), e);
                 // AI 서버 호출 실패 시 전처리 상태를 FAILED로 설정
                 doc.setPreprocessStatus("FAILED");
@@ -1068,13 +1073,14 @@ public class RagDocumentService {
                     doc.getDocumentId(),
                     doc.getVersion(),
                     doc.getSourceUrl(),
-                    doc.getDomain()
+                    doc.getDomain(),
+                    doc.getDepartment()
                 );
-                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}", 
-                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(), 
+                log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
+                    doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
                     aiResp.getRequestId(), aiResp.getTraceId());
             } catch (Exception e) {
-                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}", 
+                log.error("AI 서버 처리 요청 실패: id={}, documentId={}, version={}, error={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), e.getMessage(), e);
                 // AI 서버 호출 실패 시 전처리 상태를 FAILED로 설정
                 doc.setPreprocessStatus("FAILED");
@@ -1082,7 +1088,7 @@ public class RagDocumentService {
                 documentRepository.save(doc);
             }
         }
-        
+
         return new ReplaceFileResponse(
             doc.getId().toString(),
             doc.getDocumentId(),
