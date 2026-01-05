@@ -52,4 +52,18 @@ public interface ChatMessageService {
      * @return 재시도 결과 메시지
      */
     ChatMessage retryMessage(UUID sessionId, UUID messageId);
+
+    /**
+     * 관리자용 질문 로그 조회 (FAQ 자동 생성용)
+     * 
+     * <p>AI 서버에서 FAQ 자동 생성을 위해 질문 로그를 조회할 때 사용합니다.</p>
+     * 
+     * @param domain 도메인 필터 (선택, null이면 모든 도메인)
+     * @param daysBack 최근 N일간의 데이터 (기본값: 30)
+     * @return 질문 로그 목록
+     */
+    com.ctrlf.chat.dto.response.AdminMessageLogResponse getAdminMessages(
+        String domain,
+        Integer daysBack
+    );
 }

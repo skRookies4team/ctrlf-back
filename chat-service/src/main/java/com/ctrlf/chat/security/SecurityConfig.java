@@ -39,6 +39,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Actuator 엔드포인트는 인증 불필요
                 .requestMatchers("/actuator/**").permitAll()
+                // 내부 서비스 간 통신용 경로는 인증 불필요
+                .requestMatchers("/internal/**").permitAll()
                 // /api/** 경로는 인증 필요
                 .requestMatchers("/api/**").authenticated()
                 // 나머지 경로는 인증 불필요

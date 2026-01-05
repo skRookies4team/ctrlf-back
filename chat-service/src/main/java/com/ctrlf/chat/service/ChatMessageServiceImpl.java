@@ -12,8 +12,13 @@ import com.ctrlf.chat.repository.ChatSessionRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -394,5 +399,104 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ) {
             return createdAt.toEpochMilli() + "_" + id;
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.ctrlf.chat.dto.response.AdminMessageLogResponse getAdminMessages(
+        String domain,
+        Integer daysBack
+    ) {
+        // 기본값 설정
+        int actualDaysBack = (daysBack != null && daysBack > 0) ? daysBack : 30;
+        Instant startDate = Instant.now().minusSeconds(actualDaysBack * 24L * 60L * 60L);
+
+        log.info("[관리자 질문 로그 조회] domain={}, daysBack={}, startDate={}", domain, actualDaysBack, startDate);
+
+        // 질문 로그 조회
+        List<Object[]> results = chatMessageRepository.findUserMessagesForFaqGeneration(startDate, domain);
+
+        // DTO 변환
+        List<com.ctrlf.chat.dto.response.AdminMessageLogResponse.MessageLogItem> items = new ArrayList<>();
+        for (Object[] row : results) {
+            // null 안전 처리
+            String domainValue = row[5] != null ? (String) row[5] : "ETC";
+            String contentValue = row[2] != null ? (String) row[2] : "";
+            
+            items.add(new com.ctrlf.chat.dto.response.AdminMessageLogResponse.MessageLogItem(
+                (UUID) row[0],           // id
+                (UUID) row[1],           // session_id
+                contentValue,             // content (null 방지)
+                (String) row[3],         // keyword
+                domainValue,              // domain (null 방지, "ETC"로 기본값 설정)
+                (UUID) row[6],           // user_uuid (s.user_uuid)
+                ((java.sql.Timestamp) row[4]).toInstant()  // created_at
+            ));
+        }
+
+        log.info("[관리자 질문 로그 조회] 조회 완료: totalCount={}", items.size());
+
+        // 디버깅: 사용자별 질문 수 통계
+        Map<UUID, Long> userQuestionCount = items.stream()
+            .filter(item -> item.getUserId() != null)  // null userId 필터링
+            .collect(Collectors.groupingBy(
+                item -> item.getUserId(),  // null 체크 후 사용
+                Collectors.counting()
+            ));
+        log.info("[관리자 질문 로그 조회] 사용자별 질문 수: totalUsers={}, userCounts={}", 
+            userQuestionCount.size(), 
+            userQuestionCount.entrySet().stream()
+                .sorted(Map.Entry.<UUID, Long>comparingByValue().reversed())
+                .limit(10)
+                .collect(Collectors.toMap(
+                    e -> e.getKey().toString().substring(0, 8) + "...",
+                    Map.Entry::getValue
+                )));
+
+        // 디버깅: 질문별 빈도 통계 (상위 10개)
+        Map<String, Long> contentFrequency = items.stream()
+            .filter(item -> item.getContent() != null)  // null content 필터링
+            .collect(Collectors.groupingBy(
+                item -> item.getContent() != null ? item.getContent() : "",  // null 안전 처리
+                Collectors.counting()
+            ));
+        log.info("[관리자 질문 로그 조회] 질문별 빈도 (상위 10개): {}", 
+            contentFrequency.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(10)
+                .map(e -> String.format("'%s': %d회", 
+                    e.getKey().length() > 50 ? e.getKey().substring(0, 50) + "..." : e.getKey(),
+                    e.getValue()))
+                .collect(Collectors.joining(", ")));
+
+        // 디버깅: 여러 사용자가 질문한 질문 확인 (minFrequency=3 기준)
+        Map<String, Set<UUID>> contentUserMap = new HashMap<>();
+        for (com.ctrlf.chat.dto.response.AdminMessageLogResponse.MessageLogItem item : items) {
+            // null 안전 처리: content가 null이면 빈 문자열 사용
+            String contentKey = item.getContent() != null ? item.getContent() : "";
+            contentUserMap.computeIfAbsent(contentKey, k -> new HashSet<>())
+                .add(item.getUserId());
+        }
+        long multiUserQuestions = contentUserMap.values().stream()
+            .filter(users -> users.size() >= 3)
+            .count();
+        log.info("[관리자 질문 로그 조회] 여러 사용자(3명 이상)가 질문한 항목 수: {}", multiUserQuestions);
+
+        // 샘플 메시지 로그 (최대 5개)
+        if (!items.isEmpty()) {
+            log.info("[관리자 질문 로그 조회] 샘플 메시지 (최대 5개): {}", 
+                items.stream()
+                    .limit(5)
+                    .map(m -> {
+                        String userIdStr = m.getUserId() != null ? m.getUserId().toString().substring(0, 8) + "..." : "null";
+                        String contentStr = m.getContent() != null 
+                            ? (m.getContent().length() > 50 ? m.getContent().substring(0, 50) + "..." : m.getContent())
+                            : "(empty)";
+                        return String.format("userId=%s, content='%s'", userIdStr, contentStr);
+                    })
+                    .collect(Collectors.joining(" | ")));
+        }
+
+        return new com.ctrlf.chat.dto.response.AdminMessageLogResponse(items, items.size());
     }
 }

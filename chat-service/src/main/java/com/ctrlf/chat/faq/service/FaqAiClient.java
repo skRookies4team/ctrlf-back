@@ -261,9 +261,16 @@ public class FaqAiClient {
 
             return response;
         } catch (RestClientException e) {
-            log.error("AI 자동 FAQ 생성 요청 실패: error={}", e.getMessage(), e);
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.contains("404")) {
+                log.error("AI 자동 FAQ 생성 엔드포인트가 존재하지 않습니다: /ai/faq/generate/auto - AI 서버에 해당 엔드포인트가 구현되지 않았습니다.");
+                throw new IllegalStateException(
+                    "AI 서버에 자동 FAQ 생성 엔드포인트(/ai/faq/generate/auto)가 구현되지 않았습니다. AI 서버 개발팀에 문의하세요.", e
+                );
+            }
+            log.error("AI 자동 FAQ 생성 요청 실패: error={}", errorMsg, e);
             throw new IllegalStateException(
-                String.format("AI 서비스 호출 실패: %s", e.getMessage()), e
+                String.format("AI 서비스 호출 실패: %s", errorMsg), e
             );
         }
     }
