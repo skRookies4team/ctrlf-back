@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/chat/admin/faq/drafts")
+@RequestMapping("/admin/faq/drafts")
 public class AdminFaqDraftController {
 
     private final FaqDraftService faqDraftService;

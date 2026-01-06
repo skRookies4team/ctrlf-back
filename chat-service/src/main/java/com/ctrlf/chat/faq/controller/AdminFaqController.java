@@ -10,7 +10,7 @@ import java.util.UUID;
  * FAQ 후보 / Draft 관리용 관리자 API
  */
 @RestController
-@RequestMapping("/api/chat/admin/faqs")
+@RequestMapping("/admin/faqs")
 @RequiredArgsConstructor
 public class AdminFaqController {
 

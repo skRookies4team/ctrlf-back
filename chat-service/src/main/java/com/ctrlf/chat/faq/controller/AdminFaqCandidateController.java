@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/chat/admin/faq/candidates")
+@RequestMapping("/admin/faq/candidates")
 public class AdminFaqCandidateController {
 
     private final FaqCandidateService faqCandidateService;
