@@ -42,6 +42,12 @@ public class ChatCompletionRequest {
     @JsonProperty("model")
     private String model;
 
+    // LLM 모델 선택 (관리자 대시보드에서 설정)
+    // "exaone" (내부 EXAONE) 또는 "openai" (GPT)
+    // null인 경우 AI 서버 기본값(exaone) 사용
+    @JsonProperty("llm_model")
+    private String llm_model;
+
     // 일반 채팅용 생성자 (request_id, model 없음) - 후방 호환성
     public ChatCompletionRequest(
         UUID session_id,
@@ -61,6 +67,7 @@ public class ChatCompletionRequest {
         this.channel = channel;
         this.messages = messages;
         this.model = null;
+        this.llm_model = null;
     }
 
     // 스트리밍용 생성자 (request_id 포함, model 없음) - 후방 호환성
@@ -83,6 +90,7 @@ public class ChatCompletionRequest {
         this.channel = channel;
         this.messages = messages;
         this.model = null;
+        this.llm_model = null;
     }
 
     // A/B 테스트용 생성자 (model 포함)
@@ -106,6 +114,32 @@ public class ChatCompletionRequest {
         this.channel = channel;
         this.messages = messages;
         this.model = model;
+        this.llm_model = null;
+    }
+
+    // LLM 모델 선택 생성자 (model + llm_model 포함)
+    public ChatCompletionRequest(
+        String request_id,
+        UUID session_id,
+        UUID user_id,
+        String user_role,
+        String department,
+        String domain,
+        String channel,
+        List<Message> messages,
+        String model,
+        String llm_model
+    ) {
+        this.request_id = request_id;
+        this.session_id = session_id;
+        this.user_id = user_id;
+        this.user_role = user_role;
+        this.department = department;
+        this.domain = domain;
+        this.channel = channel;
+        this.messages = messages;
+        this.model = model;
+        this.llm_model = llm_model;
     }
 
     @Getter

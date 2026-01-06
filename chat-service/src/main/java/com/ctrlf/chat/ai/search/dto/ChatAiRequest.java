@@ -38,4 +38,10 @@ public class ChatAiRequest {
     // null인 경우 기본값(openai) 사용
     @JsonProperty("model")
     private String model;
+
+    // LLM 모델 선택 (관리자 대시보드에서 설정)
+    // "exaone" (내부 EXAONE) 또는 "openai" (GPT)
+    // null인 경우 AI 서버 기본값(exaone) 사용
+    @JsonProperty("llm_model")
+    private String llmModel;
 }
