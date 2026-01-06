@@ -75,7 +75,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 );
             }
         }
-        
+
+        // 세션에 저장된 LLM 모델 사용 (관리자 대시보드에서 설정)
+        String llmModel = session.getLlmModel();
+
         long startTime = System.currentTimeMillis();
         ChatAiResponse aiResponse;
         try {
@@ -88,7 +91,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     domain,
                     "WEB",
                     request.content(),
-                    embeddingModel  // Frontend에서 전달받은 model 값 그대로 전달
+                    embeddingModel,  // Frontend에서 전달받은 model 값 그대로 전달
+                    llmModel         // 관리자 대시보드에서 선택한 LLM 모델
                 );
         } catch (Exception e) {
             log.error("[AI] call failed", e);
@@ -269,7 +273,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 sessionId
             );
         }
-        
+
+        // 세션에 저장된 LLM 모델 사용 (관리자 대시보드에서 설정)
+        String llmModel = session.getLlmModel();
+
         long startTime = System.currentTimeMillis();
         ChatAiResponse aiResponse;
         try {
@@ -281,7 +288,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 session.getDomain(),
                 "WEB",
                 userMessage.getContent(),
-                embeddingModel  // 세션에 저장된 모델 사용
+                embeddingModel,  // 세션에 저장된 모델 사용
+                llmModel         // 관리자 대시보드에서 선택한 LLM 모델
             );
         } catch (Exception e) {
             log.error("[AI] retry failed", e);
