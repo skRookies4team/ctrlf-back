@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/api/chat")
+@RequestMapping("/chat")
 @RequiredArgsConstructor
 public class ChatMessageController {
 
