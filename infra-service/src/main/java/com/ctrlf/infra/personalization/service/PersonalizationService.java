@@ -2,6 +2,12 @@ package com.ctrlf.infra.personalization.service;
 
 import static com.ctrlf.infra.personalization.dto.PersonalizationDtos.*;
 
+import com.ctrlf.infra.hr.entity.LeaveHistory;
+import com.ctrlf.infra.hr.entity.WelfarePoint;
+import com.ctrlf.infra.hr.entity.WelfarePointUsage;
+import com.ctrlf.infra.hr.repository.LeaveHistoryRepository;
+import com.ctrlf.infra.hr.repository.WelfarePointRepository;
+import com.ctrlf.infra.hr.repository.WelfarePointUsageRepository;
 import com.ctrlf.infra.personalization.client.EducationServiceClient;
 import com.ctrlf.infra.personalization.client.EducationServiceClient.DepartmentStatsItem;
 import com.ctrlf.infra.personalization.client.EducationServiceClient.LastVideoProgressItem;
@@ -40,8 +46,13 @@ public class PersonalizationService {
 
     private static final DateTimeFormatter ISO_FORMATTER =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss").withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter DATE_FORMATTER =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final EducationServiceClient educationServiceClient;
+    private final LeaveHistoryRepository leaveHistoryRepository;
+    private final WelfarePointRepository welfarePointRepository;
+    private final WelfarePointUsageRepository welfarePointUsageRepository;
 
     /**
      * 개인화 facts를 조회합니다.
@@ -78,7 +89,9 @@ public class PersonalizationService {
                 case "Q8" -> handleQ8(userId, periodStart, periodEnd, updatedAt, request.getTopic());
                 case "Q9" -> handleQ9(userId, periodStart, periodEnd, updatedAt);
                 case "Q11" -> handleQ11(userId, periodStart, periodEnd, updatedAt);
+                case "Q12" -> handleQ12(userId, periodStart, periodEnd, updatedAt);
                 case "Q14" -> handleQ14(userId, periodStart, periodEnd, updatedAt);
+                case "Q15" -> handleQ15(userId, periodStart, periodEnd, updatedAt);
                 case "Q18" -> handleQ18(userId, periodStart, periodEnd, updatedAt, request.getTopic());
                 case "Q19" -> handleQ19(userId, periodStart, periodEnd, updatedAt, request.getTopic());
                 case "Q20" -> handleQ20(userId, periodStart, periodEnd, updatedAt);
@@ -532,41 +545,204 @@ public class PersonalizationService {
 
     // ---------- Q11: 남은 연차 일수 ----------
     private ResolveResponse handleQ11(String userId, String periodStart, String periodEnd, String updatedAt) {
-        // TODO: HR 시스템에서 연차 정보 조회
-        log.warn("Q11 handler: Stub implementation - userId={}", userId);
-        
-        Q11Metrics metrics = new Q11Metrics(15, 8, 7);
+        log.info("Q11 handler: userId={}", userId);
 
-        return new ResolveResponse(
-            "Q11", periodStart, periodEnd, updatedAt,
-            Map.of(
-                "total_days", metrics.getTotal_days(),
-                "used_days", metrics.getUsed_days(),
-                "remaining_days", metrics.getRemaining_days()
-            ),
-            List.of(),
-            Map.of(),
-            null
-        );
+        try {
+            UUID userUuid = UUID.fromString(userId);
+            int currentYear = java.time.Year.now().getValue();
+
+            // DB에서 연차 사용 이력 조회
+            Double usedDays = leaveHistoryRepository.sumDaysByUserUuidAndYear(userUuid, currentYear);
+            if (usedDays == null) usedDays = 0.0;
+
+            // 총 연차는 15일로 가정 (실제로는 infra.user 테이블에서 조회해야 함)
+            int totalDays = 15;
+            double remainingDays = totalDays - usedDays;
+
+            return new ResolveResponse(
+                "Q11", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "total_days", totalDays,
+                    "used_days", usedDays,
+                    "remaining_days", remainingDays
+                ),
+                List.of(),
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q11", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q11 handler: userId={}", userId, e);
+            return createErrorResponse("Q11", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
+    }
+
+    // ---------- Q12: 연차 사용 이력 조회 ----------
+    private ResolveResponse handleQ12(String userId, String periodStart, String periodEnd, String updatedAt) {
+        log.info("Q12 handler: userId={}", userId);
+
+        try {
+            UUID userUuid = UUID.fromString(userId);
+            int currentYear = java.time.Year.now().getValue();
+
+            // DB에서 연차 사용 이력 조회
+            List<LeaveHistory> leaveList = leaveHistoryRepository.findByUserUuidOrderByStartDateDesc(userUuid);
+
+            // 올해 사용 일수 합계
+            Double usedDays = leaveHistoryRepository.sumDaysByUserUuidAndYear(userUuid, currentYear);
+            if (usedDays == null) usedDays = 0.0;
+
+            // 올해 사용 건수
+            Long usageCount = leaveHistoryRepository.countByUserUuidAndYear(userUuid, currentYear);
+            if (usageCount == null) usageCount = 0L;
+
+            // 총 연차는 15일로 가정
+            int totalDays = 15;
+            double remainingDays = totalDays - usedDays;
+
+            // items 생성
+            List<Object> items = new ArrayList<>();
+            for (LeaveHistory leave : leaveList) {
+                String startDateStr = leave.getStartDate() != null ? leave.getStartDate().toString() : "";
+                String endDateStr = leave.getEndDate() != null ? leave.getEndDate().toString() : startDateStr;
+
+                items.add(new Q12LeaveItem(
+                    leave.getLeaveType(),
+                    startDateStr,
+                    endDateStr,
+                    leave.getDays() != null ? leave.getDays().doubleValue() : 0,
+                    leave.getReason() != null ? leave.getReason() : ""
+                ));
+            }
+
+            return new ResolveResponse(
+                "Q12", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "total_days", totalDays,
+                    "used_days", usedDays,
+                    "remaining_days", remainingDays,
+                    "usage_count", usageCount.intValue()
+                ),
+                items,
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q12", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q12 handler: userId={}", userId, e);
+            return createErrorResponse("Q12", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- Q14: 복지/식대 포인트 잔액 ----------
     private ResolveResponse handleQ14(String userId, String periodStart, String periodEnd, String updatedAt) {
-        // TODO: HR 시스템에서 복지/식대 포인트 조회
-        log.warn("Q14 handler: Stub implementation - userId={}", userId);
-        
-        Q14Metrics metrics = new Q14Metrics(150000, 280000);
+        log.info("Q14 handler: userId={}", userId);
 
-        return new ResolveResponse(
-            "Q14", periodStart, periodEnd, updatedAt,
-            Map.of(
-                "welfare_points", metrics.getWelfare_points(),
-                "meal_allowance", metrics.getMeal_allowance()
-            ),
-            List.of(),
-            Map.of(),
-            null
-        );
+        try {
+            UUID userUuid = UUID.fromString(userId);
+            int currentYear = java.time.Year.now().getValue();
+
+            // DB에서 복지 포인트 조회
+            WelfarePoint welfarePoint = welfarePointRepository.findByUserUuidAndYear(userUuid, currentYear)
+                .orElse(null);
+
+            int welfarePoints = 0;
+            int mealAllowance = 280000;  // 식대는 별도 테이블 필요, 현재는 고정값
+
+            if (welfarePoint != null) {
+                welfarePoints = welfarePoint.getRemaining() != null ? welfarePoint.getRemaining() : 0;
+            }
+
+            return new ResolveResponse(
+                "Q14", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "welfare_points", welfarePoints,
+                    "meal_allowance", mealAllowance,
+                    "total_granted", welfarePoint != null ? welfarePoint.getTotalGranted() : 0,
+                    "total_used", welfarePoint != null ? welfarePoint.getTotalUsed() : 0
+                ),
+                List.of(),
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q14", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q14 handler: userId={}", userId, e);
+            return createErrorResponse("Q14", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
+    }
+
+    // ---------- Q15: 복지 포인트 사용 내역 조회 ----------
+    private ResolveResponse handleQ15(String userId, String periodStart, String periodEnd, String updatedAt) {
+        log.info("Q15 handler: userId={}", userId);
+
+        try {
+            UUID userUuid = UUID.fromString(userId);
+            int currentYear = java.time.Year.now().getValue();
+
+            // DB에서 복지 포인트 잔액 조회
+            WelfarePoint welfarePoint = welfarePointRepository.findByUserUuidAndYear(userUuid, currentYear)
+                .orElse(null);
+
+            // DB에서 복지 포인트 사용 내역 조회
+            List<WelfarePointUsage> usageList = welfarePointUsageRepository.findByUserUuidAndYear(userUuid, currentYear);
+
+            // 사용 건수
+            Long usageCount = welfarePointUsageRepository.countByUserUuidAndYear(userUuid, currentYear);
+            if (usageCount == null) usageCount = 0L;
+
+            // metrics 구성
+            int totalGranted = welfarePoint != null ? welfarePoint.getTotalGranted() : 0;
+            int totalUsed = welfarePoint != null ? welfarePoint.getTotalUsed() : 0;
+            int remaining = welfarePoint != null ? welfarePoint.getRemaining() : 0;
+
+            // items 생성
+            List<Object> items = new ArrayList<>();
+            for (WelfarePointUsage usage : usageList) {
+                String dateStr = usage.getUsageDate() != null ? usage.getUsageDate().toString() : "";
+
+                items.add(new Q15UsageItem(
+                    usage.getCategory(),
+                    usage.getMerchant() != null ? usage.getMerchant() : "",
+                    usage.getAmount() != null ? usage.getAmount() : 0,
+                    dateStr,
+                    usage.getDescription() != null ? usage.getDescription() : ""
+                ));
+            }
+
+            return new ResolveResponse(
+                "Q15", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "total_granted", totalGranted,
+                    "total_used", totalUsed,
+                    "remaining", remaining,
+                    "usage_count", usageCount.intValue()
+                ),
+                items,
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q15", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q15 handler: userId={}", userId, e);
+            return createErrorResponse("Q15", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- Q18: 보안교육(특정 토픽) 완료 여부 ----------

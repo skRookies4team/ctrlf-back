@@ -166,6 +166,46 @@ public final class PersonalizationDtos {
         private int meal_allowance;
     }
 
+    // ---------- Q12: 연차 사용 이력 ----------
+    @Getter
+    @AllArgsConstructor
+    public static class Q12LeaveItem {
+        private String leave_type;   // 연차, 반차, 병가 등
+        private String start_date;   // YYYY-MM-DD
+        private String end_date;     // YYYY-MM-DD
+        private double days;         // 사용 일수
+        private String reason;       // 사유
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class Q12Metrics {
+        private int total_days;      // 총 연차
+        private double used_days;    // 사용 연차
+        private double remaining_days; // 남은 연차
+        private int usage_count;     // 사용 건수
+    }
+
+    // ---------- Q15: 복지 포인트 사용 내역 ----------
+    @Getter
+    @AllArgsConstructor
+    public static class Q15UsageItem {
+        private String category;     // 카테고리
+        private String merchant;     // 사용처
+        private int amount;          // 금액
+        private String date;         // YYYY-MM-DD
+        private String description;  // 설명
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class Q15Metrics {
+        private int total_granted;   // 총 지급액
+        private int total_used;      // 총 사용액
+        private int remaining;       // 잔액
+        private int usage_count;     // 사용 건수
+    }
+
     // ---------- Q20: 올해 HR 할 일 (미완료) ----------
     @Getter
     @AllArgsConstructor
