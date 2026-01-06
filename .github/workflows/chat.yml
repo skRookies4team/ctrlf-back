@@ -27,7 +27,7 @@ jobs:
 
       # 1. Gradle 빌드 (./ 를 붙여야 리눅스에서 실행됩니다)
       - name: Build with Gradle
-        run: ./gradlew :chat-service:build -x test --no-daemon --stacktrace
+        run: ./gradlew :chat-service:build -x test
 
       # 2. AWS 자격 증명 설정
       - name: Configure AWS credentials
