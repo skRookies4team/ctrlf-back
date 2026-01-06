@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -92,14 +91,22 @@ public class SourceSetService {
             req.educationId(),   // 필수
             req.videoId()        // 필수
         );
-        sourceSet = sourceSetRepository.save(sourceSet);
+        final SourceSet savedSourceSet = sourceSetRepository.save(sourceSet);
+
+        // EducationVideo에 sourceSetId 연결
+        videoRepository.findById(req.videoId()).ifPresent(video -> {
+            video.setSourceSetId(savedSourceSet.getId());
+            videoRepository.save(video);
+            log.info("EducationVideo에 sourceSetId 연결: videoId={}, sourceSetId={}", 
+                req.videoId(), savedSourceSet.getId());
+        });
 
         // 문서 관계 추가
         List<SourceSetDocument> documents = new ArrayList<>();
         for (String documentIdStr : req.documentIds()) {
             try {
                 UUID documentId = UUID.fromString(documentIdStr);
-                SourceSetDocument ssd = SourceSetDocument.create(sourceSet, documentId);
+                SourceSetDocument ssd = SourceSetDocument.create(savedSourceSet, documentId);
                 documents.add(ssd);
             } catch (IllegalArgumentException e) {
                 log.warn("잘못된 documentId 형식: {}", documentIdStr);
@@ -112,11 +119,11 @@ public class SourceSetService {
 
         // 소스셋 생성 후 AI 서버에 작업 시작 요청 (BestEffort)
         // 트랜잭션 커밋 후 실행하여 SourceSet이 DB에 확실히 저장된 후 AI 서버가 조회할 수 있도록 함
-        final UUID sourceSetId = sourceSet.getId();
-        final UUID educationId = sourceSet.getEducationId();
-        final UUID videoId = sourceSet.getVideoId();
+        final UUID sourceSetId = savedSourceSet.getId();
+        final UUID educationId = savedSourceSet.getEducationId();
+        final UUID videoId = savedSourceSet.getVideoId();
         final List<String> documentIdsForCallback = req.documentIds();
-        final String sourceSetTitle = sourceSet.getTitle();
+        final String sourceSetTitle = savedSourceSet.getTitle();
         final String departmentForCallback = department; // Education의 departmentScope에서 추출한 부서
         
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -153,8 +160,8 @@ public class SourceSetService {
         // 응답 생성
         List<String> documentIds = req.documentIds();
         return new SourceSetCreateResponse(
-            sourceSet.getId().toString(),
-            sourceSet.getStatus(),
+            savedSourceSet.getId().toString(),
+            savedSourceSet.getStatus(),
             documentIds
         );
     }
