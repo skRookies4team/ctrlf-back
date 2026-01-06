@@ -23,7 +23,7 @@
          educationTitle: "교육 제목",
          videoTitle: "영상 제목",
          status: "SCRIPT_REVIEW_REQUESTED" | "FINAL_REVIEW_REQUESTED",
-         reviewStage: "1차" | "2차",
+         reviewStage: "1차" | "2차" | "승인됨" | "1차 반려" | "2차 반려" | "반려됨" | "",
          creatorDepartment: "ESG팀",
          creatorName: "서제작",
          creatorUuid: "제작자 UUID",
@@ -53,6 +53,7 @@ status 값:
 ```
 
 **예시:**
+
 - 검토 대기: `GET /admin/videos/review-queue?status=pending`
 - 승인됨: `GET /admin/videos/review-queue?status=approved`
 - 반려됨: `GET /admin/videos/review-queue?status=rejected`
@@ -70,6 +71,7 @@ GET /admin/videos/review-queue?status=pending&search={검색어}&myProcessingOnl
 ```
 
 **검색 범위:**
+
 - 영상 제목
 - 교육 제목
 - 제작자 이름
@@ -88,7 +90,7 @@ GET /admin/videos/{videoId}/review-detail
     educationTitle: "교육 제목",
     videoTitle: "영상 제목",
     status: "SCRIPT_REVIEW_REQUESTED" | "FINAL_REVIEW_REQUESTED" | "PUBLISHED",
-    reviewStage: "1차" | "2차" | "승인됨" | "1차 반려" | "2차 반려",
+    reviewStage: "1차" | "2차" | "승인됨" | "1차 반려" | "2차 반려" | "반려됨" | "",
     creatorDepartment: "ESG팀",
     creatorName: "서제작",
     creatorUuid: "제작자 UUID",
@@ -157,6 +159,7 @@ PUT /admin/videos/{videoId}/approve
 ```
 
 **참고:**
+
 - 1차 승인 후 영상 생성이 가능해집니다.
 - 2차 승인 시 자동으로 PUBLISHED 상태가 되어 교육이 노출됩니다.
 
@@ -179,6 +182,7 @@ PUT /admin/videos/{videoId}/reject
 ```
 
 **참고:**
+
 - 반려 사유(reason)가 제공되면 `EducationVideoReview` 테이블에 저장됩니다.
 - 반려 단계(SCRIPT/VIDEO)도 함께 저장됩니다.
 
@@ -263,23 +267,39 @@ GET /admin/videos/review-stats
 ## 참고사항
 
 1. **상태 필터:**
+
    - `pending`: 검토 대기 상태 (`SCRIPT_REVIEW_REQUESTED`, `FINAL_REVIEW_REQUESTED`)
    - `approved`: 승인된 영상 (`PUBLISHED`)
    - `rejected`: 반려된 영상 (`EducationVideoReview`가 있는 영상)
 
 2. **검색 기능:**
+
    - 제목, 교육 제목, 제작자 이름, 제작자 부서로 검색 가능
    - 제작자 정보는 infra-service에서 실시간 조회
 
 3. **내 처리만 필터:**
+
    - `myProcessingOnly=true`일 때, 현재 검토자가 처리한 영상만 표시
    - `EducationVideoReview`에서 리뷰어 UUID로 필터링
 
 4. **1차/2차 구분:**
+
    - 1차: 스크립트 검토 (`SCRIPT_REVIEW_REQUESTED`)
    - 2차: 영상 검토 (`FINAL_REVIEW_REQUESTED`)
 
+4-1. **reviewStage 값 설명:**
+
+- `"1차"`: 1차 검토 대기 (SCRIPT_REVIEW_REQUESTED)
+- `"2차"`: 2차 검토 대기 (FINAL_REVIEW_REQUESTED)
+- `"승인됨"`: 승인 완료 (PUBLISHED)
+- `"1차 반려"`: 1차 검토 반려
+- `"2차 반려"`: 2차 검토 반려
+- `"반려됨"`: 반려됨 (단계 불명)
+- `""`: 없음 (빈공백) - 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우
+  - 예: DRAFT, SCRIPT_READY, SCRIPT_APPROVED, PROCESSING, READY, DISABLED 등
+
 5. **승인/반려 처리:**
+
    - 승인 시 상태가 자동으로 변경됨 (1차: `SCRIPT_APPROVED`, 2차: `PUBLISHED`)
    - 반려 시 반려 사유와 단계가 `EducationVideoReview`에 저장됨
 
@@ -291,4 +311,3 @@ GET /admin/videos/review-stats
 
 - [Video API 명세](../../video/api/video_api_spec.md)
 - [Education API 명세](../../education/api/education_api_spec.md)
-
