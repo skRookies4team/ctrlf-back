@@ -19,4 +19,17 @@ public class ChatAiResponse {
 
     @JsonProperty("model")
     private String model;
+
+    @JsonProperty("meta")
+    private Meta meta;
+
+    @Getter
+    @NoArgsConstructor
+    public static class Meta {
+        @JsonProperty("route")
+        private String route;
+
+        @JsonProperty("masked")
+        private Boolean masked;
+    }
 }

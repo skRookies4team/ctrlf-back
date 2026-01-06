@@ -27,15 +27,21 @@ import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueResponse;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewStatsResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
+import com.ctrlf.education.video.dto.VideoDtos.LastVideoProgressResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
+import com.ctrlf.education.video.entity.EducationVideoProgress;
 import com.ctrlf.education.video.entity.EducationVideoReview;
 import com.ctrlf.education.video.entity.RejectionStage;
 import com.ctrlf.education.video.entity.VideoGenerationJob;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
 import com.ctrlf.education.video.repository.EducationVideoReviewRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
-import com.ctrlf.common.constant.Department;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.ctrlf.education.video.repository.SourceSetRepository;
+import com.ctrlf.education.video.repository.SourceSetDocumentRepository;
+import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
+import com.ctrlf.education.video.entity.SourceSet;
+import com.ctrlf.education.video.entity.SourceSetDocument;
+import com.ctrlf.education.script.client.InfraRagClient;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -84,9 +90,49 @@ public class VideoService {
     private final EducationRepository educationRepository;
     private final VideoAiClient videoAiClient;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final SourceSetRepository sourceSetRepository;
+    private final SourceSetDocumentRepository sourceSetDocumentRepository;
+    private final EducationVideoProgressRepository videoProgressRepository;
+    private final InfraRagClient infraRagClient;
 
     @Value("${ctrlf.infra.base-url:http://localhost:9003}")
     private String infraBaseUrl;
+
+    /**
+     * infra-service에서 사규 검토 중인 문서 카운트 조회.
+     * 
+     * @return 검토 중인 사규 카운트 (조회 실패 시 0)
+     */
+    private long fetchDocumentCountFromInfraService() {
+        try {
+            RestClient restClient = RestClient.builder()
+                .baseUrl(infraBaseUrl.endsWith("/") ? infraBaseUrl.substring(0, infraBaseUrl.length() - 1) : infraBaseUrl)
+                .build();
+            
+            // 사규 검토 중인 문서(PENDING 상태)만 카운트
+            // PageResponse의 total 필드를 사용하여 효율적으로 카운트 조회
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restClient.get()
+                .uri("/rag/documents/policies?status=PENDING&page=0&size=1")
+                .retrieve()
+                .body(Map.class);
+            
+            if (response == null) {
+                return 0L;
+            }
+            
+            // PageResponse의 total 필드 추출
+            Object totalObj = response.get("total");
+            if (totalObj instanceof Number) {
+                return ((Number) totalObj).longValue();
+            }
+            
+            return 0L;
+        } catch (Exception e) {
+            log.warn("infra-service에서 사규 검토 중인 문서 카운트 조회 실패: error={}", e.getMessage());
+            return 0L;
+        }
+    }
 
     /**
      * infra-service에서 사용자 정보 조회 (제작자 정보용).
@@ -193,7 +239,7 @@ public class VideoService {
                 log.info("렌더 생성 요청 성공. jobId={}, videoId={}, scriptId={}, status={}",
                     renderResponse.jobId(), request.videoId(), request.scriptId(), renderResponse.status());
                 
-                // Job 상태를 PROCESSING으로 업데이트 (AI 서버가 RENDERING으로 응답했을 수도 있음)
+                // Job 상태를 PROCESSING으로 업데이트 (AI 서버가 PROCESSING으로 응답)
                 job.setStatus("PROCESSING");
                 jobRepository.save(job);
             } else {
@@ -263,6 +309,14 @@ public class VideoService {
      */
     @Transactional
     public VideoCompleteResponse handleVideoComplete(UUID jobId, VideoCompleteCallback callback) {
+        // body의 jobId와 path variable의 jobId 일치 검증
+        if (callback.jobId() != null && !callback.jobId().equals(jobId)) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Path variable의 jobId와 body의 jobId가 일치하지 않습니다: path=" + jobId + ", body=" + callback.jobId()
+            );
+        }
+
         VideoGenerationJob job = jobRepository.findById(jobId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job을 찾을 수 없습니다: " + jobId));
 
@@ -343,10 +397,16 @@ public class VideoService {
     }
 
     private JobItem toJobItem(VideoGenerationJob j) {
+        // jobId로 연결된 video 찾기
+        UUID videoId = videoRepository.findByGenerationJobId(j.getId())
+            .map(EducationVideo::getId)
+            .orElse(null);
+        
         return new JobItem(
             j.getId(),
             j.getScriptId(),
             j.getEducationId(),
+            videoId,
             j.getStatus(),
             j.getRetryCount(),
             j.getGeneratedVideoUrl(),
@@ -367,10 +427,6 @@ public class VideoService {
     @Transactional
     public VideoCreateResponse createVideoContent(VideoCreateRequest request, UUID creatorUuid) {
         EducationVideo video = EducationVideo.createDraft(request.educationId(), request.title(), creatorUuid);
-        if (request.departmentScope() != null && !request.departmentScope().isEmpty()) {
-            String deptScopeJson = convertDepartmentsToJson(request.departmentScope());
-            video.setDepartmentScope(deptScopeJson);
-        }
         video = videoRepository.save(video);
         log.info("영상 컨텐츠 생성. videoId={}, title={}, status={}, creatorUuid={}", video.getId(), video.getTitle(), video.getStatus(), creatorUuid);
         return new VideoCreateResponse(video.getId(), video.getStatus());
@@ -407,10 +463,6 @@ public class VideoService {
         if (request.version() != null) video.setVersion(request.version());
         if (request.duration() != null) video.setDuration(request.duration());
         if (request.status() != null) video.setStatus(request.status().name());
-        if (request.departmentScope() != null) {
-            String deptScopeJson = convertDepartmentsToJson(request.departmentScope());
-            video.setDepartmentScope(deptScopeJson);
-        }
         if (request.orderIndex() != null) video.setOrderIndex(request.orderIndex());
         video = videoRepository.save(video);
         log.info("영상 컨텐츠 수정. videoId={}, status={}", video.getId(), video.getStatus());
@@ -423,8 +475,25 @@ public class VideoService {
     @Transactional
     public void deleteVideoContent(UUID videoId) {
         findVideoOrThrow(videoId);
+        
+        // source_set에서 video_id 참조를 먼저 해제 (외래키 제약 조건 해결)
+        List<SourceSet> sourceSets = sourceSetRepository.findByVideoIdAndNotDeleted(videoId);
+        for (SourceSet sourceSet : sourceSets) {
+            sourceSet.setVideoId(null);
+            sourceSetRepository.save(sourceSet);
+            log.debug("SourceSet의 video_id 참조 해제. sourceSetId={}, videoId={}", sourceSet.getId(), videoId);
+        }
+        
+        // education_video_progress에서 video_id 참조 레코드 삭제
+        videoProgressRepository.deleteByVideoId(videoId);
+        log.debug("EducationVideoProgress 레코드 삭제. videoId={}", videoId);
+        
+        // education_video_review에서 video_id 참조 레코드 삭제
+        reviewRepository.deleteByVideoId(videoId);
+        log.debug("EducationVideoReview 레코드 삭제. videoId={}", videoId);
+        
         videoRepository.deleteById(videoId);
-        log.info("영상 컨텐츠 삭제. videoId={}", videoId);
+        log.info("영상 컨텐츠 삭제. videoId={}, 해제된 sourceSet 수={}", videoId, sourceSets.size());
     }
 
     /**
@@ -698,52 +767,6 @@ public class VideoService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "영상을 찾을 수 없습니다: " + videoId));
     }
 
-    /**
-     * List<Department>를 JSON 문자열로 변환합니다.
-     */
-    private String convertDepartmentsToJson(List<Department> departments) {
-        if (departments == null || departments.isEmpty()) {
-            return null;
-        }
-        try {
-            List<String> displayNames = departments.stream()
-                .map(Department::getDisplayName)
-                .collect(Collectors.toList());
-            return objectMapper.writeValueAsString(displayNames);
-        } catch (Exception e) {
-            log.error("부서 목록을 JSON으로 변환하는 중 오류 발생", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "부서 목록 변환 실패");
-        }
-    }
-
-    /**
-     * JSON 문자열을 List<Department>로 변환합니다.
-     */
-    private List<Department> convertJsonToDepartments(String deptScopeJson) {
-        if (deptScopeJson == null || deptScopeJson.isBlank()) {
-            return null;
-        }
-        try {
-            List<String> displayNames = objectMapper.readValue(deptScopeJson, new TypeReference<List<String>>() {});
-            if (displayNames == null || displayNames.isEmpty()) {
-                return null;
-            }
-            List<Department> departments = new ArrayList<>();
-            for (String displayName : displayNames) {
-                Department dept = Department.fromDisplayName(displayName);
-                if (dept != null) {
-                    departments.add(dept);
-                } else {
-                    log.warn("알 수 없는 부서명: {}", displayName);
-                }
-            }
-            return departments.isEmpty() ? null : departments;
-        } catch (Exception e) {
-            log.warn("부서 목록 JSON 파싱 실패: {}", deptScopeJson, e);
-            return null;
-        }
-    }
-
     private VideoMetaItem toVideoMetaItem(EducationVideo v) {
         VideoStatus status = null;
         if (v.getStatus() != null) {
@@ -753,7 +776,51 @@ public class VideoService {
                 log.warn("알 수 없는 영상 상태: {}, videoId={}", v.getStatus(), v.getId());
             }
         }
-        List<Department> departmentScope = convertJsonToDepartments(v.getDepartmentScope());
+        // Education에서 departmentScope 가져오기
+        List<String> departmentScope = null;
+        if (v.getEducationId() != null) {
+            Education education = educationRepository.findById(v.getEducationId()).orElse(null);
+            if (education != null && education.getDepartmentScope() != null) {
+                departmentScope = java.util.Arrays.stream(education.getDepartmentScope())
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toList());
+            }
+        }
+        
+        // SourceSet을 통해 documentId 조회하여 파일 정보 가져오기
+        String sourceFileName = null;
+        String sourceFileUrl = null;
+        if (v.getSourceSetId() != null) {
+            try {
+                // SourceSet의 첫 번째 문서 ID 가져오기
+                List<SourceSetDocument> documents = sourceSetDocumentRepository.findBySourceSetId(v.getSourceSetId());
+                if (!documents.isEmpty()) {
+                    UUID documentId = documents.get(0).getDocumentId();
+                    // infra-service에서 문서 정보 조회
+                    try {
+                        InfraRagClient.DocumentInfoResponse docInfo = infraRagClient.getDocument(documentId.toString());
+                        if (docInfo != null && docInfo.getSourceUrl() != null) {
+                            sourceFileUrl = docInfo.getSourceUrl();
+                            // sourceUrl에서 파일명 추출 (URL의 마지막 부분)
+                            String url = docInfo.getSourceUrl();
+                            if (url.contains("/")) {
+                                String fileName = url.substring(url.lastIndexOf("/") + 1);
+                                // 쿼리 파라미터 제거
+                                if (fileName.contains("?")) {
+                                    fileName = fileName.substring(0, fileName.indexOf("?"));
+                                }
+                                sourceFileName = fileName;
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.debug("문서 정보 조회 실패: documentId={}, error={}", documentId, e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("SourceSet 문서 조회 실패: sourceSetId={}, error={}", v.getSourceSetId(), e.getMessage());
+            }
+        }
+        
         return new VideoMetaItem(
             v.getId(),
             v.getEducationId(),
@@ -766,7 +833,9 @@ public class VideoService {
             status,
             departmentScope,
             v.getOrderIndex(),
-            v.getCreatedAt() != null ? v.getCreatedAt().toString() : null
+            v.getCreatedAt() != null ? v.getCreatedAt().toString() : null,
+            sourceFileName,
+            sourceFileUrl
         );
     }
 
@@ -778,7 +847,7 @@ public class VideoService {
      * 검토 목록 조회 (필터링, 정렬, 페이징).
      * 
      * @param statusFilter "pending" (검토 대기), "approved" (승인됨), "rejected" (반려됨), null (전체)
-     * @param reviewStage "first" (1차), "second" (2차), "document" (문서), null (전체)
+     * @param reviewStage "first" (1차), "second" (2차), null (전체)
      * @param sort "latest" (최신순), "oldest" (오래된순), "title" (제목순), null (최신순 기본값)
      */
     public ReviewQueueResponse getReviewQueue(
@@ -808,7 +877,7 @@ public class VideoService {
         final String reviewStageFilter = reviewStage; // 람다 내부에서 사용하기 위해 final 변수로 복사
         List<EducationVideo> filteredVideos = allVideos.stream()
             .filter(v -> {
-                // 검토 단계 필터 (1차/2차/문서)
+                // 검토 단계 필터 (1차/2차)
                 if (reviewStageFilter != null && !reviewStageFilter.isBlank()) {
                     if ("first".equals(reviewStageFilter)) {
                         // 1차 검토만
@@ -820,9 +889,6 @@ public class VideoService {
                         if (!"FINAL_REVIEW_REQUESTED".equals(v.getStatus())) {
                             return false;
                         }
-                    } else if ("document".equals(reviewStageFilter)) {
-                        // 문서 타입 (현재는 모든 영상을 문서로 간주, 추후 확장 가능)
-                        // TODO: 문서 타입 구분 로직 추가 필요
                     }
                 }
                 
@@ -965,7 +1031,7 @@ public class VideoService {
         // 통계 계산 (검토 대기 상태일 때만)
         long firstRoundCount = 0;
         long secondRoundCount = 0;
-        long documentCount = allVideos.size();
+        long documentCount = fetchDocumentCountFromInfraService();
         
         if (statusFilter == null || "pending".equals(statusFilter)) {
             firstRoundCount = allVideos.stream()
@@ -1094,6 +1160,7 @@ public class VideoService {
         return new AuditHistoryResponse(
             videoId,
             video.getTitle(),
+            video.getScriptId(),
             history
         );
     }
@@ -1151,6 +1218,52 @@ public class VideoService {
             education != null && education.getEduType() != null ? education.getEduType().name() : "",
             video.getScriptId(),
             scriptVersion
+        );
+    }
+
+    // ========================
+    // 마지막 시청 영상 조회 (Q4 이어보기용)
+    // ========================
+
+    /**
+     * 사용자의 마지막 시청 영상 정보를 조회합니다 (이어보기용).
+     *
+     * @param userUuid 사용자 UUID
+     * @return 마지막 시청 영상 정보 (없으면 null)
+     */
+    @Transactional(readOnly = true)
+    public LastVideoProgressResponse getLastVideoProgress(UUID userUuid) {
+        List<EducationVideoProgress> progressList = videoProgressRepository.findLatestByUserUuid(userUuid);
+
+        if (progressList.isEmpty()) {
+            log.debug("No video progress found for user: {}", userUuid);
+            return null;
+        }
+
+        // 가장 최근 시청 기록
+        EducationVideoProgress progress = progressList.get(0);
+
+        // 영상 정보 조회
+        EducationVideo video = videoRepository.findById(progress.getVideoId()).orElse(null);
+        if (video == null) {
+            log.warn("Video not found for progress: videoId={}", progress.getVideoId());
+            return null;
+        }
+
+        // 교육 정보 조회
+        Education education = educationRepository.findById(progress.getEducationId()).orElse(null);
+
+        log.info("Found last video progress: userUuid={}, educationId={}, videoId={}, position={}",
+            userUuid, progress.getEducationId(), progress.getVideoId(), progress.getLastPositionSeconds());
+
+        return new LastVideoProgressResponse(
+            progress.getEducationId().toString(),
+            progress.getVideoId().toString(),
+            education != null ? education.getTitle() : "",
+            video.getTitle(),
+            progress.getLastPositionSeconds(),
+            progress.getProgress(),
+            video.getDuration()
         );
     }
 }

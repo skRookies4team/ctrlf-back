@@ -2,9 +2,11 @@ package com.ctrlf.infra.rag.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * RAG 관련 요청/응답 DTO 모음.
@@ -252,6 +254,369 @@ public final class RagDtos {
     public static class FailChunksBulkUpsertResponse {
         private boolean saved;
         private int savedCount;
+    }
+
+    // ---------- Policy Management ----------
+    /**
+     * 사규 목록 조회 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class PolicyListItem {
+        private String id;  // 첫 번째 버전의 UUID (PK)
+        private String documentId;
+        private String title;
+        private String domain;
+        private java.util.List<VersionSummary> versions;
+        private int totalVersions;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class VersionSummary {
+        private Integer version;
+        private String status;
+        private String createdAt;
+    }
+
+    /**
+     * 사규 상세 조회 응답 DTO (document_id 기준).
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class PolicyDetailResponse {
+        private String documentId;
+        private String title;
+        private String domain;
+        private java.util.List<VersionDetail> versions;
+    }
+
+    /**
+     * 버전별 상세 조회 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class VersionDetail {
+        private String id; // UUID
+        private String documentId;
+        private String title;
+        private String domain;
+        private Integer version;
+        private String status;
+        private String changeSummary;
+        private String sourceUrl;
+        private String uploaderUuid;
+        private String createdAt;
+        private String processedAt;
+        // 전처리 관련 필드
+        private String preprocessStatus; // "IDLE", "PROCESSING", "READY", "FAILED"
+        private String preprocessError;
+        // 검토 관련 필드
+        private String reviewRequestedAt;
+        private String reviewItemId;
+        // 반려 관련 필드
+        private String rejectReason;
+        private String rejectedAt;
+        // 부서 범위
+        private String department;
+    }
+
+    /**
+     * 새 사규 생성 요청 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class CreatePolicyRequest {
+        @NotBlank
+        @Schema(example = "POL-EDU-015")
+        private String documentId;
+
+        @NotBlank
+        @Schema(example = "교육/퀴즈 운영 정책")
+        private String title;
+
+        @NotBlank
+        @Schema(example = "EDU")
+        private String domain;
+
+        @Schema(example = "s3://ctrl-s3/docs/hr_safety_v3.pdf")
+        private String fileUrl;
+
+        @Schema(example = "초기 사규 등록")
+        private String changeSummary;
+
+        @Schema(example = "개발팀", description = "부서 범위 (전체 부서, 총무팀, 기획팀, 마케팅팀, 인사팀, 재무팀, 개발팀, 영업팀, 법무팀)")
+        private String department;
+    }
+
+    /**
+     * 새 사규 생성 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class CreatePolicyResponse {
+        private String id; // UUID
+        private String documentId;
+        private String title;
+        private Integer version;
+        private String status;
+        private String createdAt;
+    }
+
+    /**
+     * 새 버전 생성 요청 DTO.
+     */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class CreateVersionRequest {
+        @Schema(example = "s3://ctrl-s3/docs/policy_v2.pdf")
+        private String fileUrl;
+
+        @Schema(example = "퀴즈 리포트 및 배포 캘린더 추가")
+        private String changeSummary;
+
+        @Schema(example = "직장내괴롭힘 예방 교육", description = "문서 제목 (옵션, 없으면 최신 버전의 제목 사용)")
+        private String title;
+
+        @Schema(example = "2", description = "버전 번호 (옵션, 없으면 자동 증가)")
+        private Integer version;
+
+        @Schema(example = "개발팀", description = "부서 범위 (전체 부서, 총무팀, 기획팀, 마케팅팀, 인사팀, 재무팀, 개발팀, 영업팀, 법무팀)")
+        private String department;
+    }
+
+    /**
+     * 새 버전 생성 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class CreateVersionResponse {
+        private String id; // UUID
+        private String documentId;
+        private Integer version;
+        private String status;
+        private String createdAt;
+    }
+
+    /**
+     * 버전 수정 요청 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class UpdateVersionRequest {
+        @Schema(example = "교육/퀴즈 운영 정책")
+        private String title;
+
+        @Schema(example = "퀴즈 리포트(오답 분석/재학습) 및 배포 캘린더 추가(초안)")
+        private String changeSummary;
+
+        @Schema(example = "s3://ctrl-s3/docs/policy_v2_updated.pdf")
+        private String fileUrl;
+    }
+
+    /**
+     * 버전 수정 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class UpdateVersionResponse {
+        private String id;
+        private String documentId;
+        private Integer version;
+        private String status;
+        private String updatedAt;
+    }
+
+    /**
+     * 상태 변경 요청 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class UpdateStatusRequest {
+        @NotBlank
+        @Schema(example = "ACTIVE", description = "ACTIVE, DRAFT, PENDING, ARCHIVED")
+        private String status;
+    }
+
+    /**
+     * 상태 변경 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class UpdateStatusResponse {
+        private String id;
+        private String documentId;
+        private Integer version;
+        private String status;
+        private String updatedAt;
+    }
+
+    /**
+     * 검토 승인 요청 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class ApproveReviewRequest {
+        // 승인은 사유가 필요 없을 수 있지만, 향후 확장을 위해 빈 DTO로 유지
+    }
+
+    /**
+     * 검토 반려 요청 DTO.
+     */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class RejectReviewRequest {
+        @NotBlank
+        @Schema(example = "내용이 불충분합니다.", description = "반려 사유 (필수)")
+        private String reason;
+    }
+
+    /**
+     * 검토 승인/반려 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class ReviewResponse {
+        private String id;
+        private String documentId;
+        private Integer version;
+        private String status;
+        private String rejectReason;
+        private String rejectedAt;
+        private String updatedAt;
+    }
+
+    /**
+     * 파일 업로드/교체 요청 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class ReplaceFileRequest {
+        @NotBlank
+        @Schema(example = "s3://ctrl-s3/docs/policy_v2_new.pdf")
+        private String fileUrl;
+    }
+
+    /**
+     * 파일 업로드/교체 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class ReplaceFileResponse {
+        private String id;
+        private String documentId;
+        private Integer version;
+        private String sourceUrl;
+        private String updatedAt;
+    }
+
+    // ---------- Internal API: Update Document Status (AI → Backend) ----------
+    /**
+     * 사규 상태 업데이트 요청 DTO (내부 API - AI → Backend).
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class InternalUpdateStatusRequest {
+        @NotBlank
+        @Schema(example = "COMPLETED", description = "PROCESSING | COMPLETED | FAILED")
+        private String status;
+
+        @Schema(example = "2025-12-29T12:34:56Z", description = "처리 완료 시각 (ISO-8601)")
+        private String processedAt;
+
+        @Schema(example = "임베딩 처리 실패", description = "실패 사유 (status가 FAILED인 경우)")
+        private String failReason;
+
+        @Schema(example = "3", description = "문서 버전")
+        private Integer version;
+
+        @Schema(example = "POL-EDU-015", description = "문서 ID")
+        private String documentId;
+
+        @Schema(description = "Milvus에서 조회한 문서 전체 텍스트 (임베딩 완료 후)")
+        private String content;
+    }
+
+    /**
+     * 사규 상태 업데이트 응답 DTO (내부 API).
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class InternalUpdateStatusResponse {
+        private String id; // UUID
+        private String documentId;
+        private Integer version;
+        private String status;
+        private String processedAt;
+        private String updatedAt;
+    }
+
+    // ---------- Preprocess API ----------
+
+    /**
+     * 전처리 미리보기 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class PreprocessPreviewResponse {
+        private String preprocessStatus; // "IDLE", "PROCESSING", "READY", "FAILED"
+        private Integer preprocessPages;
+        private Integer preprocessChars;
+        private String preprocessExcerpt;
+        private String preprocessError;
+        @Schema(description = "Milvus에서 조회한 문서 전체 텍스트 (임베딩 완료 후 원문)")
+        private String content;
+    }
+
+    /**
+     * 전처리 재시도 요청 DTO.
+     */
+    @Getter
+    @NoArgsConstructor
+    public static class RetryPreprocessRequest {
+        // 재시도 요청에는 특별한 필드가 필요 없음
+    }
+
+    /**
+     * 전처리 재시도 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class RetryPreprocessResponse {
+        private String documentId;
+        private Integer version;
+        private String preprocessStatus; // "PROCESSING"
+        private String message;
+    }
+
+    // ---------- History API ----------
+
+    /**
+     * 히스토리 항목 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class HistoryItem {
+        private String id; // UUID
+        private String documentId;
+        private Integer version;
+        private String action;
+        private String actor;
+        private String message;
+        private String createdAt; // ISO-8601
+    }
+
+    /**
+     * 히스토리 조회 응답 DTO.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class HistoryResponse {
+        private String documentId;
+        private Integer version;
+        private List<HistoryItem> items;
     }
 }
 

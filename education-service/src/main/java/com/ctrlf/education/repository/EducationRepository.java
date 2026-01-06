@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Modifying;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
  * 목록 조회를 위한 네이티브 쿼리를 포함합니다.
  */
 public interface EducationRepository extends JpaRepository<Education, UUID> {
+
+    /**
+     * 삭제되지 않은 교육 조회.
+     */
+    @Query("SELECT e FROM Education e WHERE e.id = :id AND e.deletedAt IS NULL")
+    Optional<Education> findByIdAndDeletedAtIsNull(@Param("id") UUID id);
 
 
     /**

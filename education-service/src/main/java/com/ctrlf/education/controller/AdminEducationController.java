@@ -12,6 +12,12 @@ import com.ctrlf.education.repository.EducationRepository;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
 import com.ctrlf.education.video.entity.EducationVideo;
 import com.ctrlf.education.video.repository.EducationVideoRepository;
+import com.ctrlf.education.video.repository.SourceSetRepository;
+import com.ctrlf.education.video.repository.SourceSetDocumentRepository;
+import com.ctrlf.education.video.entity.SourceSetDocument;
+import com.ctrlf.education.script.client.InfraRagClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -51,18 +57,29 @@ import org.springframework.web.bind.annotation.RestController;
 // @PreAuthorize("hasRole('SYSTEM_ADMIN')") 추후 추가
 public class AdminEducationController {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminEducationController.class);
+
     private final EducationService educationService;
     private final EducationRepository educationRepository;
     private final EducationVideoRepository educationVideoRepository;
+    private final SourceSetRepository sourceSetRepository;
+    private final SourceSetDocumentRepository sourceSetDocumentRepository;
+    private final InfraRagClient infraRagClient;
 
     public AdminEducationController(
         EducationService educationService,
         EducationRepository educationRepository,
-        EducationVideoRepository educationVideoRepository
+        EducationVideoRepository educationVideoRepository,
+        SourceSetRepository sourceSetRepository,
+        SourceSetDocumentRepository sourceSetDocumentRepository,
+        InfraRagClient infraRagClient
     ) {
         this.educationService = educationService;
         this.educationRepository = educationRepository;
         this.educationVideoRepository = educationVideoRepository;
+        this.sourceSetRepository = sourceSetRepository;
+        this.sourceSetDocumentRepository = sourceSetDocumentRepository;
+        this.infraRagClient = infraRagClient;
     }
 
     @PostMapping("/edu")
@@ -82,7 +99,10 @@ public class AdminEducationController {
                             "  \"eduType\": \"MANDATORY\",\n" +
                             "  \"passScore\": 80,\n" +
                             "  \"passRatio\": 90,\n" +
-                            "  \"require\": true\n" +
+                            "  \"require\": true,\n" +
+                            "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                            "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                            "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"]\n" +
                             "}"
                 )
             )
@@ -134,6 +154,9 @@ public class AdminEducationController {
                                 "  \"passScore\": 80,\n" +
                                 "  \"passRatio\": 90,\n" +
                                 "  \"duration\": 3600,\n" +
+                                "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                                "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                                "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"],\n" +
                                 "  \"createdAt\": \"2025-12-17T10:00:00Z\",\n" +
                                 "  \"updatedAt\": \"2025-12-17T10:00:00Z\",\n" +
                                 "  \"sections\": []\n" +
@@ -169,7 +192,10 @@ public class AdminEducationController {
                             "  \"eduType\": \"MANDATORY\",\n" +
                             "  \"passScore\": 85,\n" +
                             "  \"passRatio\": 95,\n" +
-                            "  \"require\": true\n" +
+                            "  \"require\": true,\n" +
+                            "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                            "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                            "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"]\n" +
                             "}"
                 )
             )
@@ -253,6 +279,9 @@ public class AdminEducationController {
                         value = "[{\n" +
                                 "  \"id\": \"2c2f8c7a-8a2c-4f3a-9d2b-111111111111\",\n" +
                                 "  \"title\": \"산업안전 교육\",\n" +
+                                "  \"startAt\": \"2024-01-01T00:00:00Z\",\n" +
+                                "  \"endAt\": \"2024-12-31T23:59:59Z\",\n" +
+                                "  \"departmentScope\": [\"전체 부서\", \"총무팀\", \"기획팀\", \"마케팅팀\", \"인사팀\", \"재무팀\", \"개발팀\", \"영업팀\", \"법무팀\"],\n" +
                                 "  \"videos\": [\n" +
                                 "    {\n" +
                                 "      \"id\": \"3d3f8c7a-8a2c-4f3a-9d2b-222222222222\",\n" +
@@ -284,23 +313,97 @@ public class AdminEducationController {
             }
             List<EducationVideosResponse.VideoItem> items = new ArrayList<>();
             for (EducationVideo v : videos) {
+                // SourceSet을 통해 documentId 조회하여 파일 정보 가져오기
+                String sourceFileName = null;
+                String sourceFileUrl = null;
+                // log.info("sourceSetId: {}", v.getSourceSetId());
+
+                if (v.getSourceSetId() != null) {
+                    try {
+                        // SourceSet의 첫 번째 문서 ID 가져오기
+                        List<SourceSetDocument> documents = sourceSetDocumentRepository.findBySourceSetId(v.getSourceSetId());
+                        if (!documents.isEmpty()) {
+                            UUID documentId = documents.get(0).getDocumentId();
+                            // infra-service에서 문서 정보 조회
+
+                            try {
+                                InfraRagClient.DocumentInfoResponse docInfo = infraRagClient.getDocument(documentId.toString());
+                                log.info("11111");
+                                log.info("docInfo.getSourceUrl(): {}", docInfo.getSourceUrl());
+
+                                if (docInfo != null && docInfo.getSourceUrl() != null) {
+                                    sourceFileUrl = docInfo.getSourceUrl();
+                                    // sourceUrl에서 파일명 추출 (URL의 마지막 부분)
+                                    String url = docInfo.getSourceUrl();
+                                    if (url.contains("/")) {
+                                        String fileName = url.substring(url.lastIndexOf("/") + 1);
+                                        // 쿼리 파라미터 제거
+                                        if (fileName.contains("?")) {
+                                            fileName = fileName.substring(0, fileName.indexOf("?"));
+                                        }
+                                        sourceFileName = fileName;
+                                    }
+                                } else {
+                                    
+                                    // log.info("문서 정보가 null이거나 sourceUrl이 null: videoId={}, documentId={}, docInfo={}", 
+                                    //     v.getId(), documentId, docInfo != null ? "not null" : "null");
+                                }
+                            } catch (Exception ex) {
+                                // 에러 메시지가 너무 길 경우 간단히 처리
+                                String errorMsg = ex.getClass().getSimpleName();
+                                String detailMsg = ex.getMessage();
+                                if (detailMsg != null) {
+                                    // "404 Not Found" 같은 간단한 메시지만 추출
+                                    if (detailMsg.contains("404")) {
+                                        errorMsg = "404 Not Found";
+                                    } else if (detailMsg.length() > 100) {
+                                        errorMsg = errorMsg + ": " + detailMsg.substring(0, 100) + "...";
+                                    } else {
+                                        errorMsg = errorMsg + ": " + detailMsg;
+                                    }
+                                }
+                                log.info("문서 정보 조회 실패: videoId={}, documentId={}, error={}", 
+                                    v.getId(), documentId, errorMsg);
+                            }
+                        } else {
+                            log.info("SourceSet에 문서가 없음333: videoId={}, sourceSetId={}", v.getId(), v.getSourceSetId());
+                        }
+                    } catch (Exception ex) {
+                        log.info("SourceSet 문서 조회 실패: videoId={}", 
+                            v.getId());
+
+
+                        // log.info("SourceSet 문서 조회 실패: videoId={}, sourceSetId={}, error={}", 
+                        //     v.getId(), v.getSourceSetId(), ex.getMessage());
+                    }
+                } else {
+                    log.info("EducationVideo에 sourceSetId가 없음: videoId={}", v.getId());
+                }
+
                 items.add(new EducationVideosResponse.VideoItem(
                     v.getId(),
                     v.getTitle(),
                     v.getFileUrl(),
                     v.getDuration() != null ? v.getDuration() : 0,
                     v.getVersion() != null ? v.getVersion() : 1,
-                    v.getDepartmentScope(),
+                    v.getStatus(),
+                    e.getDepartmentScope(),
+                    // 사용자 별 데이터라 null로 표시
                     null, // resumePosition
                     null, // isCompleted
                     null, // totalWatchSeconds
                     null, // progressPercent
-                    null  // watchStatus
+                    null, // watchStatus
+                    sourceFileName, // sourceFileName
+                    sourceFileUrl   // sourceFileUrl
                 ));
             }
             result.add(EducationVideosResponse.builder()
                 .id(e.getId())
                 .title(e.getTitle())
+                .startAt(e.getStartAt())
+                .endAt(e.getEndAt())
+                .departmentScope(e.getDepartmentScope())
                 .videos(items)
                 .build());
         }

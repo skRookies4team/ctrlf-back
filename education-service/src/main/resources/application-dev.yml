@@ -18,4 +18,4 @@ app:
       base-url: http://localhost:8000
       token: "" # 내부 호출 토큰 (필요시 설정)
   infra:
-    base-url: http://infra-service:9003 # infra-service 베이스 URL
+    base-url: http://localhost:9003 # infra-service 베이스 URL

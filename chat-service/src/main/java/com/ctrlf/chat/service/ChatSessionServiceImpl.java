@@ -36,6 +36,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         session.setTitle(request.title());
         session.setDomain(request.domain());
         session.setUserUuid(request.userUuid());
+        // 모델은 Frontend에서 POST /api/chat/sessions/{sessionId}/model로 설정
 
         ChatSession saved = chatSessionRepository.save(session);
 
@@ -155,6 +156,44 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             session.getId(),
             session.getTitle(),
             messages
+        );
+    }
+
+    @Override
+    public void setSessionModel(UUID sessionId, String model) {
+        ChatSession session = chatSessionRepository.findActiveById(sessionId);
+        if (session == null) {
+            throw new ChatSessionNotFoundException();
+        }
+
+        // Backend는 모델 값을 검증하고 그대로 저장 (해석하지 않음)
+        session.setEmbeddingModel(model);
+        log.debug(
+            "세션 모델 설정: sessionId={}, model={}",
+            sessionId,
+            model
+        );
+    }
+
+    @Override
+    public void setSessionLlmModel(UUID sessionId, String llmModel) {
+        ChatSession session = chatSessionRepository.findActiveById(sessionId);
+        if (session == null) {
+            throw new ChatSessionNotFoundException();
+        }
+
+        // 유효한 LLM 모델 값 검증
+        if (llmModel != null && !llmModel.equals("exaone") && !llmModel.equals("openai")) {
+            throw new IllegalArgumentException(
+                "유효하지 않은 LLM 모델입니다: " + llmModel + " (허용값: exaone, openai)"
+            );
+        }
+
+        session.setLlmModel(llmModel);
+        log.debug(
+            "세션 LLM 모델 설정: sessionId={}, llmModel={}",
+            sessionId,
+            llmModel
         );
     }
 }

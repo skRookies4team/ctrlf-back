@@ -2,6 +2,7 @@ package com.ctrlf.chat;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 
 /**
  * Chat Service 애플리케이션 메인 클래스
@@ -13,6 +14,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 1.0.0
  */
 @SpringBootApplication
+@EntityScan(basePackages = {"com.ctrlf.chat", "com.ctrlf.chat.telemetry"})
 public class ChatServiceApplication {
     
     /**

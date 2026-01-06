@@ -51,7 +51,7 @@ public class S3Controller {
     @PostMapping("/download")
     @Operation(summary = "Presigned GET URL 발급")
     public ResponseEntity<DownloadResponse> presignDownload(@Valid @RequestBody DownloadRequest req) {
-        // 다운로드용 사인드 URL 생성
+        // 다운로드용 사인드 URL 생성 (설정 파일의 downloadTtlSeconds 사용)
         URL getUrl = presignService.presignDownload(req.getFileUrl());
         return ResponseEntity.ok(new DownloadResponse(getUrl.toString()));
     }

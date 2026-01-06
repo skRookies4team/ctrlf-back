@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -72,11 +71,16 @@ public class SourceSetService {
                 "영상을 찾을 수 없습니다: " + req.videoId());
         }
 
-        // educationId 유효성 검증 (필수)
-        if (!educationRepository.existsById(req.educationId())) {
-            throw new ResponseStatusException(
+        // educationId 유효성 검증 및 Education 조회 (필수)
+        com.ctrlf.education.entity.Education education = educationRepository.findById(req.educationId())
+            .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
-                "교육을 찾을 수 없습니다: " + req.educationId());
+                "교육을 찾을 수 없습니다: " + req.educationId()));
+        
+        // Education의 departmentScope에서 첫 번째 부서 추출
+        String department = null;
+        if (education.getDepartmentScope() != null && education.getDepartmentScope().length > 0) {
+            department = education.getDepartmentScope()[0];
         }
 
         // 소스셋 생성 (requestedBy는 JWT에서 추출한 userUuid 사용)
@@ -87,14 +91,22 @@ public class SourceSetService {
             req.educationId(),   // 필수
             req.videoId()        // 필수
         );
-        sourceSet = sourceSetRepository.save(sourceSet);
+        final SourceSet savedSourceSet = sourceSetRepository.save(sourceSet);
+
+        // EducationVideo에 sourceSetId 연결
+        videoRepository.findById(req.videoId()).ifPresent(video -> {
+            video.setSourceSetId(savedSourceSet.getId());
+            videoRepository.save(video);
+            log.info("EducationVideo에 sourceSetId 연결: videoId={}, sourceSetId={}", 
+                req.videoId(), savedSourceSet.getId());
+        });
 
         // 문서 관계 추가
         List<SourceSetDocument> documents = new ArrayList<>();
         for (String documentIdStr : req.documentIds()) {
             try {
                 UUID documentId = UUID.fromString(documentIdStr);
-                SourceSetDocument ssd = SourceSetDocument.create(sourceSet, documentId);
+                SourceSetDocument ssd = SourceSetDocument.create(savedSourceSet, documentId);
                 documents.add(ssd);
             } catch (IllegalArgumentException e) {
                 log.warn("잘못된 documentId 형식: {}", documentIdStr);
@@ -107,11 +119,12 @@ public class SourceSetService {
 
         // 소스셋 생성 후 AI 서버에 작업 시작 요청 (BestEffort)
         // 트랜잭션 커밋 후 실행하여 SourceSet이 DB에 확실히 저장된 후 AI 서버가 조회할 수 있도록 함
-        final UUID sourceSetId = sourceSet.getId();
-        final UUID educationId = sourceSet.getEducationId();
-        final UUID videoId = sourceSet.getVideoId();
+        final UUID sourceSetId = savedSourceSet.getId();
+        final UUID educationId = savedSourceSet.getEducationId();
+        final UUID videoId = savedSourceSet.getVideoId();
         final List<String> documentIdsForCallback = req.documentIds();
-        final String sourceSetTitle = sourceSet.getTitle();
+        final String sourceSetTitle = savedSourceSet.getTitle();
+        final String departmentForCallback = department; // Education의 departmentScope에서 추출한 부서
         
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -134,7 +147,7 @@ public class SourceSetService {
                         // 트랜잭션 밖에서 실행되므로 SourceSet을 다시 조회
                         SourceSet sourceSetAfterCommit = sourceSetRepository.findByIdAndNotDeleted(sourceSetId)
                             .orElseThrow(() -> new IllegalStateException("SourceSet not found after commit: " + sourceSetId));
-                        startSourceSetProcessing(sourceSetId, sourceSetAfterCommit, documentIdsForCallback);
+                        startSourceSetProcessing(sourceSetId, sourceSetAfterCommit, documentIdsForCallback, departmentForCallback);
                     } catch (Exception e) {
                         log.warn("소스셋 작업 시작 요청 실패 (소스셋은 생성됨): sourceSetId={}, error={}", 
                             sourceSetId, e.getMessage(), e);
@@ -147,8 +160,8 @@ public class SourceSetService {
         // 응답 생성
         List<String> documentIds = req.documentIds();
         return new SourceSetCreateResponse(
-            sourceSet.getId().toString(),
-            sourceSet.getStatus(),
+            savedSourceSet.getId().toString(),
+            savedSourceSet.getStatus(),
             documentIds
         );
     }
@@ -162,16 +175,19 @@ public class SourceSetService {
      *   <li>datasetId, indexVersion, ingestId 제거: Spring이 미리 알 수 없음</li>
      *   <li>scriptJobId, domain, language 제거: 스펙에서 제거됨</li>
      *   <li>educationId 추가: SourceSet에서 가져옴</li>
+     *   <li>department 추가: JWT에서 추출한 부서 정보</li>
      * </ul>
      * 
      * @param sourceSetId 소스셋 ID
      * @param sourceSet 소스셋 엔티티
      * @param documentIds 문서 ID 목록 (사용하지 않음, 참고용)
+     * @param department 요청자 부서 (JWT에서 추출, 선택)
      */
     private void startSourceSetProcessing(
         UUID sourceSetId,
         SourceSet sourceSet,
-        List<String> documentIds
+        List<String> documentIds,
+        String department
     ) {
         // videoId 사용: SourceSet에 저장된 videoId 사용 (필수)
         String videoId = sourceSet.getVideoId().toString();
@@ -189,7 +205,8 @@ public class SourceSetService {
             requestId,   // requestId (멱등 키)
             traceId,     // traceId
             null,        // scriptPolicyId (선택)
-            null         // llmModelHint (선택)
+            null,        // llmModelHint (선택)
+            department   // department (선택)
         );
 
         // 요청 로그 (전체 요청 body 포함)
@@ -353,11 +370,13 @@ public class SourceSetService {
                     ssd.getDocumentId().toString());
                 
                 if (docInfo != null) {
+                    // S3 URL을 presigned URL로 변환 (FastAPI/RAGFlow가 접근 가능하도록)
+                    String sourceUrl = infraRagClient.getPresignedDownloadUrl(docInfo.getSourceUrl());
                     documentItems.add(new InternalSourceSetDocumentsResponse.InternalDocumentItem(
                         docInfo.getId(),
                         docInfo.getTitle(),
                         docInfo.getDomain(),
-                        docInfo.getSourceUrl(),
+                        sourceUrl,
                         docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED"
                     ));
                 }
@@ -465,15 +484,65 @@ public class SourceSetService {
             });
         }
 
-        // 성공 시 스크립트 저장
+        // 성공 시 스크립트 저장 (전체 또는 패치)
         UUID scriptId = null;
+
+        // 모드 1: 씬별 패치 전송 (SCRIPT_GENERATING 상태)
+        if (callback.scriptPatch() != null) {
+            try {
+                UUID patchScriptId = scriptService.saveScriptPatchFromSourceSet(sourceSetId, callback.scriptPatch());
+                log.info("스크립트 패치 저장 성공: sourceSetId={}, scriptId={}, progress={}/{}",
+                    sourceSetId, patchScriptId,
+                    callback.scriptPatch().currentScene(),
+                    callback.scriptPatch().totalScenes());
+
+                // 패치 모드에서는 EducationVideo에 scriptId 연결 및 상태 업데이트
+                if (sourceSet.getVideoId() != null) {
+                    final UUID finalScriptId = patchScriptId;
+                    final int currentScene = callback.scriptPatch().currentScene();
+                    final int totalScenes = callback.scriptPatch().totalScenes();
+                    final boolean isComplete = currentScene >= totalScenes;
+                    
+                    videoRepository.findById(sourceSet.getVideoId()).ifPresent(video -> {
+                        // 첫 패치에서만 scriptId 설정
+                        if (video.getScriptId() == null) {
+                            video.setScriptId(finalScriptId);
+                            log.info("영상에 스크립트 연결 (패치 모드): videoId={}, scriptId={}",
+                                video.getId(), finalScriptId);
+                        }
+                        
+                        // 모든 씬이 완료되었는지 확인하여 상태 설정
+                        if (isComplete) {
+                            video.setStatus("SCRIPT_READY");
+                            log.info("스크립트 생성 완료 (패치 모드): videoId={}, progress={}/{}",
+                                video.getId(), currentScene, totalScenes);
+                        } else {
+                            video.setStatus("SCRIPT_GENERATING");
+                            log.debug("스크립트 생성 중 (패치 모드): videoId={}, progress={}/{}",
+                                video.getId(), currentScene, totalScenes);
+                        }
+                        videoRepository.save(video);
+                    });
+                }
+
+                return new SourceSetCompleteResponse(true, patchScriptId);
+            } catch (Exception e) {
+                log.error("스크립트 패치 저장 실패: sourceSetId={}, error={}",
+                    sourceSetId, e.getMessage(), e);
+                // 패치 저장 실패는 경고로 처리 (다음 패치에서 재시도 가능)
+                return new SourceSetCompleteResponse(false, null);
+            }
+        }
+
+        // 모드 2: 전체 스크립트 전송 (기존 로직)
+        // TODO 제거 예정
         if ("COMPLETED".equals(callback.status()) && callback.script() != null) {
             try {
                 scriptId = saveScriptFromCallback(sourceSet, callback.script());
-                log.info("소스셋 완료 콜백 처리 성공: sourceSetId={}, scriptId={}, status={}", 
+                log.info("소스셋 완료 콜백 처리 성공: sourceSetId={}, scriptId={}, status={}",
                     sourceSetId, scriptId, callback.sourceSetStatus());
             } catch (Exception e) {
-                log.error("스크립트 저장 실패: sourceSetId={}, error={}", 
+                log.error("스크립트 저장 실패: sourceSetId={}, error={}",
                     sourceSetId, e.getMessage(), e);
                 // 스크립트 저장 실패 시 에러 정보 저장
                 sourceSet.setStatus("FAILED");
@@ -486,7 +555,8 @@ public class SourceSetService {
                     String.format("스크립트 저장 실패: sourceSetId=%s, error=%s", sourceSetId, e.getMessage())
                 );
             }
-        } else {
+        } else if (callback.scriptPatch() == null) {
+            // scriptPatch도 없고 script도 없는 경우에만 실패 처리
             log.error(
                 "=== 소스셋 완료 콜백 처리 (실패): sourceSetId={}, status={}, sourceSetStatus={}, errorCode={}, errorMessage={}, documents={} ===",
                 sourceSetId, callback.status(), callback.sourceSetStatus(), 
@@ -653,7 +723,8 @@ public class SourceSetService {
             "COMPLETED", // status
             "SCRIPT_READY", // sourceSetStatus
             documentResults, // documents
-            script, // script
+            script, // script (전체 스크립트)
+            null, // scriptPatch (패치 모드 아님)
             null, // errorCode
             null, // errorMessage
             UUID.randomUUID(), // requestId

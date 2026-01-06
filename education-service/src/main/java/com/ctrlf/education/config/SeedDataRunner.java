@@ -2,6 +2,7 @@ package com.ctrlf.education.config;
 
 import com.ctrlf.education.entity.Education;
 import com.ctrlf.education.entity.EducationCategory;
+import com.ctrlf.education.entity.EducationProgress;
 import com.ctrlf.education.entity.EducationTopic;
 import com.ctrlf.education.repository.EducationRepository;
 import com.ctrlf.education.script.entity.EducationScript;
@@ -24,8 +25,10 @@ import com.ctrlf.education.quiz.entity.QuizQuestion;
 import com.ctrlf.education.quiz.repository.QuizAttemptRepository;
 import com.ctrlf.education.quiz.repository.QuizQuestionRepository;
 import com.ctrlf.education.quiz.repository.QuizLeaveTrackingRepository;
+import com.ctrlf.common.dto.PageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
@@ -44,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 로컬 개발용 시드 데이터 주입기.
- * 활성화: --spring.profiles.active=local,local-seed
+ * 활성화: --spring.profiles.active=dev,local-seed (또는 다른 프로파일과 함께 local-seed)
  */
 @Profile("local-seed")
 @Order(1)
@@ -70,6 +73,7 @@ public class SeedDataRunner implements CommandLineRunner {
     private final Random random = new Random();
     private final String infraBaseUrl;
     private final RestClient restClient;
+    private UUID seedDocumentId = null; // 시드 문서 ID 캐시
 
     public SeedDataRunner(
         EducationRepository educationRepository,
@@ -109,21 +113,29 @@ public class SeedDataRunner implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        clearAllEducationData();
-        
-        // infra-service를 통해 실제 Keycloak 유저 정보 가져오기
-        List<UserInfo> users = fetchUsersFromInfraService();
-        if (users.isEmpty()) {
-            log.warn("유저 데이터를 가져올 수 없어 시드 데이터 생성을 건너뜁니다.");
-            return;
+        try {
+            log.info("Starting seed data generation...");
+            clearAllEducationData();
+            
+            // infra-service를 통해 실제 Keycloak 유저 정보 가져오기 (필수)
+            List<UserInfo> users = fetchUsersFromInfraService();
+            if (users.isEmpty()) {
+                log.error("Failed to fetch user data from infra-service. Seed data generation requires at least one user. Aborting seed data generation.");
+                throw new IllegalStateException("#### Cannot generate seed data without user data. Please ensure infra-service is running and contains at least one enabled user.");
+            }
+            
+            log.info("Successfully fetched {} user(s) from infra-service. Proceeding with seed data generation.", users.size());
+            
+            // 유저 정보를 사용하여 모든 데이터 생성
+            seedScriptsAndJobs(users);
+            seedEducationsVideosAndProgress(users);
+            seedQuizData(users);
+            
+            log.info("Seed data generation completed successfully!");
+        } catch (Exception e) {
+            log.error("Failed to generate seed data: {}", e.getMessage(), e);
+            throw e; // 트랜잭션 롤백을 위해 예외를 다시 던짐
         }
-        
-        log.info("{} 명의 유저 정보를 가져왔습니다.", users.size());
-        
-        // 유저 정보를 사용하여 모든 데이터 생성
-        seedScriptsAndJobs(users);
-        seedEducationsVideosAndProgress(users);
-        seedQuizData(users);
     }
 
     /**
@@ -131,81 +143,101 @@ public class SeedDataRunner implements CommandLineRunner {
      * FK 관계로 인해 자식 테이블부터 삭제합니다.
      */
     private void clearAllEducationData() {
-        log.info("기존 교육 데이터 삭제 시작...");
+        log.info("Starting to delete existing education data...");
         
         // 1. 교육 진행 현황 삭제 (education_id FK 참조)
         educationProgressRepository.deleteAll();
-        log.info("교육 진행 현황 삭제 완료");
+        log.info("Education progress deleted");
         
         // 2. 영상 진행률 삭제
         educationVideoProgressRepository.deleteAll();
-        log.info("교육 영상 진행률 삭제 완료");
+        log.info("Education video progress deleted");
         
         // 3. 소스셋 문서 삭제 (source_set_id FK 참조)
         sourceSetDocumentRepository.deleteAll();
-        log.info("소스셋 문서 삭제 완료");
+        log.info("Source set documents deleted");
         
         // 4. 소스셋 삭제 (video_id FK 참조하므로 video보다 먼저 삭제)
         sourceSetRepository.deleteAll();
-        log.info("소스셋 삭제 완료");
+        log.info("Source sets deleted");
         
         // 5. 영상 검토(리뷰) 삭제 (video_id FK 참조하므로 video보다 먼저 삭제)
         educationVideoReviewRepository.deleteAll();
-        log.info("영상 검토 삭제 완료");
+        log.info("Education video reviews deleted");
         
         // 6. 영상 삭제
         educationVideoRepository.deleteAll();
-        log.info("교육 영상 삭제 완료");
+        log.info("Education videos deleted");
         
         // 7. 영상 생성 작업(Job) 삭제 - script를 참조하므로 스크립트보다 먼저 삭제
         videoGenerationJobRepository.deleteAll();
-        log.info("영상 생성 작업 삭제 완료");
+        log.info("Video generation jobs deleted");
         
         // 8. 스크립트 씬 삭제
         sceneRepository.deleteAll();
-        log.info("스크립트 씬 삭제 완료");
+        log.info("Script scenes deleted");
         
         // 9. 스크립트 챕터 삭제
         chapterRepository.deleteAll();
-        log.info("스크립트 챕터 삭제 완료");
+        log.info("Script chapters deleted");
         
         // 10. 스크립트 삭제
         scriptRepository.deleteAll();
-        log.info("스크립트 삭제 완료");
+        log.info("Scripts deleted");
         
         // 11. 퀴즈 문항 삭제 (attempt_id FK 참조)
         quizQuestionRepository.deleteAll();
-        log.info("퀴즈 문항 삭제 완료");
+        log.info("Quiz questions deleted");
         
         // 12. 퀴즈 이탈 추적 삭제 (attempt_id FK 참조)
         quizLeaveTrackingRepository.deleteAll();
-        log.info("퀴즈 이탈 추적 삭제 완료");
+        log.info("Quiz leave tracking deleted");
         
         // 12. 퀴즈 시도 삭제 (education_id FK 참조)
         quizAttemptRepository.deleteAll();
-        log.info("퀴즈 시도 삭제 완료");
+        log.info("Quiz attempts deleted");
         
         // 13. 교육 삭제
         educationRepository.deleteAll();
-        log.info("교육 삭제 완료");
+        log.info("Educations deleted");
         
-        log.info("기존 교육 데이터 삭제 완료!");
+        log.info("Existing education data deletion completed!");
     }
 
     private void seedScriptsAndJobs(List<UserInfo> users) {
+        log.info("Starting to seed scripts and jobs...");
         // 5가지 교육 카테고리별 시드 데이터 생성
         List<Education> educations = new ArrayList<>();
 
-        // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB
-        Education edu1 = new Education();
-        edu1.setTitle("직무 역량 강화 교육");
-        edu1.setCategory(EducationTopic.JOB_DUTY);
-        edu1.setDescription("업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.");
-        edu1.setPassScore(80);
-        edu1.setPassRatio(90);
-        edu1.setRequire(Boolean.TRUE);
-        edu1.setEduType(EducationCategory.JOB);
-        educations.add(edu1);
+        // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB - 8개 부서별로 생성
+        String[] departments = {"총무팀", "기획팀", "마케팅팀", "인사팀", "재무팀", "개발팀", "영업팀", "법무팀"};
+        String[] departmentDescriptions = {
+            "총무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "기획 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "마케팅 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "인사 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "재무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "개발 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "영업 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+            "법무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다."
+        };
+        int[] startDaysAgo = {30, 35, 40, 45, 50, 55, 60, 65}; // 각 교육마다 다른 시작일
+        
+        for (int i = 0; i < departments.length; i++) {
+            Education edu = new Education();
+            edu.setTitle(departments[i] + " 직무 역량 강화 교육");
+            edu.setCategory(EducationTopic.JOB_DUTY);
+            edu.setDescription(departmentDescriptions[i]);
+            edu.setPassScore(80);
+            edu.setPassRatio(90);
+            edu.setRequire(Boolean.TRUE);
+            edu.setEduType(EducationCategory.JOB);
+            edu.setVersion(1);
+            edu.setStartAt(Instant.now().minusSeconds(86400L * startDaysAgo[i])); // 각각 다른 시작일
+            edu.setEndAt(Instant.now().plusSeconds(86400L * (180 - startDaysAgo[i]))); // 총 180일
+            edu.setDepartmentScope(new String[]{departments[i]});
+            educations.add(edu);
+        }
 
         // 2. 성희롱 예방 교육 (SEXUAL_HARASSMENT_PREVENTION) - edu_type: MANDATORY
         Education edu2 = new Education();
@@ -216,6 +248,10 @@ public class SeedDataRunner implements CommandLineRunner {
         edu2.setPassRatio(90);
         edu2.setRequire(Boolean.TRUE);
         edu2.setEduType(EducationCategory.MANDATORY);
+        edu2.setVersion(1);
+        edu2.setStartAt(Instant.now().minusSeconds(86400 * 60)); // 60일 전 시작
+        edu2.setEndAt(Instant.now().plusSeconds(86400 * 120)); // 120일 후 종료 (총 180일)
+        edu2.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu2);
 
         // 3. 개인정보 보호 교육 (PERSONAL_INFO_PROTECTION) - edu_type: MANDATORY
@@ -227,6 +263,10 @@ public class SeedDataRunner implements CommandLineRunner {
         edu3.setPassRatio(90);
         edu3.setRequire(Boolean.TRUE);
         edu3.setEduType(EducationCategory.MANDATORY);
+        edu3.setVersion(1);
+        edu3.setStartAt(Instant.now().minusSeconds(86400 * 90)); // 90일 전 시작
+        edu3.setEndAt(Instant.now().plusSeconds(86400 * 90)); // 90일 후 종료 (총 180일)
+        edu3.setDepartmentScope(new String[]{"개발팀", "인사팀", "재무팀"}); // 특정 부서만
         educations.add(edu3);
 
         // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
@@ -238,6 +278,10 @@ public class SeedDataRunner implements CommandLineRunner {
         edu4.setPassRatio(90);
         edu4.setRequire(Boolean.TRUE);
         edu4.setEduType(EducationCategory.MANDATORY);
+        edu4.setVersion(1);
+        edu4.setStartAt(Instant.now().minusSeconds(86400 * 120)); // 120일 전 시작
+        edu4.setEndAt(Instant.now().plusSeconds(86400 * 60)); // 60일 후 종료 (총 180일)
+        edu4.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu4);
 
         // 5. 장애인 인식 개선 교육 (DISABILITY_AWARENESS) - edu_type: MANDATORY
@@ -249,25 +293,22 @@ public class SeedDataRunner implements CommandLineRunner {
         edu5.setPassRatio(90);
         edu5.setRequire(Boolean.TRUE);
         edu5.setEduType(EducationCategory.MANDATORY);
+        edu5.setVersion(1);
+        edu5.setStartAt(Instant.now().minusSeconds(86400 * 15)); // 15일 전 시작
+        edu5.setEndAt(Instant.now().plusSeconds(86400 * 165)); // 165일 후 종료 (총 180일)
+        edu5.setDepartmentScope(new String[]{"총무팀", "기획팀", "마케팅팀"}); // 특정 부서만
         educations.add(edu5);
 
         // 모든 교육 저장
         educationRepository.saveAll(educations);
-        log.info("Seed created: {} 개의 교육 시드 데이터 생성 완료", educations.size());
+        log.info("Seed created: {} education(s) created", educations.size());
 
         // 각 교육에 대해 스크립트 생성
         List<UUID> scriptIds = new ArrayList<>();
-        String[] scriptTitles = {
-            "직무 역량 강화 교육 영상",
-            "성희롱 예방 교육 영상",
-            "개인정보 보호 교육 영상",
-            "직장 내 괴롭힘 예방 교육 영상",
-            "장애인 인식 개선 교육 영상"
-        };
-
-        for (int i = 0; i < educations.size(); i++) {
-            UUID scriptId = insertScript(educations.get(i).getId(), null,
-                scriptTitles[i] + " 스크립트 내용입니다.", 1, scriptTitles[i]);
+        for (Education edu : educations) {
+            String scriptTitle = edu.getTitle() + " 영상";
+            UUID scriptId = insertScript(edu.getId(), null,
+                scriptTitle + " 스크립트 내용입니다.", 1, scriptTitle);
             scriptIds.add(scriptId);
         }
 
@@ -283,6 +324,7 @@ public class SeedDataRunner implements CommandLineRunner {
         chapterRepository.flush();
         sceneRepository.flush();
 
+        log.info("Scripts and jobs seeding completed!");
         // Job 시드는 별도 러너(@Order(2))에서 처리합니다.
     }
 
@@ -291,9 +333,14 @@ public class SeedDataRunner implements CommandLineRunner {
      * infra-service에서 가져온 실제 유저 정보를 사용합니다.
      */
     private void seedEducationsVideosAndProgress(List<UserInfo> users) {
+        log.info("Starting to seed educations, videos and progress...");
         // 이미 영상이 있으면 스킵
         List<Education> edus = educationRepository.findAll();
-        if (edus.isEmpty()) return;
+        if (edus.isEmpty()) {
+            log.warn("No education data found. Skipping video and progress seeding.");
+            return;
+        }
+        log.info("Found {} education(s) to process.", edus.size());
 
         // 첫 번째 유저를 기본 유저로 사용 (또는 랜덤 선택)
         UUID demoUser = users.isEmpty() 
@@ -306,11 +353,8 @@ public class SeedDataRunner implements CommandLineRunner {
             if (videos.isEmpty()) {
                 List<com.ctrlf.education.video.entity.EducationVideo> seeds = new ArrayList<>();
                 String[] urls = new String[] {
-                    "s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4",
-                    "s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4",
-                    "s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4",
-                    "s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4",
-                    "s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4"
+                    "s3://ctrl-s3/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
+                    "s3://ctrl-s3/videos/f75a41fb-ff76-4d37-8220-c7647de1679f.mp4"
                 };
                 String[] titles = new String[] {
                     edu.getTitle() + " - 기본편",
@@ -340,35 +384,45 @@ public class SeedDataRunner implements CommandLineRunner {
                 log.info("Seed created: {} dummy videos for eduId={}", videos.size(), edu.getId());
             }
             if (videos.isEmpty()) {
-                log.info("Seed skip: 교육에 연결된 영상이 없어 진행률 더미 생성을 건너뜁니다. eduId={}", edu.getId());
+                log.info("Seed skip: No videos found for education, skipping progress dummy generation. eduId={}", edu.getId());
                 continue;
             }
-            /**
-             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/13654077_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/13671318_3840_2160_25fps.mp4
-             * s3://ctrl-s3/video/14876583_3840_2160_30fps.mp4
-             * s3://ctrl-s3/video/14899783_1920_1080_50fps.mp4
-             * s3://ctrl-s3/video/14903571_3840_2160_25fps.mp4
-             */
 
-            // 각 영상에 대해 source-set 생성
+            // 각 영상에 대해 source-set 생성 및 연결
             for (var v : videos) {
-                createSourceSetForVideo(edu.getId(), v.getId(), demoUser.toString());
+                UUID sourceSetId = createSourceSetForVideo(edu.getId(), v.getId(), demoUser.toString());
+                if (sourceSetId != null) {
+                    v.setSourceSetId(sourceSetId);
+                    educationVideoRepository.save(v);
+                }
             }
             
             // 진행률 더미: 각 유저별로 랜덤하게 진행률 생성
             // passRatio 기준으로 완료 여부 판단
             Integer passRatio = edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             for (UserInfo user : users) {
+                int completedVideoCount = 0;
+                int totalProgress = 0;
+                
+                // 50% 확률로 모든 영상을 완료 상태로 만들기 (통계 데이터 생성을 위해)
+                boolean shouldCompleteAll = random.nextDouble() > 0.5;
+                
                 for (int i = 0; i < videos.size(); i++) {
                     var v = videos.get(i);
                     var p = educationVideoProgressRepository
                         .findByUserUuidAndEducationIdAndVideoId(user.userUuid, edu.getId(), v.getId())
                         .orElseGet(() -> com.ctrlf.education.video.entity.EducationVideoProgress.create(user.userUuid, edu.getId(), v.getId()));
                     
-                    // 랜덤 진행률 설정
-                    int progress = random.nextInt(101); // 0~100%
+                    // 완료 상태로 만들 경우 passRatio 이상의 진행률 설정, 그렇지 않으면 랜덤
+                    int progress;
+                    if (shouldCompleteAll) {
+                        // passRatio 이상의 진행률 (passRatio ~ 100%)
+                        progress = passRatio + random.nextInt(101 - passRatio);
+                    } else {
+                        // 랜덤 진행률 (0~100%)
+                        progress = random.nextInt(101);
+                    }
+                    
                     int totalSeconds = v.getDuration() != null ? v.getDuration() : 1200;
                     int watchedSeconds = (int) (totalSeconds * progress / 100.0);
                     
@@ -376,24 +430,131 @@ public class SeedDataRunner implements CommandLineRunner {
                     p.setTotalWatchSeconds(watchedSeconds);
                     p.setProgress(progress);
                     // passRatio 기준으로 완료 여부 판단
-                    p.setIsCompleted(progress >= passRatio);
+                    boolean isCompleted = progress >= passRatio;
+                    p.setIsCompleted(isCompleted);
                     educationVideoProgressRepository.save(p);
+                    
+                    if (isCompleted) {
+                        completedVideoCount++;
+                    }
+                    totalProgress += progress;
                 }
+                
+                // EducationProgress 생성/업데이트
+                // 모든 영상이 완료된 경우에만 완료 처리
+                boolean allVideosCompleted = completedVideoCount == videos.size();
+                int avgProgress = videos.isEmpty() ? 0 : totalProgress / videos.size();
+                
+                EducationProgress eduProgress = educationProgressRepository
+                    .findByUserUuidAndEducationId(user.userUuid, edu.getId())
+                    .orElseGet(() -> {
+                        EducationProgress newProgress = new EducationProgress();
+                        newProgress.setUserUuid(user.userUuid);
+                        newProgress.setEducationId(edu.getId());
+                        return newProgress;
+                    });
+                
+                eduProgress.setProgress(avgProgress);
+                eduProgress.setIsCompleted(allVideosCompleted);
+                
+                // 완료된 경우 completedAt 설정 (최근 30일 내 랜덤 시간 - 다양한 기간 필터 테스트용)
+                if (allVideosCompleted) {
+                    // 최근 30일 내 랜덤 시간 (0~30일 전)
+                    Instant completedAt = Instant.now().minusSeconds(random.nextInt(86400 * 30));
+                    eduProgress.setCompletedAt(completedAt);
+                } else {
+                    eduProgress.setCompletedAt(null);
+                }
+                
+                educationProgressRepository.save(eduProgress);
             }
         }
+        log.info("Educations, videos and progress seeding completed!");
     }
     
     /**
+     * 시드 문서를 조회하거나 생성합니다.
+     * 문서가 이미 존재하면 그 documentId를 반환하고, 없으면 업로드를 시도합니다.
+     */
+    private UUID getOrCreateSeedDocument(String uploaderUuid) {
+        // 캐시된 documentId가 있으면 재사용
+        if (seedDocumentId != null) {
+            return seedDocumentId;
+        }
+        
+        String seedFileUrl = "s3://ctrl-s3/docs/hr_safety_v3.pdf";
+        String seedTitle = "산업안전 규정집 v3";
+        String seedDomain = "HR";
+        
+        try {
+            // 문서 목록에서 키워드로 검색
+            List<Map<String, Object>> documents = restClient.get()
+                .uri("/rag/documents?keyword=hr_safety_v3")
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+            
+            if (documents != null && !documents.isEmpty()) {
+                for (Map<String, Object> doc : documents) {
+                    String id = (String) doc.get("id");
+                    if (id != null) {
+                        seedDocumentId = UUID.fromString(id);
+                        log.info("Found existing seed document: documentId={}, fileUrl={}", seedDocumentId, seedFileUrl);
+                        return seedDocumentId;
+                    }
+                }
+            } else {
+                log.debug("No documents found with keyword 'hr_safety_v3'");
+            }
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.warn("Failed to search existing document (HTTP {}): {}", e.getStatusCode().value(), e.getMessage());
+        } catch (Exception e) {
+            log.warn("Failed to search existing document: {}", e.getMessage());
+        }
+        
+        // 문서가 없으면 업로드 시도 (JWT가 필요하므로 실패할 수 있음)
+        try {
+            Map<String, String> uploadRequest = Map.of(
+                "title", seedTitle,
+                "domain", seedDomain,
+                "fileUrl", seedFileUrl
+            );
+            
+            Map<String, Object> uploadResponse = restClient.post()
+                .uri("/rag/documents/upload")
+                .body(uploadRequest)
+                .retrieve()
+                .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            
+            if (uploadResponse != null) {
+                String documentIdStr = (String) uploadResponse.get("documentId");
+                if (documentIdStr != null) {
+                    seedDocumentId = UUID.fromString(documentIdStr);
+                    log.info("Uploaded seed document: documentId={}, fileUrl={}", seedDocumentId, seedFileUrl);
+                    return seedDocumentId;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to upload seed document (JWT may be required): {}", e.getMessage());
+        }
+        
+        // 문서 업로드도 실패하면 경고 출력
+        log.warn("Seed document not found in infra-service and upload failed. Please upload document manually: {}", seedFileUrl);
+        log.warn("Using dummy UUID for now. Document lookup will fail until document is uploaded.");
+        seedDocumentId = UUID.randomUUID();
+        return seedDocumentId;
+    }
+
+    /**
      * 영상에 대한 source-set 생성
      */
-    private void createSourceSetForVideo(UUID educationId, UUID videoId, String requestedBy) {
+    private UUID createSourceSetForVideo(UUID educationId, UUID videoId, String requestedBy) {
         // 이미 source-set이 있으면 스킵 (videoId로 조회)
         List<SourceSet> existingSourceSets = sourceSetRepository.findAll().stream()
             .filter(ss -> videoId.equals(ss.getVideoId()) && ss.getDeletedAt() == null)
             .toList();
         if (!existingSourceSets.isEmpty()) {
-            log.debug("Source-set이 이미 존재합니다. videoId={}", videoId);
-            return;
+            log.debug("Source-set already exists. videoId={}", videoId);
+            return existingSourceSets.get(0).getId();
         }
         
         // Source-set 생성
@@ -406,15 +567,17 @@ public class SeedDataRunner implements CommandLineRunner {
         );
         sourceSetRepository.save(sourceSet);
         
-        // Source-set에 더미 문서 추가 (실제로는 infra-service의 RAG 문서를 사용해야 함)
-        // 여기서는 더미 UUID를 사용
-        UUID dummyDocumentId = UUID.randomUUID();
-        SourceSetDocument doc = SourceSetDocument.create(sourceSet, dummyDocumentId);
+        // Source-set에 실제 문서 추가
+        // 시드 문서를 한 번만 조회/생성하고 재사용
+        UUID documentId = getOrCreateSeedDocument(requestedBy);
+        SourceSetDocument doc = SourceSetDocument.create(sourceSet, documentId);
         doc.markCompleted(); // 처리 완료 상태로 설정
         sourceSetDocumentRepository.save(doc);
         
         log.info("Seed created: SourceSet sourceSetId={}, videoId={}, educationId={}", 
             sourceSet.getId(), videoId, educationId);
+        
+        return sourceSet.getId();
     }
 
     private UUID insertScript(UUID eduId, UUID materialId, String content, Integer version, String title) {
@@ -438,7 +601,7 @@ public class SeedDataRunner implements CommandLineRunner {
 
     private void seedChaptersAndScenes(UUID scriptId) {
         if (!chapterRepository.findByScriptIdOrderByChapterIndexAsc(scriptId).isEmpty()) {
-            log.info("Seed skip: 챕터/씬이 이미 존재합니다. scriptId={}", scriptId);
+            log.info("Seed skip: Chapters/scenes already exist. scriptId={}", scriptId);
             return;
         }
         // Chapter 0: 괴롭힘
@@ -508,20 +671,20 @@ public class SeedDataRunner implements CommandLineRunner {
      * infra-service를 통해 Keycloak의 실제 유저 정보를 가져와 퀴즈 시도 데이터를 생성합니다.
      */
     private void seedQuizData(List<UserInfo> users) {
-        log.info("퀴즈 시드 데이터 생성 시작...");
+        log.info("Starting quiz seed data generation...");
         
         List<Education> educations = educationRepository.findAll();
         if (educations.isEmpty()) {
-            log.warn("교육 데이터가 없어 퀴즈 시드 데이터 생성을 건너뜁니다.");
+            log.warn("No education data found. Skipping quiz seed data generation.");
             return;
         }
 
         if (users.isEmpty()) {
-            log.warn("유저 데이터가 없어 퀴즈 시드 데이터 생성을 건너뜁니다.");
+            log.warn("No user data found. Skipping quiz seed data generation.");
             return;
         }
         
-        log.info("{} 명의 유저 정보로 퀴즈 데이터를 생성합니다.", users.size());
+        log.info("Generating quiz data for {} user(s).", users.size());
 
         for (UserInfo user : users) {
             UUID userUuid = user.userUuid;
@@ -534,6 +697,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     QuizAttempt attempt = new QuizAttempt();
                     attempt.setUserUuid(userUuid);
                     attempt.setEducationId(edu.getId());
+                    attempt.setVersion(edu.getVersion());
                     attempt.setAttemptNo(attemptNo);
                     attempt.setTimeLimit(900); // 15분
                     attempt.setDepartment(user.department);
@@ -568,7 +732,7 @@ public class SeedDataRunner implements CommandLineRunner {
         }
         
         quizAttemptRepository.flush();
-        log.info("퀴즈 시드 데이터 생성 완료!");
+        log.info("Quiz seed data generation completed!");
     }
 
     /**
@@ -583,21 +747,20 @@ public class SeedDataRunner implements CommandLineRunner {
         
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                log.info("infra-service에서 유저 목록 조회 중... (baseUrl: {}, 시도: {}/{})", infraBaseUrl, attempt, maxRetries);
+                log.info("Fetching user list from infra-service... (baseUrl: {}, attempt: {}/{})", infraBaseUrl, attempt, maxRetries);
                 
-                // infra-service의 /admin/users API 호출
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> userList = restClient.get()
-                    .uri("/admin/users?page=0&size=200")
+                // infra-service의 /admin/users/search API 호출
+                PageResponse<Map<String, Object>> pageResponse = restClient.get()
+                    .uri("/admin/users/search?page=0&size=200")
                     .retrieve()
-                    .body(List.class);
+                    .body(new ParameterizedTypeReference<PageResponse<Map<String, Object>>>() {});
                 
-                if (userList == null || userList.isEmpty()) {
-                    log.warn("infra-service에서 유저 목록이 비어있습니다.");
+                if (pageResponse == null || pageResponse.getItems() == null || pageResponse.getItems().isEmpty()) {
+                    log.warn("User list from infra-service is empty.");
                     return users;
                 }
             
-            for (Map<String, Object> userMap : userList) {
+            for (Map<String, Object> userMap : pageResponse.getItems()) {
                 try {
                     String userId = (String) userMap.get("id");
                     String username = (String) userMap.get("username");
@@ -611,7 +774,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     // attributes에서 department 추출
                     @SuppressWarnings("unchecked")
                     Map<String, Object> attributes = (Map<String, Object>) userMap.get("attributes");
-                    String department = "기타";
+                    String department = "Others";
                     if (attributes != null) {
                         @SuppressWarnings("unchecked")
                         List<String> deptList = (List<String>) attributes.get("department");
@@ -622,18 +785,18 @@ public class SeedDataRunner implements CommandLineRunner {
                     
                     UUID userUuid = UUID.fromString(userId);
                     users.add(new UserInfo(userUuid, username, department));
-                    log.debug("유저 정보 추가: username={}, department={}, userId={}", username, department, userId);
+                    log.debug("User added: username={}, department={}, userId={}", username, department, userId);
                 } catch (Exception e) {
-                    log.warn("유저 정보 파싱 실패: {}", userMap, e);
+                    log.warn("Failed to parse user info: {}", userMap, e);
                 }
             }
             
-                log.info("infra-service에서 {} 명의 유저를 가져왔습니다.", users.size());
+                log.info("Fetched {} user(s) from infra-service.", users.size());
                 return users; // 성공 시 즉시 반환
                 
             } catch (org.springframework.web.client.HttpClientErrorException e) {
                 if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
-                    log.warn("infra-service 인증 오류 (시도 {}/{}): {}. Keycloak이 아직 시작되지 않았을 수 있습니다.", 
+                    log.warn("infra-service authentication error (attempt {}/{}): {}. Keycloak may not have started yet.", 
                         attempt, maxRetries, e.getMessage());
                     if (attempt < maxRetries) {
                         try {
@@ -645,7 +808,7 @@ public class SeedDataRunner implements CommandLineRunner {
                         continue; // 재시도
                     }
                 } else {
-                    log.error("infra-service HTTP 오류 (시도 {}/{}): {}", attempt, maxRetries, e.getMessage());
+                    log.error("infra-service HTTP error (attempt {}/{}): {}", attempt, maxRetries, e.getMessage());
                     if (attempt < maxRetries) {
                         try {
                             Thread.sleep(retryDelayMs);
@@ -657,7 +820,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     }
                 }
             } catch (org.springframework.web.client.ResourceAccessException e) {
-                log.warn("infra-service 연결 실패 (시도 {}/{}): {}. infra-service가 아직 시작되지 않았을 수 있습니다.", 
+                log.warn("infra-service connection failed (attempt {}/{}): {}. infra-service may not have started yet.", 
                     attempt, maxRetries, e.getMessage());
                 if (attempt < maxRetries) {
                     try {
@@ -669,7 +832,7 @@ public class SeedDataRunner implements CommandLineRunner {
                     continue; // 재시도
                 }
             } catch (Exception e) {
-                log.error("infra-service에서 유저 목록을 가져오는 중 오류 발생 (시도 {}/{}): {}", 
+                log.error("Error occurred while fetching user list from infra-service (attempt {}/{}): {}", 
                     attempt, maxRetries, e.getMessage(), e);
                 if (attempt < maxRetries) {
                     try {
@@ -683,7 +846,7 @@ public class SeedDataRunner implements CommandLineRunner {
             }
         }
         
-        log.warn("infra-service에서 유저 목록을 가져오지 못했습니다. 퀴즈 시드 데이터 생성을 건너뜁니다.");
+        log.warn("Failed to fetch user list from infra-service after {} attempts. Returning empty list.", maxRetries);
         return users;
     }
 
@@ -714,7 +877,7 @@ public class SeedDataRunner implements CommandLineRunner {
             }
             
             question.setCorrectOptionIdx(random.nextInt(5)); // 0~4 중 랜덤
-            question.setExplanation("정답 설명입니다.");
+            question.setExplanation("Correct answer explanation.");
             question.setQuestionOrder(i);
             
             // 제출된 경우 사용자 선택값 설정

@@ -37,6 +37,10 @@ public class QuizAttempt {
     @Column(name = "education_id", columnDefinition = "uuid")
     private UUID educationId;
 
+    /** 교육 버전 */
+    @Column(name = "version")
+    private Integer version;
+
     /** 최종 점수 */
     @Column(name = "score")
     private Integer score;

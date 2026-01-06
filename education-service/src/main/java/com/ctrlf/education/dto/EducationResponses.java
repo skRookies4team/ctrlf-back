@@ -52,6 +52,9 @@ public final class EducationResponses {
         private Integer passRatio;
         /** 교육 전체 길이(초 단위). 섹션 합산 기준 */
         private Integer duration;
+        private Instant startAt;
+        private Instant endAt;
+        private String[] departmentScope;
         private Instant createdAt;
         private Instant updatedAt;
         private List<Section> sections;
@@ -74,6 +77,9 @@ public final class EducationResponses {
     public static class EducationVideosResponse {
         private UUID id;
         private String title;
+        private Instant startAt;
+        private Instant endAt;
+        private String[] departmentScope;
         private List<VideoItem> videos;
 
         /** 교육 영상 항목. */
@@ -90,8 +96,10 @@ public final class EducationResponses {
             private Integer duration;
             /** 영상 버전 */
             private Integer version;
-            /** 수강 가능한 부서 목록(JSON) */
-            private String departmentScope;
+            /** 영상 상태 */
+            private String status;
+            /** 수강 가능한 부서 목록 */
+            private String[] departmentScope;
             /** 사용자 이어보기 위치(초) */
             private Integer resumePosition;
             /** 사용자 영상 이수 여부 */
@@ -102,6 +110,10 @@ public final class EducationResponses {
             private Integer progressPercent;
             /** 시청 상태 레이블(시청전/시청중/시청완료) */
             private String watchStatus;
+            /** 원본 파일명 */
+            private String sourceFileName;
+            /** 원본 파일 URL */
+            private String sourceFileUrl;
         }
     }
 
@@ -118,6 +130,12 @@ public final class EducationResponses {
         private EducationTopic category;
         private EducationCategory eduType;
         private boolean required;
+        /** 교육 버전 */
+        private Integer version;
+        /** 교육 시작 시각 */
+        private Instant startAt;
+        /** 교육 종료 시각 */
+        private Instant endAt;
         /** 사용자 기준 교육 진행률(%) */
         private int progressPercent;
         /** 교육 시청 상태(시청전/시청중/시청완료) */

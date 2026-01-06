@@ -22,7 +22,7 @@ public class ChatAiClient {
 
     private final WebClient aiWebClient;
 
-    // ✅ 기존 채팅 응답용
+    // ✅ LLM 모델 선택 포함 채팅 응답용
     public ChatAiResponse ask(
         UUID sessionId,
         UUID userId,
@@ -30,7 +30,9 @@ public class ChatAiClient {
         String department,
         String domain,
         String channel,
-        String message
+        String message,
+        String model,
+        String llmModel
     ) {
         ChatAiRequest request =
             new ChatAiRequest(
@@ -40,7 +42,9 @@ public class ChatAiClient {
                 department,
                 domain,
                 channel,
-                List.of(new ChatAiMessage("user", message))
+                List.of(new ChatAiMessage("user", message)),
+                model,
+                llmModel
             );
 
         return aiWebClient.post()
@@ -49,6 +53,33 @@ public class ChatAiClient {
             .retrieve()
             .bodyToMono(ChatAiResponse.class)
             .block();
+    }
+
+    // ✅ 기존 채팅 응답용 (llmModel 없음) - 후방 호환성
+    public ChatAiResponse ask(
+        UUID sessionId,
+        UUID userId,
+        String userRole,
+        String department,
+        String domain,
+        String channel,
+        String message,
+        String model
+    ) {
+        return ask(sessionId, userId, userRole, department, domain, channel, message, model, null);
+    }
+
+    // ✅ 후방 호환용 (model, llmModel 없음) - 기본값 사용
+    public ChatAiResponse ask(
+        UUID sessionId,
+        UUID userId,
+        String userRole,
+        String department,
+        String domain,
+        String channel,
+        String message
+    ) {
+        return ask(sessionId, userId, userRole, department, domain, channel, message, null, null);
     }
 
     // ⚠️ 세션 요약 전용 (현재 AI 서비스에 해당 엔드포인트가 없어 주석 처리)

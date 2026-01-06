@@ -1,6 +1,5 @@
 package com.ctrlf.education.video.dto;
 
-import com.ctrlf.common.constant.Department;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -68,6 +67,9 @@ public final class VideoDtos {
      */
     @Schema(description = "영상 생성 완료 콜백 요청 (AI 서버 → 백엔드)")
     public record VideoCompleteCallback(
+        @Schema(description = "Job ID", example = "550e8400-e29b-41d4-a716-446655440000")
+        UUID jobId,
+
         @Schema(description = "생성된 영상 URL", example = "https://cdn.com/video.mp4")
         String videoUrl,
 
@@ -202,7 +204,7 @@ public final class VideoDtos {
         @Schema(description = "Job ID", example = "550e8400-e29b-41d4-a716-446655440000")
         UUID jobId,
 
-        @Schema(description = "상태", example = "RENDERING")
+        @Schema(description = "상태", example = "PROCESSING")
         String status
     ) {}
 
@@ -212,6 +214,7 @@ public final class VideoDtos {
         @Schema(description = "Job ID") UUID jobId,
         @Schema(description = "스크립트 ID") UUID scriptId,
         @Schema(description = "교육 ID") UUID eduId,
+        @Schema(description = "영상 ID (생성된 경우)") UUID videoId,
         @Schema(description = "상태") String status,
         @Schema(description = "재시도 횟수") Integer retryCount,
         @Schema(description = "생성된 영상 URL") String videoUrl,
@@ -244,10 +247,12 @@ public final class VideoDtos {
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
         @Schema(description = "상태") VideoStatus status,
-        @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: ALL, GENERAL_AFFAIRS, PLANNING, MARKETING, HR, FINANCE, ENGINEERING, SALES, LEGAL)", 
-                example = "[\"HR\", \"ENGINEERING\"]") List<Department> departmentScope,
+        @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: '전체 부서', '총무팀', '기획팀', '마케팅팀', '인사팀', '재무팀', '개발팀', '영업팀', '법무팀')", 
+                example = "[\"총무팀\", \"기획팀\"]") List<String> departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex,
-        @Schema(description = "생성시각 ISO8601") String createdAt
+        @Schema(description = "생성시각 ISO8601") String createdAt,
+        @Schema(description = "원본 파일명") String sourceFileName,
+        @Schema(description = "원본 파일 URL") String sourceFileUrl
     ) {}
 
     @Schema(description = "영상 메타 수정 요청 (부분 업데이트)")
@@ -257,9 +262,6 @@ public final class VideoDtos {
         @Schema(description = "버전") Integer version,
         @Schema(description = "길이(초)") Integer duration,
         @Schema(description = "상태") VideoStatus status,
-
-        @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: ALL, GENERAL_AFFAIRS, PLANNING, MARKETING, HR, FINANCE, ENGINEERING, SALES, LEGAL)", 
-                example = "[\"HR\", \"ENGINEERING\"]") List<Department> departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex
     ) {}
 
@@ -275,11 +277,7 @@ public final class VideoDtos {
 
         @Schema(description = "영상 제목", example = "2024년 성희롱 예방 교육")
         @NotBlank(message = "title은 필수입니다")
-        String title,
-
-        @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: ALL, GENERAL_AFFAIRS, PLANNING, MARKETING, HR, FINANCE, ENGINEERING, SALES, LEGAL)", 
-                example = "[\"HR\", \"ENGINEERING\"]")
-        List<Department> departmentScope
+        String title
     ) {}
 
     @Schema(description = "영상 컨텐츠 생성 응답")
@@ -410,15 +408,36 @@ public final class VideoDtos {
     }
 
     /**
+     * 스크립트 패치 (씬 단위 업서트).
+     * 씬이 생성될 때마다 백엔드에 전송하여 부분 저장.
+     */
+    @Schema(description = "스크립트 패치 (씬 단위 업서트)")
+    public record ScriptPatch(
+        @Schema(description = "패치 타입 (SCENE_UPSERT)") String type,
+        @Schema(description = "스크립트 ID") String scriptId,
+        @Schema(description = "챕터 인덱스 (0-based)") Integer chapterIndex,
+        @Schema(description = "챕터 제목") String chapterTitle,
+        @Schema(description = "씬 인덱스 (0-based)") Integer sceneIndex,
+        @Schema(description = "씬 데이터") SourceSetCompleteCallback.SourceSetScript.SourceSetScene scene,
+        @Schema(description = "전체 씬 수") Integer totalScenes,
+        @Schema(description = "현재 씬 번호 (1-based)") Integer currentScene
+    ) {}
+
+    /**
      * 소스셋 완료 콜백 요청 (FastAPI → Spring).
+     *
+     * 두 가지 모드 지원:
+     * 1. 전체 스크립트 전송: script 필드 사용, sourceSetStatus=SCRIPT_READY
+     * 2. 씬별 패치 전송: scriptPatch 필드 사용, sourceSetStatus=SCRIPT_GENERATING
      */
     @Schema(description = "소스셋 완료 콜백 요청 (FastAPI → Spring)")
     public record SourceSetCompleteCallback(
         @Schema(description = "영상 ID", required = true) @NotNull UUID videoId,
         @Schema(description = "결과 상태 (COMPLETED | FAILED)", required = true) @NotBlank String status,
-        @Schema(description = "DB source_set 상태 (SCRIPT_READY | FAILED)", required = true) @NotBlank String sourceSetStatus,
+        @Schema(description = "DB source_set 상태 (SCRIPT_GENERATING | SCRIPT_READY | FAILED)", required = true) @NotBlank String sourceSetStatus,
         @Schema(description = "문서별 결과", required = true) @NotNull java.util.List<DocumentResult> documents,
-        @Schema(description = "생성된 스크립트 (성공 시)") SourceSetScript script,
+        @Schema(description = "생성된 스크립트 (전체 전송 시)") SourceSetScript script,
+        @Schema(description = "스크립트 패치 (씬별 전송 시)") ScriptPatch scriptPatch,
         @Schema(description = "실패 코드") String errorCode,
         @Schema(description = "실패 메시지") String errorMessage,
         @Schema(description = "멱등 키") UUID requestId,
@@ -534,6 +553,7 @@ public final class VideoDtos {
     public record AuditHistoryResponse(
         @Schema(description = "영상 ID") UUID videoId,
         @Schema(description = "영상 제목") String videoTitle,
+        @Schema(description = "스크립트 ID") UUID scriptId,
         @Schema(description = "감사 이력 목록") List<AuditHistoryItem> history
     ) {}
 
@@ -554,5 +574,20 @@ public final class VideoDtos {
         @Schema(description = "교육 유형") String eduType,
         @Schema(description = "스크립트 ID") UUID scriptId,
         @Schema(description = "스크립트 버전") Integer scriptVersion
+    ) {}
+
+    // ========================
+    // 마지막 시청 영상 조회 DTOs (Q4 이어보기용)
+    // ========================
+
+    @Schema(description = "마지막 시청 영상 정보 (이어보기용)")
+    public record LastVideoProgressResponse(
+        @Schema(description = "교육 ID") String education_id,
+        @Schema(description = "영상 ID") String video_id,
+        @Schema(description = "교육 제목") String education_title,
+        @Schema(description = "영상 제목") String video_title,
+        @Schema(description = "마지막 시청 위치(초)") Integer resume_position_seconds,
+        @Schema(description = "진행률(%)") Integer progress_percent,
+        @Schema(description = "영상 전체 길이(초)") Integer duration
     ) {}
 }
