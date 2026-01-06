@@ -61,7 +61,7 @@ public class EducationController {
      * @param jwt 인증 토큰
      * @return 교육 목록(영상 목록 포함)
      */
-    @GetMapping("/edus/me")
+    @GetMapping("/api-edu/edus/me")
     @Operation(
         summary = "사용자 자신 교육 및 영상 목록 조회 (프론트 -> 백엔드)",
         description = "로그인 사용자 기준 교육 목록과 각 교육의 영상 목록/진행 정보를 반환합니다.",

@@ -327,7 +327,7 @@ public class AdminEducationController {
     // 대시보드 통계 API
     // ========================
 
-    @GetMapping("/dashboard/education/summary")
+    @GetMapping("/api-edu/dashboard/education/summary")
     @Operation(
         summary = "대시보드 요약 통계 조회",
         description = "전체 평균 이수율, 미이수자 수, 4대 의무교육 평균, 직무교육 평균을 조회합니다."
