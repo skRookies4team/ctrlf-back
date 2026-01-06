@@ -10,7 +10,7 @@ import java.util.UUID;
  * FAQ 후보 / Draft 관리용 관리자 API
  */
 @RestController
-@RequestMapping("/admin/faqs")
+@RequestMapping("/api/chat/admin/faqs")
 @RequiredArgsConstructor
 public class AdminFaqController {
 
@@ -18,7 +18,7 @@ public class AdminFaqController {
 
     /**
      * FAQ 후보 기반 AI Draft 생성
-     * 
+     *
      * @param candidateId FAQ Candidate ID (FAQ 후보 ID)
      *                    - 엔티티: {@link com.ctrlf.chat.faq.entity.FaqCandidate}
      *                    - 테이블: {@code chat.faq_candidate}
@@ -33,7 +33,7 @@ public class AdminFaqController {
 
     /**
      * FAQ Draft 승인
-     * 
+     *
      * @param draftId FAQ Draft ID (FAQ 초안 ID)
      *                - 엔티티: {@link com.ctrlf.chat.faq.entity.FaqDraft}
      *                - 테이블: {@code chat.faq_drafts}
@@ -56,7 +56,7 @@ public class AdminFaqController {
 
     /**
      * FAQ Draft 반려
-     * 
+     *
      * @param draftId FAQ Draft ID (FAQ 초안 ID)
      *                - 엔티티: {@link com.ctrlf.chat.faq.entity.FaqDraft}
      *                - 테이블: {@code chat.faq_drafts}

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/admin/faq/drafts")
+@RequestMapping("/api/chat/admin/faq/drafts")
 public class AdminFaqDraftController {
 
     private final FaqDraftService faqDraftService;
@@ -30,7 +30,7 @@ public class AdminFaqDraftController {
 
     /**
      * 초안 승인 (Request Body 방식 - 권장)
-     * 
+     *
      * <p>프론트엔드에서 사용하기 편리한 Request Body 방식입니다.
      * 기존 Query Parameter 방식도 하위 호환성을 위해 유지됩니다.</p>
      */
@@ -44,7 +44,7 @@ public class AdminFaqDraftController {
 
     /**
      * 초안 반려 (Request Body 방식 - 권장)
-     * 
+     *
      * <p>프론트엔드에서 사용하기 편리한 Request Body 방식입니다.
      * 기존 Query Parameter 방식도 하위 호환성을 위해 유지됩니다.</p>
      */

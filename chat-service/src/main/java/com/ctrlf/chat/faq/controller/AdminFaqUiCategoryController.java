@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/admin/faq/ui-categories")
+@RequestMapping("/api/chat/admin/faq/ui-categories")
 public class AdminFaqUiCategoryController {
 
     private final FaqUiCategoryService faqUiCategoryService;

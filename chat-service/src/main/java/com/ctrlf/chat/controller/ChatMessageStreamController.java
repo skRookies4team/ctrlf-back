@@ -16,7 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/chat/messages")
+@RequestMapping("/api/chat/messages")
 @RequiredArgsConstructor
 public class ChatMessageStreamController {
 
