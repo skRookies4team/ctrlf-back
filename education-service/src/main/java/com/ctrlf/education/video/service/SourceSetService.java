@@ -93,11 +93,12 @@ public class SourceSetService {
         );
         final SourceSet savedSourceSet = sourceSetRepository.save(sourceSet);
 
-        // EducationVideo에 sourceSetId 연결
+        // EducationVideo에 sourceSetId 연결 및 status를 DRAFT로 초기화
         videoRepository.findById(req.videoId()).ifPresent(video -> {
             video.setSourceSetId(savedSourceSet.getId());
+            video.setStatus("DRAFT");
             videoRepository.save(video);
-            log.info("EducationVideo에 sourceSetId 연결: videoId={}, sourceSetId={}", 
+            log.info("EducationVideo에 sourceSetId 연결 및 status를 DRAFT로 초기화: videoId={}, sourceSetId={}", 
                 req.videoId(), savedSourceSet.getId());
         });
 

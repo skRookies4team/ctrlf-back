@@ -116,8 +116,9 @@ public class EducationController {
         @AuthenticationPrincipal Jwt jwt
     ) {
         Optional<UUID> userUuid = SecurityUtils.extractUserUuid(jwt);
+        List<String> userDepartments = SecurityUtils.extractDepartments(jwt);
         List<EducationResponses.EducationListItem> res =
-            educationService.getEducationsMe(completed, eduType, sort, userUuid);
+            educationService.getEducationsMe(completed, eduType, sort, userUuid, userDepartments);
         return ResponseEntity.ok(res);
     }
 
