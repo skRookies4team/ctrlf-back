@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 채팅 메시지 피드백 관련 REST API 컨트롤러
- * 
+ *
  * <p>사용자가 특정 메시지에 대한 피드백(평점, 코멘트)을 제출하는 기능을 제공합니다.</p>
- * 
+ *
  * @author CtrlF Team
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/chat")
+@RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatFeedbackController {
 
@@ -26,9 +26,9 @@ public class ChatFeedbackController {
 
     /**
      * 메시지 피드백 제출
-     * 
+     *
      * <p>특정 메시지에 대한 사용자 피드백(평점, 코멘트)을 저장합니다.</p>
-     * 
+     *
      * @param sessionId 세션 ID
      * @param messageId 피드백을 제출할 메시지 ID
      * @param request 피드백 요청 (평점, 코멘트)
