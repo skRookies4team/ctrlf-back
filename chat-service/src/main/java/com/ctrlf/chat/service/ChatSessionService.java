@@ -66,12 +66,23 @@ public interface ChatSessionService {
 
     /**
      * 세션/컨텍스트 모델 설정
-     * 
+     *
      * <p>Frontend에서 선택한 모델을 세션에 저장합니다.</p>
      * <p>Backend는 모델 값을 검증하고 그대로 저장하며, 해석하지 않습니다.</p>
-     * 
+     *
      * @param sessionId 세션 ID
      * @param model 모델 식별자 ("openai" 또는 "sroberta")
      */
     void setSessionModel(UUID sessionId, String model);
+
+    /**
+     * 세션 LLM 모델 설정
+     *
+     * <p>관리자 대시보드에서 선택한 LLM 모델을 세션에 저장합니다.</p>
+     * <p>AI 서버에서 채팅 응답 생성 시 해당 모델이 사용됩니다.</p>
+     *
+     * @param sessionId 세션 ID
+     * @param llmModel LLM 모델 식별자 ("exaone" 또는 "openai")
+     */
+    void setSessionLlmModel(UUID sessionId, String llmModel);
 }
