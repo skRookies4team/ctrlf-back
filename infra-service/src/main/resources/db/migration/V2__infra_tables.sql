@@ -1,7 +1,4 @@
-CREATE SCHEMA IF NOT EXISTS telemetry;
-
 CREATE SCHEMA IF NOT EXISTS infra;
-
 SET search_path = infra;
 -- Extensions consolidated here
 CREATE EXTENSION IF NOT EXISTS vector;
