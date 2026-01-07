@@ -26,6 +26,12 @@ import com.ctrlf.infra.personalization.client.EducationServiceClient.TopicScoreR
 import com.ctrlf.infra.personalization.client.EducationServiceClient.TopicScoreItem;
 import com.ctrlf.infra.personalization.client.EducationServiceClient.TopicDeadlineResponse;
 import com.ctrlf.infra.personalization.client.EducationServiceClient.TopicDeadlineItem;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.IncompleteMandatoryResponse;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.IncompleteMandatoryItem;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.DeadlinesThisMonthResponse;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.DeadlineEducationItem;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.TodosThisWeekResponse;
+import com.ctrlf.infra.personalization.client.EducationServiceClient.TodoItemResponse;
 import com.ctrlf.infra.personalization.dto.PersonalizationDtos;
 import com.ctrlf.infra.personalization.util.PeriodCalculator;
 import java.time.Instant;
@@ -124,26 +130,52 @@ public class PersonalizationService {
 
     // ---------- Q1: 미이수 필수 교육 조회 ----------
     private ResolveResponse handleQ1(String userId, String periodStart, String periodEnd, String updatedAt) {
-        // TODO: education-service에서 필수 교육 및 완료 여부 조회
-        // 현재는 스텁 데이터 반환
-        log.warn("Q1 handler: Stub implementation - userId={}", userId);
-        
-        Q1Metrics metrics = new Q1Metrics(5, 3, 2);
-        List<Object> items = new ArrayList<>();
-        items.add(new Q1EducationItem("EDU001", "개인정보보호 교육", "2025-01-31", "미이수"));
-        items.add(new Q1EducationItem("EDU002", "정보보안 교육", "2025-02-15", "미이수"));
+        log.info("Q1 handler: userId={}", userId);
 
-        return new ResolveResponse(
-            "Q1", periodStart, periodEnd, updatedAt,
-            Map.of(
-                "total_required", metrics.getTotal_required(),
-                "completed", metrics.getCompleted(),
-                "remaining", metrics.getRemaining()
-            ),
-            items,
-            Map.of(),
-            null
-        );
+        try {
+            UUID userUuid = UUID.fromString(userId);
+
+            // education-service에서 미이수 필수 교육 조회
+            IncompleteMandatoryResponse response = educationServiceClient.getIncompleteMandatory(userUuid);
+
+            if (response == null) {
+                return createErrorResponse("Q1", periodStart, periodEnd, updatedAt,
+                    "SERVICE_ERROR", "교육 정보를 조회할 수 없어요.");
+            }
+
+            // items 생성
+            List<Object> items = new ArrayList<>();
+            if (response.getItems() != null) {
+                for (IncompleteMandatoryItem item : response.getItems()) {
+                    items.add(new Q1EducationItem(
+                        item.getEducationId(),
+                        item.getTitle(),
+                        item.getDeadline() != null ? item.getDeadline() : "",
+                        item.getStatus()
+                    ));
+                }
+            }
+
+            return new ResolveResponse(
+                "Q1", periodStart, periodEnd, updatedAt,
+                Map.of(
+                    "total_required", response.getTotalRequired(),
+                    "completed", response.getCompleted(),
+                    "remaining", response.getRemaining()
+                ),
+                items,
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q1", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q1 handler: userId={}", userId, e);
+            return createErrorResponse("Q1", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- Q2: 특정 토픽 교육 이수 여부 ----------
@@ -204,21 +236,48 @@ public class PersonalizationService {
 
     // ---------- Q3: 이번 달 데드라인 필수 교육 ----------
     private ResolveResponse handleQ3(String userId, String periodStart, String periodEnd, String updatedAt) {
-        // TODO: education-service에서 이번 달 마감 필수 교육 조회
-        log.warn("Q3 handler: Stub implementation - userId={}", userId);
+        log.info("Q3 handler: userId={}", userId);
 
-        Q3Metrics metrics = new Q3Metrics(2);
-        List<Object> items = new ArrayList<>();
-        items.add(new Q3EducationItem("EDU001", "개인정보보호 교육", "2025-01-31", 13));
-        items.add(new Q3EducationItem("EDU003", "직장 내 괴롭힘 예방교육", "2025-01-25", 7));
+        try {
+            UUID userUuid = UUID.fromString(userId);
 
-        return new ResolveResponse(
-            "Q3", periodStart, periodEnd, updatedAt,
-            Map.of("deadline_count", metrics.getDeadline_count()),
-            items,
-            Map.of(),
-            null
-        );
+            // education-service에서 이번 달 마감 교육 조회
+            DeadlinesThisMonthResponse response = educationServiceClient.getDeadlinesThisMonth(userUuid);
+
+            if (response == null) {
+                return createErrorResponse("Q3", periodStart, periodEnd, updatedAt,
+                    "SERVICE_ERROR", "교육 정보를 조회할 수 없어요.");
+            }
+
+            // items 생성
+            List<Object> items = new ArrayList<>();
+            if (response.getItems() != null) {
+                for (DeadlineEducationItem item : response.getItems()) {
+                    items.add(new Q3EducationItem(
+                        item.getEducationId(),
+                        item.getTitle(),
+                        item.getDeadline() != null ? item.getDeadline() : "",
+                        item.getDaysLeft()
+                    ));
+                }
+            }
+
+            return new ResolveResponse(
+                "Q3", periodStart, periodEnd, updatedAt,
+                Map.of("deadline_count", response.getDeadlineCount()),
+                items,
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q3", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q3 handler: userId={}", userId, e);
+            return createErrorResponse("Q3", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- Q4: 교육 이어보기 (마지막 시청 영상) ----------
@@ -541,22 +600,47 @@ public class PersonalizationService {
 
     // ---------- Q9: 이번 주 교육/퀴즈 할 일 ----------
     private ResolveResponse handleQ9(String userId, String periodStart, String periodEnd, String updatedAt) {
-        // TODO: education-service와 quiz-service에서 이번 주 할 일 조회
-        log.warn("Q9 handler: Stub implementation - userId={}", userId);
+        log.info("Q9 handler: userId={}", userId);
 
-        Q9Metrics metrics = new Q9Metrics(3);
-        List<Object> items = new ArrayList<>();
-        items.add(new Q9TodoItem("education", "정보보안 교육", "2025-01-20"));
-        items.add(new Q9TodoItem("quiz", "보안 퀴즈", "2025-01-19"));
-        items.add(new Q9TodoItem("education", "개인정보보호 교육", "2025-01-21"));
+        try {
+            UUID userUuid = UUID.fromString(userId);
 
-        return new ResolveResponse(
-            "Q9", periodStart, periodEnd, updatedAt,
-            Map.of("todo_count", metrics.getTodo_count()),
-            items,
-            Map.of(),
-            null
-        );
+            // education-service에서 이번 주 할 일 조회
+            TodosThisWeekResponse response = educationServiceClient.getTodosThisWeek(userUuid);
+
+            if (response == null) {
+                return createErrorResponse("Q9", periodStart, periodEnd, updatedAt,
+                    "SERVICE_ERROR", "할 일 정보를 조회할 수 없어요.");
+            }
+
+            // items 생성
+            List<Object> items = new ArrayList<>();
+            if (response.getItems() != null) {
+                for (TodoItemResponse item : response.getItems()) {
+                    items.add(new Q9TodoItem(
+                        item.getType(),
+                        item.getTitle(),
+                        item.getDeadline() != null ? item.getDeadline() : ""
+                    ));
+                }
+            }
+
+            return new ResolveResponse(
+                "Q9", periodStart, periodEnd, updatedAt,
+                Map.of("todo_count", response.getTodoCount()),
+                items,
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q9", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q9 handler: userId={}", userId, e);
+            return createErrorResponse("Q9", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- Q10: 내 근태 현황 조회 ----------
@@ -1209,23 +1293,64 @@ public class PersonalizationService {
 
     // ---------- Q20: 올해 HR 할 일 (미완료) ----------
     private ResolveResponse handleQ20(String userId, String periodStart, String periodEnd, String updatedAt) {
-        // TODO: HR 시스템에서 올해 미완료 할 일 조회
-        log.warn("Q20 handler: Stub implementation - userId={}", userId);
-        
-        Q20Metrics metrics = new Q20Metrics(4);
-        List<Object> items = new ArrayList<>();
-        items.add(new Q20TodoItem("education", "필수 교육 2건", "미완료", null));
-        items.add(new Q20TodoItem("document", "연말정산 서류 제출", null, "2025-01-31"));
-        items.add(new Q20TodoItem("survey", "직원 만족도 조사", null, "2025-02-28"));
-        items.add(new Q20TodoItem("review", "상반기 성과 평가", null, "2025-06-30"));
+        log.info("Q20 handler: userId={}", userId);
 
-        return new ResolveResponse(
-            "Q20", periodStart, periodEnd, updatedAt,
-            Map.of("todo_count", metrics.getTodo_count()),
-            items,
-            Map.of(),
-            null
-        );
+        try {
+            UUID userUuid = UUID.fromString(userId);
+
+            List<Object> items = new ArrayList<>();
+
+            // 1. 미이수 필수 교육 조회
+            IncompleteMandatoryResponse eduResponse = educationServiceClient.getIncompleteMandatory(userUuid);
+            if (eduResponse != null && eduResponse.getRemaining() > 0) {
+                String eduTitle = eduResponse.getRemaining() == 1
+                    ? "필수 교육 1건"
+                    : "필수 교육 " + eduResponse.getRemaining() + "건";
+                items.add(new Q20TodoItem("education", eduTitle, "미완료", null));
+            }
+
+            // 2. 연차 관련 할 일 (사용 권장 알림 - 연차 10일 이상 남은 경우)
+            int currentYear = java.time.Year.now().getValue();
+            Double usedDays = leaveHistoryRepository.sumDaysByUserUuidAndYear(userUuid, currentYear);
+            if (usedDays == null) usedDays = 0.0;
+            int totalDays = 15;  // 기본 연차
+            double remainingLeave = totalDays - usedDays;
+            if (remainingLeave >= 10) {
+                items.add(new Q20TodoItem("leave", "연차 사용 권장 (" + (int)remainingLeave + "일 남음)", null, null));
+            }
+
+            // 3. 복지 포인트 관련 할 일 (미사용 잔액이 50% 이상인 경우)
+            WelfarePoint welfarePoint = welfarePointRepository.findByUserUuidAndYear(userUuid, currentYear).orElse(null);
+            if (welfarePoint != null && welfarePoint.getTotalGranted() > 0) {
+                double usageRate = (double) welfarePoint.getTotalUsed() / welfarePoint.getTotalGranted();
+                if (usageRate < 0.5) {
+                    int remaining = welfarePoint.getRemaining();
+                    items.add(new Q20TodoItem("welfare", "복지 포인트 사용 권장 (" + String.format("%,d", remaining) + "원 남음)", null, null));
+                }
+            }
+
+            // 4. 이번 주 마감 교육/퀴즈 (Q9 데이터 활용)
+            TodosThisWeekResponse todoResponse = educationServiceClient.getTodosThisWeek(userUuid);
+            if (todoResponse != null && todoResponse.getTodoCount() > 0) {
+                items.add(new Q20TodoItem("deadline", "이번 주 마감 교육/퀴즈 " + todoResponse.getTodoCount() + "건", null, null));
+            }
+
+            return new ResolveResponse(
+                "Q20", periodStart, periodEnd, updatedAt,
+                Map.of("todo_count", items.size()),
+                items,
+                Map.of(),
+                null
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid userId format: {}", userId);
+            return createErrorResponse("Q20", periodStart, periodEnd, updatedAt,
+                "INVALID_USER", "사용자 정보를 확인할 수 없어요.");
+        } catch (Exception e) {
+            log.error("Error in Q20 handler: userId={}", userId, e);
+            return createErrorResponse("Q20", periodStart, periodEnd, updatedAt,
+                "SERVICE_ERROR", "데이터를 조회하는 중 오류가 발생했어요.");
+        }
     }
 
     // ---------- 에러 응답 생성 ----------

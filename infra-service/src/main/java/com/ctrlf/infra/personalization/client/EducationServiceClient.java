@@ -279,4 +279,116 @@ public class EducationServiceClient {
         private Integer passScore;
         private String lastAttemptAt;
     }
+
+    // ---------- Q1용: 미이수 필수 교육 ----------
+
+    /**
+     * 사용자의 미이수 필수 교육 목록을 조회합니다 (Q1용).
+     *
+     * @param userUuid 사용자 UUID
+     * @return 미이수 필수 교육 목록
+     */
+    public IncompleteMandatoryResponse getIncompleteMandatory(UUID userUuid) {
+        try {
+            return restClient.get()
+                .uri("/internal/education/incomplete-mandatory")
+                .header("X-User-Id", userUuid.toString())
+                .retrieve()
+                .body(IncompleteMandatoryResponse.class);
+        } catch (RestClientException e) {
+            log.warn("Failed to get incomplete-mandatory: userUuid={}, error={}", userUuid, e.getMessage());
+            return null;
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class IncompleteMandatoryResponse {
+        private int totalRequired;
+        private int completed;
+        private int remaining;
+        private List<IncompleteMandatoryItem> items;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class IncompleteMandatoryItem {
+        private String educationId;
+        private String title;
+        private String deadline;
+        private String status;
+    }
+
+    // ---------- Q3용: 이번 달 마감 필수 교육 ----------
+
+    /**
+     * 이번 달 마감인 필수 교육 목록을 조회합니다 (Q3용).
+     *
+     * @param userUuid 사용자 UUID
+     * @return 이번 달 마감 필수 교육 목록
+     */
+    public DeadlinesThisMonthResponse getDeadlinesThisMonth(UUID userUuid) {
+        try {
+            return restClient.get()
+                .uri("/internal/education/deadlines-this-month")
+                .header("X-User-Id", userUuid.toString())
+                .retrieve()
+                .body(DeadlinesThisMonthResponse.class);
+        } catch (RestClientException e) {
+            log.warn("Failed to get deadlines-this-month: userUuid={}, error={}", userUuid, e.getMessage());
+            return null;
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class DeadlinesThisMonthResponse {
+        private int deadlineCount;
+        private List<DeadlineEducationItem> items;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class DeadlineEducationItem {
+        private String educationId;
+        private String title;
+        private String deadline;
+        private int daysLeft;
+    }
+
+    // ---------- Q9용: 이번 주 할 일 ----------
+
+    /**
+     * 이번 주 할 일(교육/퀴즈) 목록을 조회합니다 (Q9용).
+     *
+     * @param userUuid 사용자 UUID
+     * @return 이번 주 할 일 목록
+     */
+    public TodosThisWeekResponse getTodosThisWeek(UUID userUuid) {
+        try {
+            return restClient.get()
+                .uri("/internal/education/todos-this-week")
+                .header("X-User-Id", userUuid.toString())
+                .retrieve()
+                .body(TodosThisWeekResponse.class);
+        } catch (RestClientException e) {
+            log.warn("Failed to get todos-this-week: userUuid={}, error={}", userUuid, e.getMessage());
+            return null;
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class TodosThisWeekResponse {
+        private int todoCount;
+        private List<TodoItemResponse> items;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class TodoItemResponse {
+        private String type;  // "education" | "quiz"
+        private String title;
+        private String deadline;
+    }
 }
