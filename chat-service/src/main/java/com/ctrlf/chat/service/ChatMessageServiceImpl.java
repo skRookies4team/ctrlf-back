@@ -68,9 +68,9 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             embeddingModel = session.getEmbeddingModel();
             if (embeddingModel == null) {
                 // 세션에도 없으면 기본값 사용
-                embeddingModel = "openai";
+                embeddingModel = "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct";
                 log.warn(
-                    "모델이 지정되지 않음. 기본값(openai) 사용: sessionId={}",
+                    "모델이 지정되지 않음. 기본값(LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct) 사용: sessionId={}",
                     request.sessionId()
                 );
             }
