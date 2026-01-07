@@ -252,7 +252,8 @@ public final class VideoDtos {
         @Schema(description = "재생 순서(0-base)") Integer orderIndex,
         @Schema(description = "생성시각 ISO8601") String createdAt,
         @Schema(description = "원본 파일명") String sourceFileName,
-        @Schema(description = "원본 파일 URL") String sourceFileUrl
+        @Schema(description = "원본 파일 URL") String sourceFileUrl,
+        @Schema(description = "교육 카테고리") String category
     ) {}
 
     @Schema(description = "영상 메타 수정 요청 (부분 업데이트)")
