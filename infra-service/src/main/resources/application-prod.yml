@@ -21,7 +21,7 @@ app:
   rag:
     ai:
       base-url: http://ai-service.argocd.svc.cluster.local:8000
-      token: changeme
+      token: ${AI_INTERNAL_TOKEN}
       timeout-seconds: 50
   api:
     education-service:

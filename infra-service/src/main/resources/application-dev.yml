@@ -20,7 +20,7 @@ app:
   rag:
     ai:
       base-url: http://localhost:8000
-      token: changeme
+      token: ${AI_INTERNAL_TOKEN}
       timeout-seconds: 10
   api:
     education-service:

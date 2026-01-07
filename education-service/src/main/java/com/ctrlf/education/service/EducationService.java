@@ -111,18 +111,21 @@ public class EducationService {
      * - 영상 시청완료 판단은 education.pass_ratio(%) 이상 시청 또는 진행 엔티티의 완료 플래그로 결정한다.
      * - 교육 진행률은 포함된 영상 진행률의 평균으로 계산한다.
      * - 페이지네이션은 적용하지 않고 최대 1000건까지 반환한다.
+     * - 사용자 부서에 해당하는 교육과 영상만 반환한다.
      *
      * @param completed 이수 여부 필터(옵션)
      * @param category 카테고리(MANDATORY/JOB/ETC, 옵션)
      * @param sort 정렬 기준(UPDATED|TITLE, 기본 UPDATED)
      * @param userUuid 로그인 사용자 UUID(옵션)
+     * @param userDepartments 사용자 부서 목록(옵션)
      * @return 교육 목록(영상 목록/진행 포함)
      */
     public List<EducationResponses.EducationListItem> getEducationsMe(
         Boolean completed,
         String eduType,
         String sort,
-        Optional<UUID> userUuid
+        Optional<UUID> userUuid,
+        List<String> userDepartments
     ) {
         // 1. 정렬 키 정규화
         String sortKey = (!StringUtils.hasText(sort)) ? "UPDATED" : sort.trim().toUpperCase();
@@ -140,6 +143,7 @@ public class EducationService {
             offset, size, completed, null, eduTypeFilter, userUuid.orElse(null), sortKey
         );
 
+
         // 4. 교육 목록 결과 생성
         List<EducationResponses.EducationListItem> result = new ArrayList<>();
         for (Object[] r : rows) {
@@ -151,20 +155,40 @@ public class EducationService {
             Boolean required = (Boolean) r[4];
             Boolean hasProgress = (Boolean) r[6];
 
-            // 5. 교육별 영상/진행 정보 결합 (PUBLISHED 상태만)
-            List<EducationVideo> vids = educationVideoRepository.findByEducationIdAndStatusOrderByOrderIndexAscCreatedAtAsc(
-                eduId, "PUBLISHED");
-            List<EducationResponses.EducationVideosResponse.VideoItem> videoItems = new ArrayList<>();
-            int sumPct = 0;
-
             // 6. 교육 정보 조회 (passRatio, eduTypeCategory, version 등)
             Education edu = educationRepository.findByIdAndDeletedAtIsNull(eduId).orElse(null);
+
+            // 부서 배열 로그 출력
+            if (edu != null) {
+                String[] eduDeptScope = edu.getDepartmentScope();
+                log.info("교육 ID: {}, 제목: {}, 교육 부서 범위: {}", 
+                    eduId, edu.getTitle(), 
+                    eduDeptScope != null ? java.util.Arrays.toString(eduDeptScope) : "null");
+            }
+            log.info("사용자 부서 목록: {}", userDepartments);
+            
+            // 부서 필터링: 교육의 departmentScope와 사용자 부서 비교
+            if (!isEducationAccessibleByDepartment(edu, userDepartments)) {
+                continue; // 부서 권한이 없으면 스킵
+            }
+            
             Integer passRatio = edu != null && edu.getPassRatio() != null ? edu.getPassRatio() : 100;
             EducationCategory eduTypeCategory = edu != null ? edu.getEduType() : null;
             Integer version = edu != null ? edu.getVersion() : null;
             Instant startAt = edu != null ? edu.getStartAt() : null;
             Instant endAt = edu != null ? edu.getEndAt() : null;
+
+            // 5. 교육별 영상/진행 정보 결합 (PUBLISHED 상태만)
+            List<EducationVideo> vids = educationVideoRepository.findByEducationIdAndStatusOrderByOrderIndexAscCreatedAtAsc(
+                eduId, "PUBLISHED");
+            List<EducationResponses.EducationVideosResponse.VideoItem> videoItems = new ArrayList<>();
+            int sumPct = 0;
+            
             for (EducationVideo v : vids) {
+                // 영상도 부서 필터링 적용
+                if (!isVideoAccessibleByDepartment(v, userDepartments)) {
+                    continue; // 부서 권한이 없으면 스킵
+                }
                 Integer resume = 0;
                 Integer total = 0;
                 Boolean completedV = false;
@@ -483,8 +507,48 @@ public class EducationService {
     }
 
     /**
+     * 교육이 사용자 부서에서 접근 가능한지 확인합니다.
+     * - departmentScope가 null이거나 비어있으면 모든 부서에서 접근 가능
+     * - departmentScope에 '전체 부서'가 포함되어 있으면 모든 사용자 접근 가능
+     * - departmentScope에 사용자 부서 중 하나라도 포함되면 접근 가능
+     */
+    private boolean isEducationAccessibleByDepartment(Education education, List<String> userDepartments) {
+        if (education == null) {
+            return true; // Education을 찾을 수 없으면 접근 허용
+        }
+        String[] deptScope = education.getDepartmentScope();
+        // departmentScope가 없으면 모든 부서 접근 가능
+        if (deptScope == null || deptScope.length == 0) {
+            return true;
+        }
+        
+        // departmentScope에 '전체 부서'가 포함되어 있으면 모든 사용자 접근 가능
+        for (String allowedDept : deptScope) {
+            if ("전체 부서".equals(allowedDept)) {
+                return true;
+            }
+        }
+        
+        // 사용자 부서가 없으면 접근 불가
+        if (userDepartments == null || userDepartments.isEmpty()) {
+            return false;
+        }
+        
+        // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
+        for (String userDept : userDepartments) {
+            for (String allowedDept : deptScope) {
+                if (allowedDept != null && allowedDept.equals(userDept)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * 영상이 사용자 부서에서 접근 가능한지 확인합니다.
      * - departmentScope가 null이거나 비어있으면 모든 부서에서 접근 가능
+     * - departmentScope에 '전체 부서'가 포함되어 있으면 모든 사용자 접근 가능
      * - departmentScope에 사용자 부서 중 하나라도 포함되면 접근 가능
      */
     private boolean isVideoAccessibleByDepartment(EducationVideo video, List<String> userDepartments) {
@@ -501,10 +565,19 @@ public class EducationService {
         if (deptScope == null || deptScope.length == 0) {
             return true;
         }
+        
+        // departmentScope에 '전체 부서'가 포함되어 있으면 모든 사용자 접근 가능
+        for (String allowedDept : deptScope) {
+            if ("전체 부서".equals(allowedDept)) {
+                return true;
+            }
+        }
+        
         // 사용자 부서가 없으면 접근 불가
         if (userDepartments == null || userDepartments.isEmpty()) {
             return false;
         }
+        
         // 사용자 부서 중 하나라도 허용 목록에 있으면 접근 가능
         for (String userDept : userDepartments) {
             for (String allowedDept : deptScope) {
