@@ -382,7 +382,8 @@ public class SourceSetService {
                         docInfo.getTitle() != null ? docInfo.getTitle() : "",  // null 체크: FastAPI validation 에러 방지
                         docInfo.getDomain() != null ? docInfo.getDomain() : "",  // null 체크
                         sourceUrl != null ? sourceUrl : "",  // null 체크
-                        docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED"
+                        docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED",
+                        docInfo.getVersion()  // 문서 버전
                     ));
                 }
             } catch (RestClientException e) {

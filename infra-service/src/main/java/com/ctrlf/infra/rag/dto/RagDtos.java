@@ -183,6 +183,7 @@ public final class RagDtos {
         private String domain;
         private String sourceUrl;   // fileUrl
         private String status;
+        private Integer version;    // 문서 버전
     }
 
     // ---------- Internal API: Chunks Bulk Upsert ----------
