@@ -61,7 +61,7 @@ public final class RagDtos {
         private String title;
 
         @NotBlank
-        @Schema(example = "HR")
+        @Schema(example = "직무교육 | 장애인인식개선교육 | 직장내괴롭힘교육 | 직장내성희롱교육 | 정보보안교육 | 사내규정")
         private String domain;
 
         @NotBlank

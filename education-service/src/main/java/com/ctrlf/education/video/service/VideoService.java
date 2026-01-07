@@ -777,14 +777,20 @@ public class VideoService {
                 log.warn("알 수 없는 영상 상태: {}, videoId={}", v.getStatus(), v.getId());
             }
         }
-        // Education에서 departmentScope 가져오기
+        // Education에서 departmentScope와 category 가져오기
         List<String> departmentScope = null;
+        String category = null;
         if (v.getEducationId() != null) {
             Education education = educationRepository.findById(v.getEducationId()).orElse(null);
-            if (education != null && education.getDepartmentScope() != null) {
-                departmentScope = java.util.Arrays.stream(education.getDepartmentScope())
-                    .filter(java.util.Objects::nonNull)
-                    .collect(java.util.stream.Collectors.toList());
+            if (education != null) {
+                if (education.getDepartmentScope() != null) {
+                    departmentScope = java.util.Arrays.stream(education.getDepartmentScope())
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toList());
+                }
+                if (education.getCategory() != null) {
+                    category = education.getCategory().name();
+                }
             }
         }
         
@@ -836,7 +842,8 @@ public class VideoService {
             v.getOrderIndex(),
             v.getCreatedAt() != null ? v.getCreatedAt().toString() : null,
             sourceFileName,
-            sourceFileUrl
+            sourceFileUrl,
+            category
         );
     }
 
