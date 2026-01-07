@@ -100,6 +100,7 @@ public class ScriptService {
         script.getVersion(),
         script.getLlmModel(),
         script.getRawPayload(),
+        script.getStatus(),
         chapterItems);
   }
 
