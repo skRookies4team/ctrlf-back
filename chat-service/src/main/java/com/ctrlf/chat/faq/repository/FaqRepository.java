@@ -25,6 +25,16 @@ public interface FaqRepository extends JpaRepository<Faq, UUID> {
 
     List<Faq> findTop10ByDomainAndIsActiveTrueOrderByPublishedAtDesc(String domain);
 
+    /**
+     * 도메인별 활성화된 FAQ 최대 2개 조회 (최신순)
+     */
+    List<Faq> findTop2ByDomainAndIsActiveTrueOrderByPublishedAtDesc(String domain);
+
+    /**
+     * 도메인별 활성화된 FAQ를 publishedAt 오름차순으로 조회 (가장 오래된 것부터)
+     */
+    List<Faq> findByDomainAndIsActiveTrueOrderByPublishedAtAsc(String domain);
+
     Optional<Faq> findByQuestionAndDomain(String question, String domain);
 
     // ✅ 카테고리 비활성화 시 FAQ 이동용

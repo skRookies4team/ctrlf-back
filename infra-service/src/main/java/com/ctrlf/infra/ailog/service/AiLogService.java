@@ -37,14 +37,28 @@ public class AiLogService {
      * AI 로그 Bulk 저장
      */
     public AiLogDtos.BulkResponse saveBulkLogs(AiLogDtos.BulkRequest request) {
-        int received = request.getLogs().size();
+        int received = request.getLogs() != null ? request.getLogs().size() : 0;
         int saved = 0;
         int failed = 0;
         List<AiLogDtos.ErrorItem> errors = new ArrayList<>();
 
+        if (request.getLogs() == null || request.getLogs().isEmpty()) {
+            log.warn("[AI 로그 Bulk 저장] 빈 요청 수신: logs가 null이거나 비어있음");
+            return new AiLogDtos.BulkResponse(0, 0, 0, errors);
+        }
+
+        log.info("[AI 로그 Bulk 저장] 시작: received={}", received);
+
         for (int i = 0; i < request.getLogs().size(); i++) {
             AiLogDtos.LogItem logItem = request.getLogs().get(i);
             try {
+                // 로그 항목 상세 정보 로깅 (첫 번째 항목만)
+                if (i == 0) {
+                    log.debug("[AI 로그 Bulk 저장] 첫 번째 로그 항목: createdAt={}, userId={}, domain={}, route={}, traceId={}, conversationId={}, turnId={}",
+                        logItem.getCreatedAt(), logItem.getUserId(), logItem.getDomain(), 
+                        logItem.getRoute(), logItem.getTraceId(), logItem.getConversationId(), logItem.getTurnId());
+                }
+
                 AiLog aiLog = new AiLog();
                 aiLog.setCreatedAt(logItem.getCreatedAt());
                 aiLog.setUserId(logItem.getUserId());
@@ -74,12 +88,18 @@ public class AiLogService {
                     "SAVE_ERROR",
                     e.getMessage()
                 ));
-                log.warn("AI 로그 저장 실패: index={}, error={}", i, e.getMessage());
+                log.error("[AI 로그 Bulk 저장] 저장 실패: index={}, createdAt={}, userId={}, domain={}, route={}, traceId={}, error={}, stackTrace={}",
+                    i, logItem.getCreatedAt(), logItem.getUserId(), logItem.getDomain(), 
+                    logItem.getRoute(), logItem.getTraceId(), e.getMessage(), e);
             }
         }
 
-        log.info("AI 로그 bulk 저장 완료: received={}, saved={}, failed={}", 
+        log.info("[AI 로그 Bulk 저장] 완료: received={}, saved={}, failed={}", 
             received, saved, failed);
+
+        if (failed > 0) {
+            log.warn("[AI 로그 Bulk 저장] 일부 실패: errors={}", errors);
+        }
 
         return new AiLogDtos.BulkResponse(received, saved, failed, errors);
     }
@@ -103,19 +123,23 @@ public class AiLogService {
         String sort
     ) {
         try {
-            log.debug("로그 조회 요청: period={}, startDate={}, endDate={}, department={}, domain={}, route={}, model={}, onlyError={}, hasPiiOnly={}, page={}, size={}, sort={}",
+            log.info("로그 조회 요청: period={}, startDate={}, endDate={}, department={}, domain={}, route={}, model={}, onlyError={}, hasPiiOnly={}, page={}, size={}, sort={}",
                 period, startDateStr, endDateStr, department, domain, route, model, onlyError, hasPiiOnly, page, size, sort);
 
             // 기간 계산: startDate/endDate가 있으면 우선 사용, 없으면 period 사용
             Instant startDate;
             Instant endDate;
             
-            if (startDateStr != null && !startDateStr.isBlank() && 
-                endDateStr != null && !endDateStr.isBlank()) {
-                // startDate, endDate 직접 사용
+            if (startDateStr != null && !startDateStr.isBlank()) {
+                // startDate 파싱
                 try {
                     startDate = Instant.parse(startDateStr);
-                    endDate = Instant.parse(endDateStr);
+                    // endDate가 있으면 사용, 없으면 현재 시각 사용
+                    if (endDateStr != null && !endDateStr.isBlank()) {
+                        endDate = Instant.parse(endDateStr);
+                    } else {
+                        endDate = Instant.now();  // 최신 데이터까지 포함
+                    }
                     log.debug("날짜 파싱 성공: startDate={}, endDate={}", startDate, endDate);
                 } catch (Exception e) {
                     log.warn("날짜 파싱 실패: startDate={}, endDate={}, error={}", 
@@ -130,7 +154,7 @@ public class AiLogService {
                 Instant[] periodRange = calculatePeriodRange(period);
                 startDate = periodRange[0];
                 endDate = periodRange[1];
-                log.debug("period 사용: startDate={}, endDate={}", startDate, endDate);
+                log.info("period 사용: startDate={}, endDate={}", startDate, endDate);
             }
 
             // 페이징 및 정렬 설정
@@ -173,14 +197,14 @@ public class AiLogService {
                 startDate, endDate, department, domain, route, model, onlyError, hasPiiOnly
             );
             
-            log.debug("DB 조회 시작: startDate={}, endDate={}, department={}, domain={}, route={}, model={}, onlyError={}, hasPiiOnly={}, pageable={}", 
-                startDate, endDate, department, domain, route, model, onlyError, hasPiiOnly, pageable);
+            log.info("DB 조회 시작: startDate={}, endDate={}, department={}, domain={}, route={}, model={}, onlyError={}, hasPiiOnly={}, pageNumber={}, pageSize={}", 
+                startDate, endDate, department, domain, route, model, onlyError, hasPiiOnly, pageNumber, pageSize);
             
             Page<AiLog> logPage;
             try {
                 logPage = aiLogRepository.findAll(spec, pageable);
-                log.debug("DB 조회 완료: totalElements={}, totalPages={}, contentSize={}", 
-                    logPage.getTotalElements(), logPage.getTotalPages(), logPage.getContent().size());
+                log.info("DB 조회 완료: totalElements={}, totalPages={}, contentSize={}, pageNumber={}, pageSize={}", 
+                    logPage.getTotalElements(), logPage.getTotalPages(), logPage.getContent().size(), logPage.getNumber(), logPage.getSize());
             } catch (Exception e) {
                 log.error("DB 조회 중 예외 발생: startDate={}, endDate={}, error={}", 
                     startDate, endDate, e.getMessage(), e);
@@ -192,8 +216,22 @@ public class AiLogService {
                 .map(this::convertToLogListItem)
                 .toList();
 
-            log.info("로그 조회 성공: totalElements={}, contentSize={}", 
-                logPage.getTotalElements(), content.size());
+            // 최신 데이터 확인을 위한 디버깅 로그
+            if (!content.isEmpty()) {
+                log.info("조회된 로그 중 가장 최신: createdAt={}, userId={}, domain={}, route={}", 
+                    content.get(0).getCreatedAt(), content.get(0).getUserId(), 
+                    content.get(0).getDomain(), content.get(0).getRoute());
+            }
+            
+            // DB에 실제로 최신 데이터가 있는지 확인 (최근 1시간 내 데이터)
+            long recentCount = aiLogRepository.findAll((root, query, cb) -> {
+                Instant oneHourAgo = Instant.now().minusSeconds(3600);
+                return cb.greaterThanOrEqualTo(root.get("createdAt"), oneHourAgo);
+            }).size();
+            log.info("최근 1시간 내 DB에 저장된 로그 개수: {}", recentCount);
+
+            log.info("로그 조회 성공: totalElements={}, contentSize={}, startDate={}, endDate={}", 
+                logPage.getTotalElements(), content.size(), startDate, endDate);
 
             return new AiLogDtos.PageResponse<>(
                 content,
@@ -260,9 +298,11 @@ public class AiLogService {
                 startDate = endDate.minusDays(30);
         }
 
+        // endDate를 현재 시각으로 설정하여 최신 데이터까지 포함
+        // startDate는 해당 날짜의 자정부터 시작
         return new Instant[] {
             startDate.atStartOfDay(ZoneId.systemDefault()).toInstant(),
-            endDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+            Instant.now()  // 현재 시각까지 포함
         };
     }
 
@@ -303,7 +343,8 @@ public class AiLogService {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), startDate));
             }
             if (endDate != null) {
-                predicates.add(cb.lessThan(root.get("createdAt"), endDate));
+                // endDate는 현재 시각이므로 lessThanOrEqualTo를 사용하여 현재 시각까지 포함
+                predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), endDate));
             }
 
             // 부서 필터

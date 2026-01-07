@@ -240,11 +240,39 @@ public class FaqServiceImpl implements FaqService {
             throw new IllegalStateException("반려된 FAQ 초안은 승인할 수 없습니다.");
         }
 
+        String domain = draft.getDomain();
+        
+        // 도메인별 활성화된 FAQ 개수 확인
+        List<Faq> activeFaqs = faqRepository.findByDomainAndIsActiveTrueOrderByPublishedAtAsc(domain);
+        
+        // 도메인별 FAQ는 최대 2개로 제한
+        // 새로운 FAQ를 승인하면, 기존 FAQ 중 가장 오래된 것(publishedAt이 가장 오래된 것)을 비활성화
+        if (activeFaqs.size() >= 2) {
+            // 가장 오래된 FAQ를 비활성화 (publishedAt이 가장 오래된 것)
+            Faq oldestFaq = activeFaqs.get(0);
+            oldestFaq.setIsActive(false);
+            oldestFaq.setUpdatedAt(Instant.now());
+            faqRepository.save(oldestFaq);
+            
+            log.info("[FAQ 승인] 도메인별 FAQ 제한으로 인한 비활성화: domain={}, deactivatedFaqId={}, question={}", 
+                domain, oldestFaq.getId(), oldestFaq.getQuestion());
+            
+            // 관리자 이력 저장 (비활성화)
+            FaqRevision revision = FaqRevision.create(
+                "FAQ",
+                oldestFaq.getId(),
+                "DEACTIVATE",
+                reviewerId,
+                String.format("새로운 FAQ 승인으로 인한 자동 비활성화 (도메인: %s, 최대 2개 제한)", domain)
+            );
+            faqRevisionRepository.save(revision);
+        }
+
         // 게시 FAQ 생성
         Faq faq = new Faq();
         faq.setQuestion(question);
         faq.setAnswer(answer);
-        faq.setDomain(draft.getDomain());
+        faq.setDomain(domain);
         faq.setIsActive(true);
         faq.setNeedsRecategorization(false);  // 기본값 설정
         faq.setPriority(1);  // 기본 우선순위 설정 (1~5, 기본값: 1)
@@ -252,12 +280,20 @@ public class FaqServiceImpl implements FaqService {
         faq.setCreatedAt(Instant.now());
         faq.setUpdatedAt(Instant.now());
 
-        faqRepository.save(faq);
+        Faq savedFaq = faqRepository.save(faq);
+        
+        log.info("[FAQ 승인] FAQ 생성 완료: faqId={}, domain={}, question={}", 
+            savedFaq.getId(), domain, question);
 
         // 초안 상태 변경
         draft.publish(reviewerId);
+        // 상태 변경 후 명시적으로 저장
+        faqDraftRepository.save(draft);
+        
+        log.info("[FAQ 승인] Draft 상태 변경 완료: draftId={}, status={}", 
+            draft.getId(), draft.getStatus());
 
-        // 관리자 이력
+        // 관리자 이력 저장 (승인)
         FaqRevision revision = FaqRevision.create(
             "FAQ_DRAFT",
             draft.getId(),
@@ -285,6 +321,11 @@ public class FaqServiceImpl implements FaqService {
         }
 
         draft.reject(reviewerId);
+        // 상태 변경 후 명시적으로 저장
+        faqDraftRepository.save(draft);
+        
+        log.info("[FAQ 반려] Draft 상태 변경 완료: draftId={}, status={}", 
+            draft.getId(), draft.getStatus());
 
         FaqRevision revision = FaqRevision.create(
             "FAQ_DRAFT",
