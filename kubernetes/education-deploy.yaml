@@ -22,7 +22,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "prod,prod-seed"
+              value: "prod"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://keycloak-db:5432/keycloak"
             - name: SPRING_DATASOURCE_USERNAME
