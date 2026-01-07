@@ -14,6 +14,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -224,6 +228,219 @@ public class InternalEducationController {
     }
 
     /**
+     * 사용자의 미이수 필수 교육 목록을 조회합니다 (Q1용).
+     *
+     * @param userId 사용자 UUID (X-User-Id 헤더)
+     * @return 미이수 필수 교육 목록
+     */
+    @Operation(summary = "미이수 필수 교육 조회 (Q1)",
+        description = "사용자의 미이수 필수 교육 목록을 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = IncompleteMandatoryResponse.class))),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류")
+    })
+    @GetMapping("/incomplete-mandatory")
+    public ResponseEntity<IncompleteMandatoryResponse> getIncompleteMandatory(
+        @Parameter(description = "사용자 UUID", required = true)
+        @RequestHeader("X-User-Id") String userId
+    ) {
+        UUID userUuid = UUID.fromString(userId);
+        log.info("getIncompleteMandatory: userUuid={}", userUuid);
+
+        Instant now = Instant.now();
+
+        // 필수 교육 목록 조회 (삭제되지 않고, 현재 활성 상태인 것)
+        List<Education> mandatoryEducations = educationRepository.findAll().stream()
+            .filter(e -> e.getDeletedAt() == null)
+            .filter(e -> Boolean.TRUE.equals(e.getRequire()))
+            .filter(e -> e.getStartAt() == null || !e.getStartAt().isAfter(now))
+            .collect(Collectors.toList());
+
+        if (mandatoryEducations.isEmpty()) {
+            return ResponseEntity.ok(IncompleteMandatoryResponse.builder()
+                .totalRequired(0)
+                .completed(0)
+                .remaining(0)
+                .items(List.of())
+                .build());
+        }
+
+        // 사용자의 완료된 교육 조회
+        List<EducationProgress> completedProgresses = educationProgressRepository
+            .findByUserUuidAndIsCompletedTrue(userUuid);
+        List<UUID> completedEducationIds = completedProgresses.stream()
+            .map(EducationProgress::getEducationId)
+            .collect(Collectors.toList());
+
+        // 미이수 필수 교육 필터링
+        List<IncompleteMandatoryItem> items = mandatoryEducations.stream()
+            .filter(e -> !completedEducationIds.contains(e.getId()))
+            .map(edu -> IncompleteMandatoryItem.builder()
+                .educationId(edu.getId().toString())
+                .title(edu.getTitle())
+                .deadline(edu.getEndAt() != null ? edu.getEndAt().toString().substring(0, 10) : null)
+                .status("미이수")
+                .build())
+            .collect(Collectors.toList());
+
+        int totalRequired = mandatoryEducations.size();
+        int completed = totalRequired - items.size();
+
+        return ResponseEntity.ok(IncompleteMandatoryResponse.builder()
+            .totalRequired(totalRequired)
+            .completed(completed)
+            .remaining(items.size())
+            .items(items)
+            .build());
+    }
+
+    /**
+     * 이번 달 마감인 필수 교육 목록을 조회합니다 (Q3용).
+     *
+     * @param userId 사용자 UUID (X-User-Id 헤더)
+     * @return 이번 달 마감 필수 교육 목록
+     */
+    @Operation(summary = "이번 달 마감 필수 교육 조회 (Q3)",
+        description = "이번 달 마감인 필수 교육 목록을 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = DeadlinesThisMonthResponse.class))),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류")
+    })
+    @GetMapping("/deadlines-this-month")
+    public ResponseEntity<DeadlinesThisMonthResponse> getDeadlinesThisMonth(
+        @Parameter(description = "사용자 UUID", required = true)
+        @RequestHeader("X-User-Id") String userId
+    ) {
+        UUID userUuid = UUID.fromString(userId);
+        log.info("getDeadlinesThisMonth: userUuid={}", userUuid);
+
+        LocalDate today = LocalDate.now();
+        LocalDate firstDayOfMonth = today.withDayOfMonth(1);
+        LocalDate lastDayOfMonth = today.with(TemporalAdjusters.lastDayOfMonth());
+
+        Instant monthStart = firstDayOfMonth.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant monthEnd = lastDayOfMonth.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+
+        // 이번 달 마감인 필수 교육 목록 조회
+        List<Education> deadlineEducations = educationRepository.findAll().stream()
+            .filter(e -> e.getDeletedAt() == null)
+            .filter(e -> Boolean.TRUE.equals(e.getRequire()))
+            .filter(e -> e.getEndAt() != null)
+            .filter(e -> !e.getEndAt().isBefore(monthStart) && e.getEndAt().isBefore(monthEnd))
+            .collect(Collectors.toList());
+
+        if (deadlineEducations.isEmpty()) {
+            return ResponseEntity.ok(DeadlinesThisMonthResponse.builder()
+                .deadlineCount(0)
+                .items(List.of())
+                .build());
+        }
+
+        // 사용자의 완료된 교육 조회
+        List<EducationProgress> completedProgresses = educationProgressRepository
+            .findByUserUuidAndIsCompletedTrue(userUuid);
+        List<UUID> completedEducationIds = completedProgresses.stream()
+            .map(EducationProgress::getEducationId)
+            .collect(Collectors.toList());
+
+        // 미완료 교육만 필터링하고 마감일 기준 정렬
+        List<DeadlineEducationItem> items = deadlineEducations.stream()
+            .filter(e -> !completedEducationIds.contains(e.getId()))
+            .map(edu -> {
+                long daysLeft = java.time.Duration.between(Instant.now(), edu.getEndAt()).toDays();
+                return DeadlineEducationItem.builder()
+                    .educationId(edu.getId().toString())
+                    .title(edu.getTitle())
+                    .deadline(edu.getEndAt().toString().substring(0, 10))
+                    .daysLeft((int) Math.max(0, daysLeft))
+                    .build();
+            })
+            .sorted((a, b) -> Integer.compare(a.getDaysLeft(), b.getDaysLeft()))
+            .collect(Collectors.toList());
+
+        return ResponseEntity.ok(DeadlinesThisMonthResponse.builder()
+            .deadlineCount(items.size())
+            .items(items)
+            .build());
+    }
+
+    /**
+     * 이번 주 할 일(교육/퀴즈) 목록을 조회합니다 (Q9용).
+     *
+     * @param userId 사용자 UUID (X-User-Id 헤더)
+     * @return 이번 주 할 일 목록
+     */
+    @Operation(summary = "이번 주 할 일 조회 (Q9)",
+        description = "이번 주 마감인 교육/퀴즈 목록을 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = TodosThisWeekResponse.class))),
+        @ApiResponse(responseCode = "401", description = "내부 토큰 오류")
+    })
+    @GetMapping("/todos-this-week")
+    public ResponseEntity<TodosThisWeekResponse> getTodosThisWeek(
+        @Parameter(description = "사용자 UUID", required = true)
+        @RequestHeader("X-User-Id") String userId
+    ) {
+        UUID userUuid = UUID.fromString(userId);
+        log.info("getTodosThisWeek: userUuid={}", userUuid);
+
+        LocalDate today = LocalDate.now();
+        // 이번 주 일요일까지 (또는 다음 7일)
+        LocalDate weekEnd = today.plusDays(7);
+
+        Instant now = Instant.now();
+        Instant weekEndInstant = weekEnd.atStartOfDay(ZoneId.systemDefault()).toInstant();
+
+        // 이번 주 마감인 교육 목록 조회
+        List<Education> weekEducations = educationRepository.findAll().stream()
+            .filter(e -> e.getDeletedAt() == null)
+            .filter(e -> e.getEndAt() != null)
+            .filter(e -> !e.getEndAt().isBefore(now) && e.getEndAt().isBefore(weekEndInstant))
+            .collect(Collectors.toList());
+
+        // 사용자의 완료된 교육 조회
+        List<EducationProgress> completedProgresses = educationProgressRepository
+            .findByUserUuidAndIsCompletedTrue(userUuid);
+        List<UUID> completedEducationIds = completedProgresses.stream()
+            .map(EducationProgress::getEducationId)
+            .collect(Collectors.toList());
+
+        // 미완료 교육만 필터링
+        List<TodoItem> items = new ArrayList<>();
+
+        for (Education edu : weekEducations) {
+            if (!completedEducationIds.contains(edu.getId())) {
+                // 교육 시청 할 일
+                items.add(TodoItem.builder()
+                    .type("education")
+                    .title(edu.getTitle())
+                    .deadline(edu.getEndAt().toString().substring(0, 10))
+                    .build());
+
+                // 퀴즈 할 일 (퀴즈가 있는 교육인 경우 - passScore가 설정된 경우)
+                if (edu.getPassScore() != null && edu.getPassScore() > 0) {
+                    items.add(TodoItem.builder()
+                        .type("quiz")
+                        .title(edu.getTitle() + " 퀴즈")
+                        .deadline(edu.getEndAt().toString().substring(0, 10))
+                        .build());
+                }
+            }
+        }
+
+        // 마감일 기준 정렬
+        items.sort((a, b) -> a.getDeadline().compareTo(b.getDeadline()));
+
+        return ResponseEntity.ok(TodosThisWeekResponse.builder()
+            .todoCount(items.size())
+            .items(items)
+            .build());
+    }
+
+    /**
      * 토픽에 대한 한글 라벨 반환.
      */
     private String getTopicLabel(EducationTopic topic) {
@@ -277,5 +494,60 @@ public class InternalEducationController {
         private String title;
         private String deadline;
         private Boolean isCompleted;
+    }
+
+    // ---------- Q1: 미이수 필수 교육 ----------
+
+    @Getter
+    @Builder
+    public static class IncompleteMandatoryResponse {
+        private int totalRequired;
+        private int completed;
+        private int remaining;
+        private List<IncompleteMandatoryItem> items;
+    }
+
+    @Getter
+    @Builder
+    public static class IncompleteMandatoryItem {
+        private String educationId;
+        private String title;
+        private String deadline;
+        private String status;
+    }
+
+    // ---------- Q3: 이번 달 마감 필수 교육 ----------
+
+    @Getter
+    @Builder
+    public static class DeadlinesThisMonthResponse {
+        private int deadlineCount;
+        private List<DeadlineEducationItem> items;
+    }
+
+    @Getter
+    @Builder
+    public static class DeadlineEducationItem {
+        private String educationId;
+        private String title;
+        private String deadline;
+        private int daysLeft;
+    }
+
+    // ---------- Q9: 이번 주 할 일 ----------
+
+    @Getter
+    @Builder
+    public static class TodosThisWeekResponse {
+        private int todoCount;
+        private List<TodoItem> items;
+    }
+
+    @Getter
+    @Builder
+    public static class TodoItem {
+        private String type;  // "education" | "quiz"
+        private String title;
+        private String deadline;
     }
 }
