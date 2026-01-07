@@ -544,7 +544,8 @@ public final class VideoDtos {
         @Schema(description = "제작자 UUID") UUID creatorUuid,
         @Schema(description = "제출 시각") String submittedAt,
         @Schema(description = "카테고리") String category,
-        @Schema(description = "교육 유형") String eduType
+        @Schema(description = "교육 유형") String eduType,
+        @Schema(description = "스크립트 ID") UUID scriptId
     ) {}
 
     @Schema(description = "검토 대기 목록 조회 페이징 응답")
