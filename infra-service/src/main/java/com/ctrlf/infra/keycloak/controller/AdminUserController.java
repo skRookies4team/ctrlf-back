@@ -334,25 +334,6 @@ public class AdminUserController {
         return props.getBaseUrl() + "/realms/" + props.getRealm() + "/protocol/openid-connect/token";
     }
 
-    @PostMapping("/token/client")
-    @Operation(
-        summary = "[DEV] client_credentials 토큰 발급",
-        description = "keycloak.admin(client_id / client_secret)로 client_credentials 토큰을 발급합니다.",
-        security = {}
-    )
-    public ResponseEntity<Map<String, Object>> clientCredentialsToken() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("grant_type", "client_credentials");
-        form.add("client_id", props.getClientId());
-        form.add("client_secret", props.getClientSecret());
-        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(form, headers);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> body = restTemplate.postForObject(tokenEndpoint(), entity, Map.class);
-        return ResponseEntity.ok(body);
-    }
-
     @PostMapping("/token/password")
     @Operation(
         summary = "[DEV] password(grant) 토큰 발급",
