@@ -10,6 +10,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,11 +36,16 @@ public class AiLogService {
 
     /**
      * AI 로그 Bulk 저장
+     * 
+     * <p>AI 서버의 LogSyncService에서 주기적으로 전송하는 로그를 저장합니다.</p>
+     * <p>중복 방지: traceId + conversationId + turnId 조합으로 중복 체크</p>
+     * <p>성능 최적화: Bulk insert 사용</p>
      */
     public AiLogDtos.BulkResponse saveBulkLogs(AiLogDtos.BulkRequest request) {
         int received = request.getLogs() != null ? request.getLogs().size() : 0;
         int saved = 0;
         int failed = 0;
+        int skipped = 0;  // 중복으로 건너뛴 개수
         List<AiLogDtos.ErrorItem> errors = new ArrayList<>();
 
         if (request.getLogs() == null || request.getLogs().isEmpty()) {
@@ -48,6 +54,11 @@ public class AiLogService {
         }
 
         log.info("[AI 로그 Bulk 저장] 시작: received={}", received);
+
+        // 중복 체크를 위한 Set (traceId + conversationId + turnId 조합)
+        java.util.Set<String> duplicateKeys = new java.util.HashSet<>();
+        List<AiLog> logsToSave = new ArrayList<>();
+        Instant receivedAt = Instant.now();
 
         for (int i = 0; i < request.getLogs().size(); i++) {
             AiLogDtos.LogItem logItem = request.getLogs().get(i);
@@ -59,6 +70,53 @@ public class AiLogService {
                         logItem.getRoute(), logItem.getTraceId(), logItem.getConversationId(), logItem.getTurnId());
                 }
 
+                // 필수 필드 검증
+                if (logItem.getCreatedAt() == null || logItem.getUserId() == null) {
+                    failed++;
+                    errors.add(new AiLogDtos.ErrorItem(
+                        i,
+                        "VALIDATION_ERROR",
+                        "createdAt 또는 userId가 null입니다."
+                    ));
+                    log.warn("[AI 로그 Bulk 저장] 필수 필드 누락: index={}, createdAt={}, userId={}", 
+                        i, logItem.getCreatedAt(), logItem.getUserId());
+                    continue;
+                }
+
+                // 중복 체크: traceId, conversationId, turnId 조합
+                String duplicateKey = buildDuplicateKey(
+                    logItem.getTraceId(), 
+                    logItem.getConversationId(), 
+                    logItem.getTurnId()
+                );
+                
+                if (duplicateKey != null) {
+                    if (duplicateKeys.contains(duplicateKey)) {
+                        // 같은 요청 내에서 중복
+                        skipped++;
+                        log.debug("[AI 로그 Bulk 저장] 요청 내 중복 건너뜀: index={}, key={}", i, duplicateKey);
+                        continue;
+                    }
+                    
+                    // DB에서 중복 체크
+                    Optional<AiLog> existing = aiLogRepository.findByTraceIdAndConversationIdAndTurnId(
+                        logItem.getTraceId(),
+                        logItem.getConversationId(),
+                        logItem.getTurnId()
+                    );
+                    
+                    if (existing.isPresent()) {
+                        skipped++;
+                        duplicateKeys.add(duplicateKey);
+                        log.debug("[AI 로그 Bulk 저장] DB 중복 건너뜀: index={}, key={}, existingId={}", 
+                            i, duplicateKey, existing.get().getId());
+                        continue;
+                    }
+                    
+                    duplicateKeys.add(duplicateKey);
+                }
+
+                // AiLog 엔티티 생성
                 AiLog aiLog = new AiLog();
                 aiLog.setCreatedAt(logItem.getCreatedAt());
                 aiLog.setUserId(logItem.getUserId());
@@ -76,32 +134,74 @@ public class AiLogService {
                 aiLog.setTraceId(logItem.getTraceId());
                 aiLog.setConversationId(logItem.getConversationId());
                 aiLog.setTurnId(logItem.getTurnId());
-                aiLog.setReceivedAt(Instant.now());
+                aiLog.setReceivedAt(receivedAt);
 
-                aiLogRepository.save(aiLog);
-                saved++;
+                logsToSave.add(aiLog);
 
             } catch (Exception e) {
                 failed++;
                 errors.add(new AiLogDtos.ErrorItem(
                     i,
-                    "SAVE_ERROR",
+                    "PROCESSING_ERROR",
                     e.getMessage()
                 ));
-                log.error("[AI 로그 Bulk 저장] 저장 실패: index={}, createdAt={}, userId={}, domain={}, route={}, traceId={}, error={}, stackTrace={}",
+                log.error("[AI 로그 Bulk 저장] 처리 실패: index={}, createdAt={}, userId={}, domain={}, route={}, traceId={}, error={}",
                     i, logItem.getCreatedAt(), logItem.getUserId(), logItem.getDomain(), 
                     logItem.getRoute(), logItem.getTraceId(), e.getMessage(), e);
             }
         }
 
-        log.info("[AI 로그 Bulk 저장] 완료: received={}, saved={}, failed={}", 
-            received, saved, failed);
+        // Bulk insert (성능 최적화)
+        if (!logsToSave.isEmpty()) {
+            try {
+                aiLogRepository.saveAll(logsToSave);
+                saved = logsToSave.size();
+                log.info("[AI 로그 Bulk 저장] Bulk insert 완료: saved={}", saved);
+            } catch (Exception e) {
+                log.error("[AI 로그 Bulk 저장] Bulk insert 실패: count={}, error={}", 
+                    logsToSave.size(), e.getMessage(), e);
+                // 개별 저장 시도
+                for (AiLog aiLogItem : logsToSave) {
+                    try {
+                        aiLogRepository.save(aiLogItem);
+                        saved++;
+                    } catch (Exception ex) {
+                        failed++;
+                        log.error("[AI 로그 Bulk 저장] 개별 저장 실패: traceId={}, error={}", 
+                            aiLogItem.getTraceId(), ex.getMessage());
+                    }
+                }
+            }
+        }
+
+        log.info("[AI 로그 Bulk 저장] 완료: received={}, saved={}, skipped={}, failed={}", 
+            received, saved, skipped, failed);
 
         if (failed > 0) {
             log.warn("[AI 로그 Bulk 저장] 일부 실패: errors={}", errors);
         }
+        
+        if (skipped > 0) {
+            log.info("[AI 로그 Bulk 저장] 중복 건너뜀: skipped={}", skipped);
+        }
 
         return new AiLogDtos.BulkResponse(received, saved, failed, errors);
+    }
+
+    /**
+     * 중복 체크를 위한 키 생성
+     * 
+     * @param traceId 트레이스 ID
+     * @param conversationId 대화 ID
+     * @param turnId 턴 ID
+     * @return 중복 체크 키 (null이면 중복 체크 불가)
+     */
+    private String buildDuplicateKey(String traceId, String conversationId, Integer turnId) {
+        // traceId, conversationId, turnId가 모두 있어야 중복 체크 가능
+        if (traceId != null && conversationId != null && turnId != null) {
+            return traceId + "|" + conversationId + "|" + turnId;
+        }
+        return null;
     }
 
     /**

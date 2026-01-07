@@ -10,6 +10,8 @@ import com.ctrlf.chat.faq.exception.FaqNotFoundException;
 import com.ctrlf.chat.faq.dto.response.FaqDraftGenerateBatchResponse;
 import com.ctrlf.chat.faq.dto.response.FaqDraftGenerateResponse;
 import com.ctrlf.chat.faq.dto.response.FaqResponse;
+import com.ctrlf.chat.ai.search.client.ChatAiClient;
+import com.ctrlf.chat.ai.search.dto.ChatAiResponse;
 import com.ctrlf.chat.faq.entity.*;
 import com.ctrlf.chat.faq.repository.*;
 import java.time.Instant;
@@ -32,6 +34,7 @@ public class FaqServiceImpl implements FaqService {
     private final FaqDraftRepository faqDraftRepository;
     private final FaqRevisionRepository faqRevisionRepository;
     private final FaqAiClient faqAiClient;
+    private final ChatAiClient chatAiClient;
 
     // =========================
     // FAQ 조회 및 관리
@@ -638,5 +641,107 @@ public class FaqServiceImpl implements FaqService {
 
         // 그 외는 그대로 반환
         return ragflowDomain;
+    }
+
+    @Override
+    public com.ctrlf.chat.faq.dto.response.InitialFaqAiAnswerGenerateResponse generateAiAnswersForInitialFaqs() {
+        log.info("[초기 FAQ AI 답변 생성] 시작");
+        
+        // 초기 데이터 FAQ 조회 (ID가 00000000-0000-0000-0000-로 시작하는 것들)
+        List<Faq> initialFaqs = faqRepository.findInitialDataFaqs();
+        
+        if (initialFaqs.isEmpty()) {
+            log.warn("[초기 FAQ AI 답변 생성] 초기 데이터 FAQ를 찾을 수 없습니다.");
+            return new com.ctrlf.chat.faq.dto.response.InitialFaqAiAnswerGenerateResponse(
+                "FAILED",
+                0,
+                0,
+                0,
+                "초기 데이터 FAQ를 찾을 수 없습니다."
+            );
+        }
+        
+        log.info("[초기 FAQ AI 답변 생성] 초기 데이터 FAQ 개수: {}", initialFaqs.size());
+        
+        int successCount = 0;
+        int failCount = 0;
+        
+        // 각 FAQ 질문에 대해 AI 답변 생성
+        for (Faq faq : initialFaqs) {
+            try {
+                log.info("[초기 FAQ AI 답변 생성] 처리 중: id={}, question={}, domain={}", 
+                    faq.getId(), faq.getQuestion(), faq.getDomain());
+                
+                // 임시 세션 ID 생성 (FAQ 답변 생성용)
+                UUID tempSessionId = UUID.randomUUID();
+                // 임시 사용자 ID 생성 (FAQ 답변 생성용)
+                UUID tempUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+                
+                // ChatAiClient를 사용하여 AI 답변 생성
+                ChatAiResponse aiResponse = chatAiClient.ask(
+                    tempSessionId,
+                    tempUserId,
+                    "ADMIN",  // 관리자 역할
+                    null,  // department는 null
+                    faq.getDomain(),
+                    "WEB",
+                    faq.getQuestion(),  // FAQ 질문을 AI에 전달
+                    "openai",  // 기본 임베딩 모델
+                    "exaone"  // 기본 LLM 모델
+                );
+                
+                if (aiResponse != null && aiResponse.getAnswer() != null && !aiResponse.getAnswer().isBlank()) {
+                    // AI 답변으로 FAQ 업데이트
+                    faq.setAnswer(aiResponse.getAnswer());
+                    faq.setUpdatedAt(Instant.now());
+                    faqRepository.save(faq);
+                    
+                    successCount++;
+                    log.info("[초기 FAQ AI 답변 생성] 성공: id={}, question={}", 
+                        faq.getId(), faq.getQuestion());
+                } else {
+                    failCount++;
+                    log.warn("[초기 FAQ AI 답변 생성] AI 응답이 비어있음: id={}, question={}", 
+                        faq.getId(), faq.getQuestion());
+                }
+                
+                // API 호출 제한을 피하기 위해 짧은 대기 시간 추가
+                Thread.sleep(500);  // 0.5초 대기
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                failCount++;
+                log.error("[초기 FAQ AI 답변 생성] 인터럽트 발생: id={}, question={}, error={}", 
+                    faq.getId(), faq.getQuestion(), e.getMessage(), e);
+            } catch (Exception e) {
+                failCount++;
+                log.error("[초기 FAQ AI 답변 생성] 실패: id={}, question={}, error={}", 
+                    faq.getId(), faq.getQuestion(), e.getMessage(), e);
+            }
+        }
+        
+        // 상태 결정
+        String status;
+        String errorMessage = null;
+        if (failCount == 0) {
+            status = "SUCCESS";
+        } else if (successCount > 0) {
+            status = "PARTIAL";
+            errorMessage = String.format("%d개 FAQ 업데이트 실패", failCount);
+        } else {
+            status = "FAILED";
+            errorMessage = "모든 FAQ 업데이트 실패";
+        }
+        
+        log.info("[초기 FAQ AI 답변 생성] 완료: 전체={}, 성공={}, 실패={}, 상태={}", 
+            initialFaqs.size(), successCount, failCount, status);
+        
+        return new com.ctrlf.chat.faq.dto.response.InitialFaqAiAnswerGenerateResponse(
+            status,
+            initialFaqs.size(),
+            successCount,
+            failCount,
+            errorMessage
+        );
     }
 }
