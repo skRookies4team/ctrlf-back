@@ -26,6 +26,7 @@ import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueItem;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueResponse;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewStatsResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
+import com.ctrlf.education.video.dto.VideoDtos.ReviewStage;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
 import com.ctrlf.education.video.dto.VideoDtos.LastVideoProgressResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
@@ -37,8 +38,11 @@ import com.ctrlf.education.video.repository.EducationVideoRepository;
 import com.ctrlf.education.video.repository.EducationVideoReviewRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
 import com.ctrlf.education.video.repository.SourceSetRepository;
+import com.ctrlf.education.video.repository.SourceSetDocumentRepository;
 import com.ctrlf.education.video.repository.EducationVideoProgressRepository;
 import com.ctrlf.education.video.entity.SourceSet;
+import com.ctrlf.education.video.entity.SourceSetDocument;
+import com.ctrlf.education.script.client.InfraRagClient;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,10 +92,48 @@ public class VideoService {
     private final VideoAiClient videoAiClient;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final SourceSetRepository sourceSetRepository;
+    private final SourceSetDocumentRepository sourceSetDocumentRepository;
     private final EducationVideoProgressRepository videoProgressRepository;
+    private final InfraRagClient infraRagClient;
 
     @Value("${ctrlf.infra.base-url:http://localhost:9003}")
     private String infraBaseUrl;
+
+    /**
+     * infra-service에서 사규 검토 중인 문서 카운트 조회.
+     * 
+     * @return 검토 중인 사규 카운트 (조회 실패 시 0)
+     */
+    private long fetchDocumentCountFromInfraService() {
+        try {
+            RestClient restClient = RestClient.builder()
+                .baseUrl(infraBaseUrl.endsWith("/") ? infraBaseUrl.substring(0, infraBaseUrl.length() - 1) : infraBaseUrl)
+                .build();
+            
+            // 사규 검토 중인 문서(PENDING 상태)만 카운트
+            // PageResponse의 total 필드를 사용하여 효율적으로 카운트 조회
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restClient.get()
+                .uri("/rag/documents/policies?status=PENDING&page=0&size=1")
+                .retrieve()
+                .body(Map.class);
+            
+            if (response == null) {
+                return 0L;
+            }
+            
+            // PageResponse의 total 필드 추출
+            Object totalObj = response.get("total");
+            if (totalObj instanceof Number) {
+                return ((Number) totalObj).longValue();
+            }
+            
+            return 0L;
+        } catch (Exception e) {
+            log.warn("infra-service에서 사규 검토 중인 문서 카운트 조회 실패: error={}", e.getMessage());
+            return 0L;
+        }
+    }
 
     /**
      * infra-service에서 사용자 정보 조회 (제작자 정보용).
@@ -745,6 +787,41 @@ public class VideoService {
                     .collect(java.util.stream.Collectors.toList());
             }
         }
+        
+        // SourceSet을 통해 documentId 조회하여 파일 정보 가져오기
+        String sourceFileName = null;
+        String sourceFileUrl = null;
+        if (v.getSourceSetId() != null) {
+            try {
+                // SourceSet의 첫 번째 문서 ID 가져오기
+                List<SourceSetDocument> documents = sourceSetDocumentRepository.findBySourceSetId(v.getSourceSetId());
+                if (!documents.isEmpty()) {
+                    UUID documentId = documents.get(0).getDocumentId();
+                    // infra-service에서 문서 정보 조회
+                    try {
+                        InfraRagClient.DocumentInfoResponse docInfo = infraRagClient.getDocument(documentId.toString());
+                        if (docInfo != null && docInfo.getSourceUrl() != null) {
+                            sourceFileUrl = docInfo.getSourceUrl();
+                            // sourceUrl에서 파일명 추출 (URL의 마지막 부분)
+                            String url = docInfo.getSourceUrl();
+                            if (url.contains("/")) {
+                                String fileName = url.substring(url.lastIndexOf("/") + 1);
+                                // 쿼리 파라미터 제거
+                                if (fileName.contains("?")) {
+                                    fileName = fileName.substring(0, fileName.indexOf("?"));
+                                }
+                                sourceFileName = fileName;
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.debug("문서 정보 조회 실패: documentId={}, error={}", documentId, e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("SourceSet 문서 조회 실패: sourceSetId={}, error={}", v.getSourceSetId(), e.getMessage());
+            }
+        }
+        
         return new VideoMetaItem(
             v.getId(),
             v.getEducationId(),
@@ -757,7 +834,9 @@ public class VideoService {
             status,
             departmentScope,
             v.getOrderIndex(),
-            v.getCreatedAt() != null ? v.getCreatedAt().toString() : null
+            v.getCreatedAt() != null ? v.getCreatedAt().toString() : null,
+            sourceFileName,
+            sourceFileUrl
         );
     }
 
@@ -769,7 +848,7 @@ public class VideoService {
      * 검토 목록 조회 (필터링, 정렬, 페이징).
      * 
      * @param statusFilter "pending" (검토 대기), "approved" (승인됨), "rejected" (반려됨), null (전체)
-     * @param reviewStage "first" (1차), "second" (2차), "document" (문서), null (전체)
+     * @param reviewStage "first" (1차), "second" (2차), null (전체)
      * @param sort "latest" (최신순), "oldest" (오래된순), "title" (제목순), null (최신순 기본값)
      */
     public ReviewQueueResponse getReviewQueue(
@@ -799,7 +878,7 @@ public class VideoService {
         final String reviewStageFilter = reviewStage; // 람다 내부에서 사용하기 위해 final 변수로 복사
         List<EducationVideo> filteredVideos = allVideos.stream()
             .filter(v -> {
-                // 검토 단계 필터 (1차/2차/문서)
+                // 검토 단계 필터 (1차/2차)
                 if (reviewStageFilter != null && !reviewStageFilter.isBlank()) {
                     if ("first".equals(reviewStageFilter)) {
                         // 1차 검토만
@@ -811,9 +890,6 @@ public class VideoService {
                         if (!"FINAL_REVIEW_REQUESTED".equals(v.getStatus())) {
                             return false;
                         }
-                    } else if ("document".equals(reviewStageFilter)) {
-                        // 문서 타입 (현재는 모든 영상을 문서로 간주, 추후 확장 가능)
-                        // TODO: 문서 타입 구분 로직 추가 필요
                     }
                 }
                 
@@ -906,23 +982,35 @@ public class VideoService {
                     log.warn("알 수 없는 영상 상태: {}", v.getStatus());
                 }
 
-                String reviewStageLabel = null;
+                // reviewStage 설정 로직:
+                // - SCRIPT_REVIEW_REQUESTED → "1차"
+                // - FINAL_REVIEW_REQUESTED → "2차"
+                // - PUBLISHED → "승인됨"
+                // - 그 외 상태이면서 반려 기록이 있으면 → "1차 반려"/"2차 반려"/"반려됨"
+                // - 그 외 상태이면서 반려 기록이 없으면 → "" (빈공백)
+                //   예: DRAFT, SCRIPT_READY, SCRIPT_APPROVED, PROCESSING, READY, DISABLED 등 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우
+                ReviewStage reviewStageLabel = null;
                 if ("SCRIPT_REVIEW_REQUESTED".equals(v.getStatus())) {
-                    reviewStageLabel = "1차";
+                    reviewStageLabel = ReviewStage.FIRST_ROUND;
                 } else if ("FINAL_REVIEW_REQUESTED".equals(v.getStatus())) {
-                    reviewStageLabel = "2차";
+                    reviewStageLabel = ReviewStage.SECOND_ROUND;
                 } else if ("PUBLISHED".equals(v.getStatus())) {
-                    reviewStageLabel = "승인됨";
+                    reviewStageLabel = ReviewStage.APPROVED;
                 } else {
                     // 반려됨인 경우 리뷰에서 단계 확인
                     List<EducationVideoReview> reviews = reviewRepository.findByVideoIdOrderByCreatedAtDesc(v.getId());
                     if (!reviews.isEmpty()) {
                         EducationVideoReview latestReview = reviews.get(0);
                         if (latestReview.getRejectionStage() != null) {
-                            reviewStageLabel = latestReview.getRejectionStage() == RejectionStage.SCRIPT ? "1차 반려" : "2차 반려";
+                            reviewStageLabel = latestReview.getRejectionStage() == RejectionStage.SCRIPT 
+                                ? ReviewStage.FIRST_ROUND_REJECTED 
+                                : ReviewStage.SECOND_ROUND_REJECTED;
                         } else {
-                            reviewStageLabel = "반려됨";
+                            reviewStageLabel = ReviewStage.REJECTED;
                         }
+                    } else {
+                        // 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우 빈공백("")
+                        reviewStageLabel = ReviewStage.NONE;
                     }
                 }
                 
@@ -956,7 +1044,7 @@ public class VideoService {
         // 통계 계산 (검토 대기 상태일 때만)
         long firstRoundCount = 0;
         long secondRoundCount = 0;
-        long documentCount = allVideos.size();
+        long documentCount = fetchDocumentCountFromInfraService();
         
         if (statusFilter == null || "pending".equals(statusFilter)) {
             firstRoundCount = allVideos.stream()
@@ -1105,8 +1193,37 @@ public class VideoService {
             log.warn("알 수 없는 영상 상태: {}", video.getStatus());
         }
 
-        String reviewStage = "SCRIPT_REVIEW_REQUESTED".equals(video.getStatus()) ? "1차" : 
-            "FINAL_REVIEW_REQUESTED".equals(video.getStatus()) ? "2차" : "";
+        // reviewStage 설정 로직:
+        // - SCRIPT_REVIEW_REQUESTED → "1차"
+        // - FINAL_REVIEW_REQUESTED → "2차"
+        // - PUBLISHED → "승인됨"
+        // - 그 외 상태이면서 반려 기록이 있으면 → "1차 반려"/"2차 반려"/"반려됨"
+        // - 그 외 상태이면서 반려 기록이 없으면 → "" (빈공백)
+        //   예: DRAFT, SCRIPT_READY, SCRIPT_APPROVED, PROCESSING, READY, DISABLED 등 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우
+        ReviewStage reviewStage = null;
+        if ("SCRIPT_REVIEW_REQUESTED".equals(video.getStatus())) {
+            reviewStage = ReviewStage.FIRST_ROUND;
+        } else if ("FINAL_REVIEW_REQUESTED".equals(video.getStatus())) {
+            reviewStage = ReviewStage.SECOND_ROUND;
+        } else if ("PUBLISHED".equals(video.getStatus())) {
+            reviewStage = ReviewStage.APPROVED;
+        } else {
+            // 반려됨인 경우 리뷰에서 단계 확인
+            List<EducationVideoReview> reviews = reviewRepository.findByVideoIdOrderByCreatedAtDesc(videoId);
+            if (!reviews.isEmpty()) {
+                EducationVideoReview latestReview = reviews.get(0);
+                if (latestReview.getRejectionStage() != null) {
+                    reviewStage = latestReview.getRejectionStage() == RejectionStage.SCRIPT 
+                        ? ReviewStage.FIRST_ROUND_REJECTED 
+                        : ReviewStage.SECOND_ROUND_REJECTED;
+                } else {
+                    reviewStage = ReviewStage.REJECTED;
+                }
+            } else {
+                // 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우 빈공백("")
+                reviewStage = ReviewStage.NONE;
+            }
+        }
 
         // 제작자 정보 조회 (infra-service)
         UUID creatorUuid = video.getCreatorUuid();

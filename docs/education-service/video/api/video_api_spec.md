@@ -144,6 +144,8 @@ Body: 없음
 | departmentScope | 수강 가능 부서 목록 | array(string) | optional | true     | ["HR", "ENGINEERING"]                  |
 | orderIndex      | 재생 순서(0-base)   | number        | optional | true     | 0                                      |
 | createdAt       | 생성시각 ISO8601    | string        | required | false    | "2025-12-24T10:00:00Z"                 |
+| sourceFileName  | 원본 파일명         | string        | optional | true     | "hr_safety_v3.pdf"                     |
+| sourceFileUrl   | 원본 파일 URL       | string        | optional | true     | "s3://ctrl-s3/docs/hr_safety_v3.pdf"   |
 
 ### Status
 
@@ -925,45 +927,45 @@ Body: 없음
 
 ### Query Parameter
 
-| key              | 설명                                                      | value 타입 | 옵션     | Nullable | 예시     |
-| ---------------- | --------------------------------------------------------- | ---------- | -------- | -------- | -------- |
-| page             | 페이지 번호 (0-base)                                      | number     | optional | false    | 0        |
-| size             | 페이지 크기                                               | number     | optional | false    | 30       |
-| search           | 검색어 (제목/교육 제목/부서/제작자)                      | string     | optional | true     | "성희롱" |
-| myProcessingOnly | 내 처리만 (현재 사용자가 검토한 영상만)                   | boolean    | optional | true     | false    |
+| key              | 설명                                                               | value 타입 | 옵션     | Nullable | 예시      |
+| ---------------- | ------------------------------------------------------------------ | ---------- | -------- | -------- | --------- |
+| page             | 페이지 번호 (0-base)                                               | number     | optional | false    | 0         |
+| size             | 페이지 크기                                                        | number     | optional | false    | 30        |
+| search           | 검색어 (제목/교육 제목/부서/제작자)                                | string     | optional | true     | "성희롱"  |
+| myProcessingOnly | 내 처리만 (현재 사용자가 검토한 영상만)                            | boolean    | optional | true     | false     |
 | status           | 상태 필터 (pending: 검토 대기, approved: 승인됨, rejected: 반려됨) | string     | optional | true     | "pending" |
-| reviewStage      | 검토 단계 필터 (first: 1차, second: 2차, document: 문서, all: 전체) | string     | optional | true     | "first"   |
-| sort             | 정렬 옵션 (latest: 최신순, oldest: 오래된순, title: 제목순) | string     | optional | true     | "latest" |
+| reviewStage      | 검토 단계 필터 (first: 1차, second: 2차)                           | string     | optional | true     | "first"   |
+| sort             | 정렬 옵션 (latest: 최신순, oldest: 오래된순, title: 제목순)        | string     | optional | true     | "latest"  |
 
 ### Response
 
-| key              | 설명                | value 타입    | 옵션     | Nullable | 예시 |
-| ---------------- | ------------------- | ------------- | -------- | -------- | ---- |
-| items            | 검토 목록           | array(object) | required | false    | 아래 표 참조 |
-| totalCount       | 전체 개수           | number        | required | false    | 100  |
-| page             | 현재 페이지 (0-base) | number        | required | false    | 0    |
-| size             | 페이지 크기         | number        | required | false    | 30   |
-| totalPages       | 전체 페이지 수      | number        | required | false    | 4    |
-| firstRoundCount  | 1차 검토 대기 개수  | number        | required | false    | 8    |
-| secondRoundCount | 2차 검토 대기 개수  | number        | required | false    | 19   |
-| documentCount    | 문서 타입 개수      | number        | required | false    | 36   |
+| key              | 설명                     | value 타입    | 옵션     | Nullable | 예시         |
+| ---------------- | ------------------------ | ------------- | -------- | -------- | ------------ |
+| items            | 검토 목록                | array(object) | required | false    | 아래 표 참조 |
+| totalCount       | 전체 개수                | number        | required | false    | 100          |
+| page             | 현재 페이지 (0-base)     | number        | required | false    | 0            |
+| size             | 페이지 크기              | number        | required | false    | 30           |
+| totalPages       | 전체 페이지 수           | number        | required | false    | 4            |
+| firstRoundCount  | 1차 검토 대기 개수       | number        | required | false    | 8            |
+| secondRoundCount | 2차 검토 대기 개수       | number        | required | false    | 19           |
+| documentCount    | 사규 검토 중인 문서 개수 | number        | required | false    | 36           |
 
 items item
 
-| key              | 설명           | value 타입   | 옵션     | Nullable | 예시                                   |
-| ---------------- | -------------- | ------------ | -------- | -------- | -------------------------------------- |
-| videoId          | 영상 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| educationId      | 교육 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| educationTitle   | 교육 제목      | string       | required | false    | "성희롱 예방 교육"                     |
-| videoTitle       | 영상 제목      | string       | required | false    | "2024년 성희롱 예방 교육"              |
-| status           | 상태           | string       | required | false    | "SCRIPT_REVIEW_REQUESTED"              |
-| reviewStage      | 검토 단계      | string       | required | false    | "1차 검토"                             |
-| creatorDepartment | 제작자 부서    | string       | optional | true     | "총무팀"                               |
-| creatorName      | 제작자 이름    | string       | optional | true     | "홍길동"                               |
-| creatorUuid      | 제작자 UUID    | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
-| submittedAt      | 제출 시각      | string       | required | false    | "2025-12-24T10:00:00Z"                 |
-| category         | 카테고리       | string       | optional | true     | "SEXUAL_HARASSMENT_PREVENTION"         |
-| eduType          | 교육 유형      | string       | optional | true     | "MANDATORY"                            |
+| key               | 설명        | value 타입                | 옵션     | Nullable | 예시                                                                            |
+| ----------------- | ----------- | ------------------------- | -------- | -------- | ------------------------------------------------------------------------------- |
+| videoId           | 영상 ID     | string(uuid)              | required | false    | "550e8400-e29b-41d4-a716-446655440001"                                          |
+| educationId       | 교육 ID     | string(uuid)              | required | false    | "550e8400-e29b-41d4-a716-446655440000"                                          |
+| educationTitle    | 교육 제목   | string                    | required | false    | "성희롱 예방 교육"                                                              |
+| videoTitle        | 영상 제목   | string                    | required | false    | "2024년 성희롱 예방 교육"                                                       |
+| status            | 상태        | string                    | required | false    | "SCRIPT_REVIEW_REQUESTED"                                                       |
+| reviewStage       | 검토 단계   | string (ReviewStage enum) | required | false    | "1차" (가능한 값: "1차", "2차", "승인됨", "1차 반려", "2차 반려", "반려됨", "") |
+| creatorDepartment | 제작자 부서 | string                    | optional | true     | "총무팀"                                                                        |
+| creatorName       | 제작자 이름 | string                    | optional | true     | "홍길동"                                                                        |
+| creatorUuid       | 제작자 UUID | string(uuid)              | optional | true     | "550e8400-e29b-41d4-a716-446655440002"                                          |
+| submittedAt       | 제출 시각   | string                    | required | false    | "2025-12-24T10:00:00Z"                                                          |
+| category          | 카테고리    | string                    | optional | true     | "SEXUAL_HARASSMENT_PREVENTION"                                                  |
+| eduType           | 교육 유형   | string                    | optional | true     | "MANDATORY"                                                                     |
 
 ### Status
 
@@ -998,12 +1000,12 @@ Body: 없음
 
 ### Response
 
-| key            | 설명          | value 타입 | 옵션     | Nullable | 예시 |
-| -------------- | ------------- | ---------- | -------- | -------- | ---- |
-| pendingCount   | 검토 대기 개수 | number     | required | false    | 27   |
-| approvedCount  | 승인됨 개수   | number     | required | false    | 150  |
-| rejectedCount  | 반려됨 개수   | number     | required | false    | 5    |
-| myActivityCount | 내 활동 개수 | number     | required | false    | 12   |
+| key             | 설명           | value 타입 | 옵션     | Nullable | 예시 |
+| --------------- | -------------- | ---------- | -------- | -------- | ---- |
+| pendingCount    | 검토 대기 개수 | number     | required | false    | 27   |
+| approvedCount   | 승인됨 개수    | number     | required | false    | 150  |
+| rejectedCount   | 반려됨 개수    | number     | required | false    | 5    |
+| myActivityCount | 내 활동 개수   | number     | required | false    | 12   |
 
 ### Status
 
@@ -1038,23 +1040,23 @@ Body: 없음
 
 ### Response
 
-| key         | 설명          | value 타입    | 옵션     | Nullable | 예시                                   |
-| ----------- | ------------- | ------------- | -------- | -------- | -------------------------------------- |
-| videoId     | 영상 ID       | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| videoTitle  | 영상 제목     | string        | required | false    | "2024년 성희롱 예방 교육"              |
-| history     | 감사 이력 목록 | array(object) | required | false    | 아래 표 참조                           |
+| key        | 설명           | value 타입    | 옵션     | Nullable | 예시                                   |
+| ---------- | -------------- | ------------- | -------- | -------- | -------------------------------------- |
+| videoId    | 영상 ID        | string(uuid)  | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
+| videoTitle | 영상 제목      | string        | required | false    | "2024년 성희롱 예방 교육"              |
+| history    | 감사 이력 목록 | array(object) | required | false    | 아래 표 참조                           |
 
 history item
 
-| key             | 설명                | value 타입   | 옵션     | Nullable | 예시                      |
-| --------------- | ------------------- | ------------ | -------- | -------- | ------------------------- |
-| eventType       | 이벤트 타입         | string       | required | false    | "CREATED", "REJECTED"     |
-| description     | 이벤트 설명         | string       | required | false    | "영상 생성", "검토 반려"  |
-| timestamp       | 발생 시각           | string       | required | false    | "2025-12-24T10:00:00Z"    |
-| actorName       | 처리자 이름         | string       | required | false    | "홍길동", "SYSTEM"         |
-| actorUuid       | 처리자 UUID         | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
-| rejectionReason | 반려 사유 (반려인 경우) | string       | optional | true     | "스크립트 내용 수정 필요" |
-| rejectionStage  | 반려 단계 (반려인 경우) | string       | optional | true     | "SCRIPT", "VIDEO"         |
+| key             | 설명                    | value 타입   | 옵션     | Nullable | 예시                                   |
+| --------------- | ----------------------- | ------------ | -------- | -------- | -------------------------------------- |
+| eventType       | 이벤트 타입             | string       | required | false    | "CREATED", "REJECTED"                  |
+| description     | 이벤트 설명             | string       | required | false    | "영상 생성", "검토 반려"               |
+| timestamp       | 발생 시각               | string       | required | false    | "2025-12-24T10:00:00Z"                 |
+| actorName       | 처리자 이름             | string       | required | false    | "홍길동", "SYSTEM"                     |
+| actorUuid       | 처리자 UUID             | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
+| rejectionReason | 반려 사유 (반려인 경우) | string       | optional | true     | "스크립트 내용 수정 필요"              |
+| rejectionStage  | 반려 단계 (반려인 경우) | string       | optional | true     | "SCRIPT", "VIDEO"                      |
 
 ### Status
 
@@ -1091,23 +1093,23 @@ Body: 없음
 
 ### Response
 
-| key              | 설명           | value 타입   | 옵션     | Nullable | 예시                                   |
-| ---------------- | -------------- | ------------ | -------- | -------- | -------------------------------------- |
-| videoId          | 영상 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440001" |
-| educationId      | 교육 ID        | string(uuid) | required | false    | "550e8400-e29b-41d4-a716-446655440000" |
-| educationTitle   | 교육 제목      | string       | required | false    | "성희롱 예방 교육"                     |
-| videoTitle       | 영상 제목      | string       | required | false    | "2024년 성희롱 예방 교육"              |
-| status           | 상태           | string       | required | false    | "SCRIPT_REVIEW_REQUESTED"              |
-| reviewStage      | 검토 단계      | string       | required | false    | "1차 검토"                             |
-| creatorDepartment | 제작자 부서    | string       | optional | true     | "총무팀"                               |
-| creatorName      | 제작자 이름    | string       | optional | true     | "홍길동"                               |
-| creatorUuid      | 제작자 UUID    | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440002" |
-| submittedAt      | 제출 시각      | string       | required | false    | "2025-12-24T10:00:00Z"                 |
-| updatedAt        | 업데이트 시각  | string       | required | false    | "2025-12-24T11:00:00Z"                 |
-| category         | 카테고리       | string       | optional | true     | "SEXUAL_HARASSMENT_PREVENTION"          |
-| eduType          | 교육 유형      | string       | optional | true     | "MANDATORY"                             |
-| scriptId         | 스크립트 ID    | string(uuid) | optional | true     | "550e8400-e29b-41d4-a716-446655440003" |
-| scriptVersion    | 스크립트 버전  | number       | optional | true     | 1                                      |
+| key               | 설명          | value 타입                | 옵션     | Nullable | 예시                                                                            |
+| ----------------- | ------------- | ------------------------- | -------- | -------- | ------------------------------------------------------------------------------- |
+| videoId           | 영상 ID       | string(uuid)              | required | false    | "550e8400-e29b-41d4-a716-446655440001"                                          |
+| educationId       | 교육 ID       | string(uuid)              | required | false    | "550e8400-e29b-41d4-a716-446655440000"                                          |
+| educationTitle    | 교육 제목     | string                    | required | false    | "성희롱 예방 교육"                                                              |
+| videoTitle        | 영상 제목     | string                    | required | false    | "2024년 성희롱 예방 교육"                                                       |
+| status            | 상태          | string                    | required | false    | "SCRIPT_REVIEW_REQUESTED"                                                       |
+| reviewStage       | 검토 단계     | string (ReviewStage enum) | required | false    | "1차" (가능한 값: "1차", "2차", "승인됨", "1차 반려", "2차 반려", "반려됨", "") |
+| creatorDepartment | 제작자 부서   | string                    | optional | true     | "총무팀"                                                                        |
+| creatorName       | 제작자 이름   | string                    | optional | true     | "홍길동"                                                                        |
+| creatorUuid       | 제작자 UUID   | string(uuid)              | optional | true     | "550e8400-e29b-41d4-a716-446655440002"                                          |
+| submittedAt       | 제출 시각     | string                    | required | false    | "2025-12-24T10:00:00Z"                                                          |
+| updatedAt         | 업데이트 시각 | string                    | required | false    | "2025-12-24T11:00:00Z"                                                          |
+| category          | 카테고리      | string                    | optional | true     | "SEXUAL_HARASSMENT_PREVENTION"                                                  |
+| eduType           | 교육 유형     | string                    | optional | true     | "MANDATORY"                                                                     |
+| scriptId          | 스크립트 ID   | string(uuid)              | optional | true     | "550e8400-e29b-41d4-a716-446655440003"                                          |
+| scriptVersion     | 스크립트 버전 | number                    | optional | true     | 1                                                                               |
 
 ### Status
 
@@ -1121,14 +1123,27 @@ Body: 없음
 
 ## 주의사항
 
-1. **상태 전이**: 영상 상태는 다음 순서로 전이됩니다:
+1. **검토 단계 (ReviewStage enum)**: `reviewStage` 필드는 `ReviewStage` enum을 사용하며, JSON 직렬화 시 displayName이 반환됩니다.
+
+   - 가능한 값: `"1차"`, `"2차"`, `"승인됨"`, `"1차 반려"`, `"2차 반려"`, `"반려됨"`, `""`
+   - `"1차"`: 1차 검토 대기 (SCRIPT_REVIEW_REQUESTED)
+   - `"2차"`: 2차 검토 대기 (FINAL_REVIEW_REQUESTED)
+   - `"승인됨"`: 승인 완료 (PUBLISHED)
+   - `"1차 반려"`: 1차 검토 반려
+   - `"2차 반려"`: 2차 검토 반려
+   - `"반려됨"`: 반려됨 (단계 불명)
+   - `""`: 없음 (빈공백)
+     - 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우
+     - 예: DRAFT, SCRIPT_READY, SCRIPT_APPROVED, PROCESSING, READY, DISABLED 등
+
+2. **상태 전이**: 영상 상태는 다음 순서로 전이됩니다:
    - `DRAFT` → `SCRIPT_READY` → `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_APPROVED` → `PROCESSING` → `READY` → `FINAL_REVIEW_REQUESTED` → `PUBLISHED` → `DISABLED` (비활성화 가능)
    - 반려 시: `SCRIPT_REVIEW_REQUESTED` → `SCRIPT_READY` (1차 반려), `FINAL_REVIEW_REQUESTED` → `READY` (2차 반려)
    - 비활성화/활성화: `PUBLISHED` ↔ `DISABLED`
-2. **영상 생성**: 영상 생성 Job은 비동기로 처리되며, 완료까지 시간이 걸릴 수 있습니다.
-3. **Job 상태**: Job 상태는 `PENDING` → `PROCESSING` → `COMPLETED` 또는 `FAILED`로 변경됩니다.
-4. **재시도**: FAILED 상태의 Job만 재시도할 수 있습니다.
-5. **내부 API**: `/video/job/{jobId}/complete` 엔드포인트는 내부 토큰(`X-Internal-Token`)이 필요하며, 외부에서 직접 호출하지 않습니다.
+3. **영상 생성**: 영상 생성 Job은 비동기로 처리되며, 완료까지 시간이 걸릴 수 있습니다.
+4. **Job 상태**: Job 상태는 `PENDING` → `PROCESSING` → `COMPLETED` 또는 `FAILED`로 변경됩니다.
+5. **재시도**: FAILED 상태의 Job만 재시도할 수 있습니다.
+6. **내부 API**: `/video/job/{jobId}/complete` 엔드포인트는 내부 토큰(`X-Internal-Token`)이 필요하며, 외부에서 직접 호출하지 않습니다.
 
 ---
 

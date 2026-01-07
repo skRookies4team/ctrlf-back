@@ -23,7 +23,7 @@
          educationTitle: "교육 제목",
          videoTitle: "영상 제목",
          status: "SCRIPT_REVIEW_REQUESTED" | "FINAL_REVIEW_REQUESTED",
-         reviewStage: "1차" | "2차",
+         reviewStage: "1차" | "2차" | "승인됨" | "1차 반려" | "2차 반려" | "반려됨" | "",
          creatorDepartment: "ESG팀",
          creatorName: "서제작",
          creatorUuid: "제작자 UUID",
@@ -105,7 +105,7 @@ GET /admin/videos/{videoId}/review-detail
     educationTitle: "교육 제목",
     videoTitle: "영상 제목",
     status: "SCRIPT_REVIEW_REQUESTED" | "FINAL_REVIEW_REQUESTED" | "PUBLISHED",
-    reviewStage: "1차" | "2차" | "승인됨" | "1차 반려" | "2차 반려",
+    reviewStage: "1차" | "2차" | "승인됨" | "1차 반려" | "2차 반려" | "반려됨" | "",
     creatorDepartment: "ESG팀",
     creatorName: "서제작",
     creatorUuid: "제작자 UUID",
@@ -314,6 +314,17 @@ GET /admin/videos/review-stats
 
    - 1차: 스크립트 검토 (`SCRIPT_REVIEW_REQUESTED`)
    - 2차: 영상 검토 (`FINAL_REVIEW_REQUESTED`)
+
+6-1. **reviewStage 값 설명:**
+
+   - `"1차"`: 1차 검토 대기 (SCRIPT_REVIEW_REQUESTED)
+   - `"2차"`: 2차 검토 대기 (FINAL_REVIEW_REQUESTED)
+   - `"승인됨"`: 승인 완료 (PUBLISHED)
+   - `"1차 반려"`: 1차 검토 반려
+   - `"2차 반려"`: 2차 검토 반려
+   - `"반려됨"`: 반려됨 (단계 불명)
+   - `""`: 없음 (빈공백) - 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우
+     - 예: DRAFT, SCRIPT_READY, SCRIPT_APPROVED, PROCESSING, READY, DISABLED 등
 
 7. **승인/반려 처리:**
 

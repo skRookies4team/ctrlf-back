@@ -250,7 +250,9 @@ public final class VideoDtos {
         @Schema(description = "수강 가능 부서 목록 (사용 가능한 값: '전체 부서', '총무팀', '기획팀', '마케팅팀', '인사팀', '재무팀', '개발팀', '영업팀', '법무팀')", 
                 example = "[\"총무팀\", \"기획팀\"]") List<String> departmentScope,
         @Schema(description = "재생 순서(0-base)") Integer orderIndex,
-        @Schema(description = "생성시각 ISO8601") String createdAt
+        @Schema(description = "생성시각 ISO8601") String createdAt,
+        @Schema(description = "원본 파일명") String sourceFileName,
+        @Schema(description = "원본 파일 URL") String sourceFileUrl
     ) {}
 
     @Schema(description = "영상 메타 수정 요청 (부분 업데이트)")
@@ -322,6 +324,35 @@ public final class VideoDtos {
         @NotNull(message = "status는 필수입니다")
         VideoStatus status
     ) {}
+
+    @Schema(description = "검토 단계")
+    public enum ReviewStage {
+        @Schema(description = "1차 검토")
+        FIRST_ROUND("1차"),
+        @Schema(description = "2차 검토")
+        SECOND_ROUND("2차"),
+        @Schema(description = "승인됨")
+        APPROVED("승인됨"),
+        @Schema(description = "1차 반려")
+        FIRST_ROUND_REJECTED("1차 반려"),
+        @Schema(description = "2차 반려")
+        SECOND_ROUND_REJECTED("2차 반려"),
+        @Schema(description = "반려됨")
+        REJECTED("반려됨"),
+        @Schema(description = "없음")
+        NONE("");
+
+        private final String displayName;
+
+        ReviewStage(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @com.fasterxml.jackson.annotation.JsonValue
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
 
     // ========================
     // 소스셋(SourceSet) 관련 DTOs
@@ -507,7 +538,7 @@ public final class VideoDtos {
         @Schema(description = "교육 제목") String educationTitle,
         @Schema(description = "영상 제목") String videoTitle,
         @Schema(description = "상태") VideoStatus status,
-        @Schema(description = "검토 단계 (1차: SCRIPT_REVIEW_REQUESTED, 2차: FINAL_REVIEW_REQUESTED)") String reviewStage,
+        @Schema(description = "검토 단계") ReviewStage reviewStage,
         @Schema(description = "제작자 부서") String creatorDepartment,
         @Schema(description = "제작자 이름") String creatorName,
         @Schema(description = "제작자 UUID") UUID creatorUuid,
@@ -562,7 +593,7 @@ public final class VideoDtos {
         @Schema(description = "교육 제목") String educationTitle,
         @Schema(description = "영상 제목") String videoTitle,
         @Schema(description = "상태") VideoStatus status,
-        @Schema(description = "검토 단계") String reviewStage,
+        @Schema(description = "검토 단계") ReviewStage reviewStage,
         @Schema(description = "제작자 부서") String creatorDepartment,
         @Schema(description = "제작자 이름") String creatorName,
         @Schema(description = "제작자 UUID") UUID creatorUuid,
