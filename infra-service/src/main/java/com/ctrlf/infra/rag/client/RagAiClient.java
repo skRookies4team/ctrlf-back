@@ -12,15 +12,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-/**
- * AI 서버(RAG 파이프라인) 호출 클라이언트.
- *
- * 기능
- * - 문서 처리(텍스트 추출/청킹/임베딩) 요청을 AI 서버로 전달합니다.
- *
- * 엔드포인트
- * - POST {baseUrl}/internal/ai/rag-documents/ingest
- */
+    /**
+     * AI 서버(RAG 파이프라인) 호출 클라이언트.
+     *
+     * 기능
+     * - 문서 처리(텍스트 추출/청킹/임베딩) 요청을 AI 서버로 전달합니다.
+     *
+     * 엔드포인트
+     * - POST {baseUrl}/v1/internal_ragflow/internal/ai/rag-documents/ingest
+     */
 @Component
 public class RagAiClient {
     private static final Logger log = LoggerFactory.getLogger(RagAiClient.class);
@@ -110,7 +110,7 @@ public class RagAiClient {
 
         try {
             AiResponse response = restClient.post()
-                .uri("/internal/ai/rag-documents/ingest")
+                .uri("/v1/internal_ragflow/internal/ai/rag-documents/ingest")
                 .header("X-Request-Id", requestId.toString())
                 .body(requestBody)
                 .retrieve()
