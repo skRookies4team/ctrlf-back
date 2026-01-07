@@ -10,4 +10,4 @@ spring:
           issuer-uri: http://keycloak-service:8090/auth/realms/ctrlf
 ai:
   gateway:
-    url: http://ai-service:8000
+    url: http://ai-service.argocd.svc.cluster.local:8000

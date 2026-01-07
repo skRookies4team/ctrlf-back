@@ -15,7 +15,7 @@ app:
       token: "" # 내부 호출 토큰 (필요시 설정)
   quiz:
     ai:
-      base-url: http://ai-service:8000
+      base-url: http://ai-service.argocd.svc.cluster.local:8000
       token: "" # 내부 호출 토큰 (필요시 설정).
   infra:
     base-url: http://infra-service:9003 # infra-service 베이스 URL
