@@ -90,7 +90,6 @@ public class VideoService {
     private final EducationVideoReviewRepository reviewRepository;
     private final EducationRepository educationRepository;
     private final VideoAiClient videoAiClient;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final SourceSetRepository sourceSetRepository;
     private final SourceSetDocumentRepository sourceSetDocumentRepository;
     private final EducationVideoProgressRepository videoProgressRepository;
@@ -507,10 +506,16 @@ public class VideoService {
         EducationVideo video = findVideoOrThrow(videoId);
         String prevStatus = video.getStatus();
         String newStatus;
+
+        UUID scriptId = video.getScriptId();
+        EducationScript script = scriptRepository.findById(scriptId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
         
         if ("SCRIPT_READY".equals(prevStatus)) {
+            script.setStatus("REVIEW_REQUESTED");
+            scriptRepository.save(script);
             // 1차 검토 요청 (스크립트)
             newStatus = "SCRIPT_REVIEW_REQUESTED";
+            
             log.info("1차 검토 요청 (스크립트). videoId={}, {} → {}", videoId, prevStatus, newStatus);
         } else if ("READY".equals(prevStatus)) {
             // 2차 검토 요청 (영상)
@@ -535,11 +540,17 @@ public class VideoService {
     @Transactional
     public VideoStatusResponse approveVideo(UUID videoId) {
         EducationVideo video = findVideoOrThrow(videoId);
+        UUID scriptId = video.getScriptId();
+        EducationScript script = scriptRepository.findById(scriptId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
         String prevStatus = video.getStatus();
         String newStatus;
         
         if ("SCRIPT_REVIEW_REQUESTED".equals(prevStatus)) {
             // 1차 승인 (스크립트)
+
+            script.setStatus("APPROVED");
+            scriptRepository.save(script);
+
             newStatus = "SCRIPT_APPROVED";
             log.info("1차 승인 (스크립트). videoId={}, {} → {}", videoId, prevStatus, newStatus);
         } else if ("FINAL_REVIEW_REQUESTED".equals(prevStatus)) {
@@ -565,11 +576,15 @@ public class VideoService {
     @Transactional
     public VideoStatusResponse rejectVideo(UUID videoId, String reason, UUID reviewerUuid) {
         EducationVideo video = findVideoOrThrow(videoId);
+        UUID scriptId = video.getScriptId();
+        EducationScript script = scriptRepository.findById(scriptId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
         String prevStatus = video.getStatus();
         String newStatus;
         
         if ("SCRIPT_REVIEW_REQUESTED".equals(prevStatus)) {
             // 1차 반려 (스크립트)
+            script.setStatus("REJECTED");
+            scriptRepository.save(script);
             newStatus = "SCRIPT_READY";
             log.info("1차 반려 (스크립트). videoId={}, {} → {}, reason={}", videoId, prevStatus, newStatus, reason);
         } else if ("FINAL_REVIEW_REQUESTED".equals(prevStatus)) {
@@ -587,6 +602,7 @@ public class VideoService {
                 "SCRIPT_REVIEW_REQUESTED".equals(prevStatus) 
                     ? RejectionStage.SCRIPT 
                     : RejectionStage.VIDEO;
+                    
             EducationVideoReview review = EducationVideoReview.createRejection(
                 videoId,
                 reason,
@@ -611,6 +627,8 @@ public class VideoService {
     public VideoStatusResponse approveScript(UUID scriptId) {
         // scriptId로 연결된 Video 찾기
         List<EducationVideo> videos = videoRepository.findByScriptId(scriptId);
+        EducationScript script = scriptRepository.findById(scriptId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
+
         if (videos.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
                 "스크립트에 연결된 영상을 찾을 수 없습니다: " + scriptId);
@@ -629,6 +647,7 @@ public class VideoService {
         log.info("스크립트 승인. scriptId={}, videoId={}, {} → {}", scriptId, video.getId(), prevStatus, newStatus);
         
         video.setStatus(newStatus);
+        script.setStatus("APPROVED");
         video = videoRepository.save(video);
         
         return new VideoStatusResponse(video.getId(), prevStatus, video.getStatus(), Instant.now().toString());
@@ -642,6 +661,8 @@ public class VideoService {
     public VideoStatusResponse rejectScript(UUID scriptId, String reason, UUID reviewerUuid) {
         // scriptId로 연결된 Video 찾기
         List<EducationVideo> videos = videoRepository.findByScriptId(scriptId);
+        EducationScript script = scriptRepository.findById(scriptId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "스크립트를 찾을 수 없습니다: " + scriptId));
+
         if (videos.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
                 "스크립트에 연결된 영상을 찾을 수 없습니다: " + scriptId);
@@ -673,6 +694,7 @@ public class VideoService {
         }
         
         video.setStatus(newStatus);
+        script.setStatus("REJECTED");
         video = videoRepository.save(video);
         
         return new VideoStatusResponse(video.getId(), prevStatus, video.getStatus(), Instant.now().toString());

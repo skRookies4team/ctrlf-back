@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -156,6 +157,21 @@ public class QuizController {
         UUID userUuid = SecurityUtils.extractUserUuid(jwt)
             .orElseThrow(() -> new IllegalArgumentException("사용자 UUID를 추출할 수 없습니다."));
         return ResponseEntity.ok(quizService.getRetryInfo(educationId, userUuid));
+    }
+
+    @DeleteMapping("/{eduId}/attempts")
+    @Operation(
+        summary = "유저의 해당 교육의 퀴즈 시도 삭제 (프론트 -> 백엔드)",
+        description = "해당 사용자의 특정 교육에 대한 모든 퀴즈 시도를 소프트 삭제합니다."
+    )
+    public ResponseEntity<Void> deleteAttempts(
+        @PathVariable("eduId") UUID educationId,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userUuid = SecurityUtils.extractUserUuid(jwt)
+            .orElseThrow(() -> new IllegalArgumentException("사용자 UUID를 추출할 수 없습니다."));
+        quizService.deleteAttemptsByEducation(educationId, userUuid);
+        return ResponseEntity.noContent().build();
     }
 }
 
