@@ -26,6 +26,7 @@ import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueItem;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewQueueResponse;
 import com.ctrlf.education.video.dto.VideoDtos.ReviewStatsResponse;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatus;
+import com.ctrlf.education.video.dto.VideoDtos.ReviewStage;
 import com.ctrlf.education.video.dto.VideoDtos.VideoStatusResponse;
 import com.ctrlf.education.video.dto.VideoDtos.LastVideoProgressResponse;
 import com.ctrlf.education.video.entity.EducationVideo;
@@ -981,23 +982,35 @@ public class VideoService {
                     log.warn("알 수 없는 영상 상태: {}", v.getStatus());
                 }
 
-                String reviewStageLabel = null;
+                // reviewStage 설정 로직:
+                // - SCRIPT_REVIEW_REQUESTED → "1차"
+                // - FINAL_REVIEW_REQUESTED → "2차"
+                // - PUBLISHED → "승인됨"
+                // - 그 외 상태이면서 반려 기록이 있으면 → "1차 반려"/"2차 반려"/"반려됨"
+                // - 그 외 상태이면서 반려 기록이 없으면 → "" (빈공백)
+                //   예: DRAFT, SCRIPT_READY, SCRIPT_APPROVED, PROCESSING, READY, DISABLED 등 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우
+                ReviewStage reviewStageLabel = null;
                 if ("SCRIPT_REVIEW_REQUESTED".equals(v.getStatus())) {
-                    reviewStageLabel = "1차";
+                    reviewStageLabel = ReviewStage.FIRST_ROUND;
                 } else if ("FINAL_REVIEW_REQUESTED".equals(v.getStatus())) {
-                    reviewStageLabel = "2차";
+                    reviewStageLabel = ReviewStage.SECOND_ROUND;
                 } else if ("PUBLISHED".equals(v.getStatus())) {
-                    reviewStageLabel = "승인됨";
+                    reviewStageLabel = ReviewStage.APPROVED;
                 } else {
                     // 반려됨인 경우 리뷰에서 단계 확인
                     List<EducationVideoReview> reviews = reviewRepository.findByVideoIdOrderByCreatedAtDesc(v.getId());
                     if (!reviews.isEmpty()) {
                         EducationVideoReview latestReview = reviews.get(0);
                         if (latestReview.getRejectionStage() != null) {
-                            reviewStageLabel = latestReview.getRejectionStage() == RejectionStage.SCRIPT ? "1차 반려" : "2차 반려";
+                            reviewStageLabel = latestReview.getRejectionStage() == RejectionStage.SCRIPT 
+                                ? ReviewStage.FIRST_ROUND_REJECTED 
+                                : ReviewStage.SECOND_ROUND_REJECTED;
                         } else {
-                            reviewStageLabel = "반려됨";
+                            reviewStageLabel = ReviewStage.REJECTED;
                         }
+                    } else {
+                        // 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우 빈공백("")
+                        reviewStageLabel = ReviewStage.NONE;
                     }
                 }
                 
@@ -1180,8 +1193,37 @@ public class VideoService {
             log.warn("알 수 없는 영상 상태: {}", video.getStatus());
         }
 
-        String reviewStage = "SCRIPT_REVIEW_REQUESTED".equals(video.getStatus()) ? "1차" : 
-            "FINAL_REVIEW_REQUESTED".equals(video.getStatus()) ? "2차" : "";
+        // reviewStage 설정 로직:
+        // - SCRIPT_REVIEW_REQUESTED → "1차"
+        // - FINAL_REVIEW_REQUESTED → "2차"
+        // - PUBLISHED → "승인됨"
+        // - 그 외 상태이면서 반려 기록이 있으면 → "1차 반려"/"2차 반려"/"반려됨"
+        // - 그 외 상태이면서 반려 기록이 없으면 → "" (빈공백)
+        //   예: DRAFT, SCRIPT_READY, SCRIPT_APPROVED, PROCESSING, READY, DISABLED 등 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우
+        ReviewStage reviewStage = null;
+        if ("SCRIPT_REVIEW_REQUESTED".equals(video.getStatus())) {
+            reviewStage = ReviewStage.FIRST_ROUND;
+        } else if ("FINAL_REVIEW_REQUESTED".equals(video.getStatus())) {
+            reviewStage = ReviewStage.SECOND_ROUND;
+        } else if ("PUBLISHED".equals(video.getStatus())) {
+            reviewStage = ReviewStage.APPROVED;
+        } else {
+            // 반려됨인 경우 리뷰에서 단계 확인
+            List<EducationVideoReview> reviews = reviewRepository.findByVideoIdOrderByCreatedAtDesc(videoId);
+            if (!reviews.isEmpty()) {
+                EducationVideoReview latestReview = reviews.get(0);
+                if (latestReview.getRejectionStage() != null) {
+                    reviewStage = latestReview.getRejectionStage() == RejectionStage.SCRIPT 
+                        ? ReviewStage.FIRST_ROUND_REJECTED 
+                        : ReviewStage.SECOND_ROUND_REJECTED;
+                } else {
+                    reviewStage = ReviewStage.REJECTED;
+                }
+            } else {
+                // 검토 요청/승인 상태가 아니고 반려 기록도 없는 경우 빈공백("")
+                reviewStage = ReviewStage.NONE;
+            }
+        }
 
         // 제작자 정보 조회 (infra-service)
         UUID creatorUuid = video.getCreatorUuid();
