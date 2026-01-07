@@ -1036,7 +1036,8 @@ public class VideoService {
                     creatorUuid,
                     v.getCreatedAt() != null ? v.getCreatedAt().toString() : "",
                     education != null && education.getCategory() != null ? education.getCategory().name() : "",
-                    education != null && education.getEduType() != null ? education.getEduType().name() : ""
+                    education != null && education.getEduType() != null ? education.getEduType().name() : "",
+                    v.getScriptId()
                 );
             })
             .collect(Collectors.toList());

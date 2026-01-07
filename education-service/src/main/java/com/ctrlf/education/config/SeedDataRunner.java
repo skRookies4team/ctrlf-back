@@ -266,7 +266,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu3.setVersion(1);
         edu3.setStartAt(Instant.now().minusSeconds(86400 * 90)); // 90일 전 시작
         edu3.setEndAt(Instant.now().plusSeconds(86400 * 90)); // 90일 후 종료 (총 180일)
-        edu3.setDepartmentScope(new String[]{"개발팀", "인사팀", "재무팀"}); // 특정 부서만
+        edu3.setDepartmentScope(new String[]{"전체 부서"}); // 특정 부서만
         educations.add(edu3);
 
         // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
@@ -296,7 +296,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu5.setVersion(1);
         edu5.setStartAt(Instant.now().minusSeconds(86400 * 15)); // 15일 전 시작
         edu5.setEndAt(Instant.now().plusSeconds(86400 * 165)); // 165일 후 종료 (총 180일)
-        edu5.setDepartmentScope(new String[]{"총무팀", "기획팀", "마케팅팀"}); // 특정 부서만
+        edu5.setDepartmentScope(new String[]{"전체 부서"}); // 특정 부서만
         educations.add(edu5);
 
         // 모든 교육 저장

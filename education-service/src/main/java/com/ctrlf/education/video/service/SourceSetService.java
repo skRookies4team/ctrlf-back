@@ -93,11 +93,12 @@ public class SourceSetService {
         );
         final SourceSet savedSourceSet = sourceSetRepository.save(sourceSet);
 
-        // EducationVideo에 sourceSetId 연결
+        // EducationVideo에 sourceSetId 연결 및 status를 DRAFT로 초기화
         videoRepository.findById(req.videoId()).ifPresent(video -> {
             video.setSourceSetId(savedSourceSet.getId());
+            video.setStatus("DRAFT");
             videoRepository.save(video);
-            log.info("EducationVideo에 sourceSetId 연결: videoId={}, sourceSetId={}", 
+            log.info("EducationVideo에 sourceSetId 연결 및 status를 DRAFT로 초기화: videoId={}, sourceSetId={}", 
                 req.videoId(), savedSourceSet.getId());
         });
 
@@ -371,12 +372,15 @@ public class SourceSetService {
                 
                 if (docInfo != null) {
                     // S3 URL을 presigned URL로 변환 (FastAPI/RAGFlow가 접근 가능하도록)
-                    String sourceUrl = infraRagClient.getPresignedDownloadUrl(docInfo.getSourceUrl());
+                    String sourceUrl = null;
+                    if (docInfo.getSourceUrl() != null) {
+                        sourceUrl = infraRagClient.getPresignedDownloadUrl(docInfo.getSourceUrl());
+                    }
                     documentItems.add(new InternalSourceSetDocumentsResponse.InternalDocumentItem(
-                        docInfo.getId(),
-                        docInfo.getTitle(),
-                        docInfo.getDomain(),
-                        sourceUrl,
+                        docInfo.getId() != null ? docInfo.getId() : "",  // null 체크
+                        docInfo.getTitle() != null ? docInfo.getTitle() : "",  // null 체크: FastAPI validation 에러 방지
+                        docInfo.getDomain() != null ? docInfo.getDomain() : "",  // null 체크
+                        sourceUrl != null ? sourceUrl : "",  // null 체크
                         docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED"
                     ));
                 }
