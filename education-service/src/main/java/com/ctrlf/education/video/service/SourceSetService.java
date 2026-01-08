@@ -368,6 +368,8 @@ public class SourceSetService {
         List<InternalSourceSetDocumentsResponse.InternalDocumentItem> documentItems = new ArrayList<>();
         for (SourceSetDocument ssd : sourceSetDocuments) {
             try {
+
+                log.info("문서 정보 조회: documentId={}", ssd.getDocumentId());
                 InfraRagClient.DocumentInfoResponse docInfo = infraRagClient.getDocument(
                     ssd.getDocumentId().toString());
                 
@@ -382,8 +384,11 @@ public class SourceSetService {
                         docInfo.getTitle() != null ? docInfo.getTitle() : "",  // null 체크: FastAPI validation 에러 방지
                         docInfo.getDomain() != null ? docInfo.getDomain() : "",  // null 체크
                         sourceUrl != null ? sourceUrl : "",  // null 체크
-                        docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED"
+                        docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED",
+                        docInfo.getVersion()  // 문서 버전
                     ));
+
+                    log.info("문서 정보 sourceUrl: sourceUrl={}", sourceUrl);
                 }
             } catch (RestClientException e) {
                 log.warn("문서 정보 조회 실패: documentId={}, error={}", 

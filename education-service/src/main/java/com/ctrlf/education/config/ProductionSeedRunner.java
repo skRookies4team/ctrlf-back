@@ -55,8 +55,14 @@ public class ProductionSeedRunner implements CommandLineRunner {
             
             log.info("Production seed data generation completed successfully!");
         } catch (Exception e) {
+<<<<<<< HEAD
             log.error("Failed to generate production seed data: {}", e.getMessage(), e);
             throw e; // 트랜잭션 롤백을 위해 예외를 다시 던짐
+=======
+            // 프로덕션에서는 시드 실패해도 서비스 시작을 막지 않음
+            log.error("Failed to generate production seed data (non-blocking): {}", e.getMessage(), e);
+            // 예외를 다시 던지지 않아서 서비스 시작이 계속됨
+>>>>>>> main
         }
     }
 
@@ -66,6 +72,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
     private void seedEducations() {
         log.info("Starting to seed educations (production mode - no deletion)...");
         
+<<<<<<< HEAD
         // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB - 8개 부서별로 생성
         String[] departments = {"총무팀", "기획팀", "마케팅팀", "인사팀", "재무팀", "개발팀", "영업팀", "법무팀"};
         String[] departmentDescriptions = {
@@ -89,10 +96,119 @@ public class ProductionSeedRunner implements CommandLineRunner {
             if (exists) {
                 log.debug("Education already exists, skipping: {}", title);
                 continue;
+=======
+        try {
+            // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB - 8개 부서별로 생성
+            String[] departments = {"총무팀", "기획팀", "마케팅팀", "인사팀", "재무팀", "개발팀", "영업팀", "법무팀"};
+            String[] departmentDescriptions = {
+                "총무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+                "기획 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+                "마케팅 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+                "인사 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+                "재무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+                "개발 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+                "영업 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
+                "법무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다."
+            };
+            int[] startDaysAgo = {30, 35, 40, 45, 50, 55, 60, 65};
+            
+            for (int i = 0; i < departments.length; i++) {
+                String title = departments[i] + " 직무 역량 강화 교육";
+                // 이미 존재하는지 확인 (findAll 대신 findByTitleAndDeletedAtIsNull 사용)
+                if (educationRepository.findByTitleAndDeletedAtIsNull(title).isPresent()) {
+                    log.debug("Education already exists, skipping: {}", title);
+                    continue;
+                }
+                
+                try {
+                    Education edu = new Education();
+                    edu.setTitle(title);
+                    edu.setCategory(EducationTopic.JOB_DUTY);
+                    edu.setDescription(departmentDescriptions[i]);
+                    edu.setPassScore(80);
+                    edu.setPassRatio(90);
+                    edu.setRequire(Boolean.TRUE);
+                    edu.setEduType(EducationCategory.JOB);
+                    edu.setVersion(1);
+                    edu.setStartAt(Instant.now().minusSeconds(86400L * startDaysAgo[i]));
+                    edu.setEndAt(Instant.now().plusSeconds(86400L * (180 - startDaysAgo[i])));
+                    edu.setDepartmentScope(new String[]{departments[i]});
+                    educationRepository.save(edu);
+                    log.info("Created education: {}", title);
+                } catch (Exception e) {
+                    log.warn("Failed to create education '{}': {}", title, e.getMessage());
+                    // 개별 실패해도 계속 진행
+                }
+            }
+
+            // 2. 성희롱 예방 교육 (SEXUAL_HARASSMENT_PREVENTION) - edu_type: MANDATORY
+            createEducationIfNotExists(
+                "성희롱 예방 교육",
+                EducationTopic.SEXUAL_HARASSMENT_PREVENTION,
+                "직장 내 성희롱 예방 및 대응 방법에 대한 법정 필수 교육입니다.",
+                EducationCategory.MANDATORY,
+                60,
+                120
+            );
+
+            // 3. 개인정보 보호 교육 (PERSONAL_INFO_PROTECTION) - edu_type: MANDATORY
+            createEducationIfNotExists(
+                "개인정보 보호 교육",
+                EducationTopic.PERSONAL_INFO_PROTECTION,
+                "개인정보 보호법에 따른 개인정보 취급 및 보호에 관한 법정 필수 교육입니다.",
+                EducationCategory.MANDATORY,
+                90,
+                90
+            );
+
+            // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
+            createEducationIfNotExists(
+                "직장 내 괴롭힘 예방 교육",
+                EducationTopic.WORKPLACE_BULLYING,
+                "직장 내 괴롭힘 예방 및 대응 방법에 대한 법정 필수 교육입니다.",
+                EducationCategory.MANDATORY,
+                120,
+                60
+            );
+
+            // 5. 장애인 인식 개선 교육 (DISABILITY_AWARENESS) - edu_type: MANDATORY
+            createEducationIfNotExists(
+                "장애인 인식 개선 교육",
+                EducationTopic.DISABILITY_AWARENESS,
+                "장애인에 대한 인식 개선 및 편견 해소를 위한 법정 필수 교육입니다.",
+                EducationCategory.MANDATORY,
+                15,
+                165
+            );
+            
+            log.info("Education seeding completed (production mode)");
+        } catch (Exception e) {
+            log.error("Error during education seeding: {}", e.getMessage(), e);
+            throw e; // 상위에서 처리하도록
+        }
+    }
+    
+    /**
+     * 교육이 없으면 생성하는 헬퍼 메서드
+     */
+    private void createEducationIfNotExists(
+        String title,
+        EducationTopic category,
+        String description,
+        EducationCategory eduType,
+        int startDaysAgo,
+        int endDaysFromNow
+    ) {
+        try {
+            if (educationRepository.findByTitleAndDeletedAtIsNull(title).isPresent()) {
+                log.debug("Education already exists, skipping: {}", title);
+                return;
+>>>>>>> main
             }
             
             Education edu = new Education();
             edu.setTitle(title);
+<<<<<<< HEAD
             edu.setCategory(EducationTopic.JOB_DUTY);
             edu.setDescription(departmentDescriptions[i]);
             edu.setPassScore(80);
@@ -204,6 +320,24 @@ public class ProductionSeedRunner implements CommandLineRunner {
         }
         
         log.info("Education seeding completed (production mode)");
+=======
+            edu.setCategory(category);
+            edu.setDescription(description);
+            edu.setPassScore(80);
+            edu.setPassRatio(90);
+            edu.setRequire(Boolean.TRUE);
+            edu.setEduType(eduType);
+            edu.setVersion(1);
+            edu.setStartAt(Instant.now().minusSeconds(86400L * startDaysAgo));
+            edu.setEndAt(Instant.now().plusSeconds(86400L * endDaysFromNow));
+            edu.setDepartmentScope(new String[]{"전체 부서"});
+            educationRepository.save(edu);
+            log.info("Created education: {}", title);
+        } catch (Exception e) {
+            log.warn("Failed to create education '{}': {}", title, e.getMessage());
+            // 개별 실패해도 계속 진행
+        }
+>>>>>>> main
     }
     
     /**
