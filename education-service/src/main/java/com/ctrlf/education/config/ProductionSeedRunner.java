@@ -224,7 +224,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         var video = EducationVideo.create(
             personalInfoEducation.getId(),
             "개인정보 보호 교육 - 기본편",
-            "s3://ctrl-s3/videos/edu.mp4",
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4",
             1200,
             1,
             "PUBLISHED"
