@@ -300,7 +300,7 @@ public class SeedDataRunner implements CommandLineRunner {
         var video = com.ctrlf.education.video.entity.EducationVideo.create(
             personalInfoEducation.getId(),
             "개인정보 보호 교육 - 기본편",
-            "s3://ctrl-s3/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
+            "s3://ctrl-s3/video/edu.mp4",
             1200,
             1,
             "PUBLISHED"
