@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -47,12 +49,36 @@ public class ChatAiClient {
                 llmModel
             );
 
-        return aiWebClient.post()
+        // 필수 헤더 생성
+        UUID traceId = UUID.randomUUID();
+        String userIdStr = userId != null ? userId.toString() : "";
+        String deptIdStr = department != null ? department : "";
+
+        log.info("[CHAT → AI/MESSAGES] 요청 전송: sessionId={}, userId={}, traceId={}, deptId={}, domain={}, route={}",
+            sessionId, userId, traceId, deptIdStr, domain, channel);
+
+        String rawJson = aiWebClient.post()
             .uri("/ai/chat/messages")
+            .header("X-Trace-Id", traceId.toString())
+            .header("X-User-Id", userIdStr)
+            .header("X-Dept-Id", deptIdStr)
+            .header("X-Conversation-Id", sessionId.toString())
             .bodyValue(request)
             .retrieve()
-            .bodyToMono(ChatAiResponse.class)
+            .bodyToMono(String.class)
             .block();
+
+        log.info("[AI Response Raw] {}", rawJson != null && rawJson.length() > 500
+            ? rawJson.substring(0, 500) + "..." : rawJson);
+
+        // JSON 파싱
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(rawJson, ChatAiResponse.class);
+        } catch (Exception e) {
+            log.error("[AI Response Parse Error] {}", e.getMessage(), e);
+            throw new RuntimeException("AI response parse failed", e);
+        }
     }
 
     // ✅ 기존 채팅 응답용 (llmModel 없음) - 후방 호환성

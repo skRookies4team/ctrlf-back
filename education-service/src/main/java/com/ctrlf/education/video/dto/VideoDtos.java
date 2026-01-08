@@ -252,7 +252,8 @@ public final class VideoDtos {
         @Schema(description = "재생 순서(0-base)") Integer orderIndex,
         @Schema(description = "생성시각 ISO8601") String createdAt,
         @Schema(description = "원본 파일명") String sourceFileName,
-        @Schema(description = "원본 파일 URL") String sourceFileUrl
+        @Schema(description = "원본 파일 URL") String sourceFileUrl,
+        @Schema(description = "교육 카테고리") String category
     ) {}
 
     @Schema(description = "영상 메타 수정 요청 (부분 업데이트)")
@@ -367,7 +368,7 @@ public final class VideoDtos {
         @NotBlank(message = "title은 필수입니다")
         String title,
 
-        @Schema(description = "소스셋 도메인", example = "FOUR_MANDATORY")
+        @Schema(description = "소스셋 도메인", example = "직무교육")
         String domain,
 
         @Schema(description = "포함할 문서 ID 목록")
@@ -432,7 +433,8 @@ public final class VideoDtos {
             @Schema(description = "제목") String title,
             @Schema(description = "도메인") String domain,
             @Schema(description = "원본 파일 URL") String sourceUrl,
-            @Schema(description = "상태") String status
+            @Schema(description = "상태") String status,
+            @Schema(description = "문서 버전") Integer version
         ) {}
     }
 

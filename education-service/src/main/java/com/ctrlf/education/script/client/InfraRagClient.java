@@ -112,6 +112,7 @@ public class InfraRagClient {
         private String domain;
         private String sourceUrl; // fileUrl
         private String status;
+        private Integer version;  // 문서 버전
     }
 
     /**

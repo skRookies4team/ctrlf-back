@@ -23,6 +23,12 @@ public interface EducationRepository extends JpaRepository<Education, UUID> {
     @Query("SELECT e FROM Education e WHERE e.id = :id AND e.deletedAt IS NULL")
     Optional<Education> findByIdAndDeletedAtIsNull(@Param("id") UUID id);
 
+    /**
+     * 제목과 삭제 여부로 교육 조회.
+     */
+    @Query("SELECT e FROM Education e WHERE e.title = :title AND e.deletedAt IS NULL")
+    Optional<Education> findByTitleAndDeletedAtIsNull(@Param("title") String title);
+
 
     /**
      * 교육 목록(간략+추가 정보) 조회 V2.

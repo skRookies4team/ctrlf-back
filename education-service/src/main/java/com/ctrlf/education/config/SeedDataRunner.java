@@ -20,11 +20,6 @@ import com.ctrlf.education.video.repository.SourceSetRepository;
 import com.ctrlf.education.video.repository.VideoGenerationJobRepository;
 import com.ctrlf.education.video.entity.SourceSet;
 import com.ctrlf.education.video.entity.SourceSetDocument;
-import com.ctrlf.education.quiz.entity.QuizAttempt;
-import com.ctrlf.education.quiz.entity.QuizQuestion;
-import com.ctrlf.education.quiz.repository.QuizAttemptRepository;
-import com.ctrlf.education.quiz.repository.QuizQuestionRepository;
-import com.ctrlf.education.quiz.repository.QuizLeaveTrackingRepository;
 import com.ctrlf.common.dto.PageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,9 +61,6 @@ public class SeedDataRunner implements CommandLineRunner {
     private final VideoGenerationJobRepository videoGenerationJobRepository;
     private final SourceSetDocumentRepository sourceSetDocumentRepository;
     private final SourceSetRepository sourceSetRepository;
-    private final QuizAttemptRepository quizAttemptRepository;
-    private final QuizQuestionRepository quizQuestionRepository;
-    private final QuizLeaveTrackingRepository quizLeaveTrackingRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Random random = new Random();
     private final String infraBaseUrl;
@@ -87,9 +79,6 @@ public class SeedDataRunner implements CommandLineRunner {
         VideoGenerationJobRepository videoGenerationJobRepository,
         SourceSetDocumentRepository sourceSetDocumentRepository,
         SourceSetRepository sourceSetRepository,
-        QuizAttemptRepository quizAttemptRepository,
-        QuizQuestionRepository quizQuestionRepository,
-        QuizLeaveTrackingRepository quizLeaveTrackingRepository,
         @Value("${app.infra.base-url:http://localhost:9003}") String infraBaseUrl
     ) {
         this.educationRepository = educationRepository;
@@ -103,9 +92,6 @@ public class SeedDataRunner implements CommandLineRunner {
         this.videoGenerationJobRepository = videoGenerationJobRepository;
         this.sourceSetDocumentRepository = sourceSetDocumentRepository;
         this.sourceSetRepository = sourceSetRepository;
-        this.quizAttemptRepository = quizAttemptRepository;
-        this.quizQuestionRepository = quizQuestionRepository;
-        this.quizLeaveTrackingRepository = quizLeaveTrackingRepository;
         this.infraBaseUrl = infraBaseUrl.endsWith("/") ? infraBaseUrl.substring(0, infraBaseUrl.length() - 1) : infraBaseUrl;
         this.restClient = RestClient.builder().baseUrl(this.infraBaseUrl).build();
     }
@@ -117,19 +103,9 @@ public class SeedDataRunner implements CommandLineRunner {
             log.info("Starting seed data generation...");
             clearAllEducationData();
             
-            // infra-service를 통해 실제 Keycloak 유저 정보 가져오기 (필수)
-            List<UserInfo> users = fetchUsersFromInfraService();
-            if (users.isEmpty()) {
-                log.error("Failed to fetch user data from infra-service. Seed data generation requires at least one user. Aborting seed data generation.");
-                throw new IllegalStateException("#### Cannot generate seed data without user data. Please ensure infra-service is running and contains at least one enabled user.");
-            }
-            
-            log.info("Successfully fetched {} user(s) from infra-service. Proceeding with seed data generation.", users.size());
-            
-            // 유저 정보를 사용하여 모든 데이터 생성
-            seedScriptsAndJobs(users);
-            seedEducationsVideosAndProgress(users);
-            seedQuizData(users);
+            // 교육 시드만 생성
+            seedEducations();
+            seedVideoForPersonalInfoEducation();
             
             log.info("Seed data generation completed successfully!");
         } catch (Exception e) {
@@ -185,28 +161,18 @@ public class SeedDataRunner implements CommandLineRunner {
         scriptRepository.deleteAll();
         log.info("Scripts deleted");
         
-        // 11. 퀴즈 문항 삭제 (attempt_id FK 참조)
-        quizQuestionRepository.deleteAll();
-        log.info("Quiz questions deleted");
-        
-        // 12. 퀴즈 이탈 추적 삭제 (attempt_id FK 참조)
-        quizLeaveTrackingRepository.deleteAll();
-        log.info("Quiz leave tracking deleted");
-        
-        // 12. 퀴즈 시도 삭제 (education_id FK 참조)
-        quizAttemptRepository.deleteAll();
-        log.info("Quiz attempts deleted");
-        
-        // 13. 교육 삭제
+        // 11. 교육 삭제
         educationRepository.deleteAll();
         log.info("Educations deleted");
         
         log.info("Existing education data deletion completed!");
     }
 
-    private void seedScriptsAndJobs(List<UserInfo> users) {
-        log.info("Starting to seed scripts and jobs...");
-        // 5가지 교육 카테고리별 시드 데이터 생성
+    /**
+     * 교육 시드만 생성
+     */
+    private void seedEducations() {
+        log.info("Starting to seed educations...");
         List<Education> educations = new ArrayList<>();
 
         // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB - 8개 부서별로 생성
@@ -266,7 +232,7 @@ public class SeedDataRunner implements CommandLineRunner {
         edu3.setVersion(1);
         edu3.setStartAt(Instant.now().minusSeconds(86400 * 90)); // 90일 전 시작
         edu3.setEndAt(Instant.now().plusSeconds(86400 * 90)); // 90일 후 종료 (총 180일)
-        edu3.setDepartmentScope(new String[]{"전체 부서"}); // 특정 부서만
+        edu3.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu3);
 
         // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
@@ -296,180 +262,52 @@ public class SeedDataRunner implements CommandLineRunner {
         edu5.setVersion(1);
         edu5.setStartAt(Instant.now().minusSeconds(86400 * 15)); // 15일 전 시작
         edu5.setEndAt(Instant.now().plusSeconds(86400 * 165)); // 165일 후 종료 (총 180일)
-        edu5.setDepartmentScope(new String[]{"전체 부서"}); // 특정 부서만
+        edu5.setDepartmentScope(new String[]{"전체 부서"});
         educations.add(edu5);
 
         // 모든 교육 저장
         educationRepository.saveAll(educations);
         log.info("Seed created: {} education(s) created", educations.size());
-
-        // 각 교육에 대해 스크립트 생성
-        List<UUID> scriptIds = new ArrayList<>();
-        for (Education edu : educations) {
-            String scriptTitle = edu.getTitle() + " 영상";
-            UUID scriptId = insertScript(edu.getId(), null,
-                scriptTitle + " 스크립트 내용입니다.", 1, scriptTitle);
-            scriptIds.add(scriptId);
-        }
-
-        // 스크립트 INSERT를 먼저 DB에 반영
-        scriptRepository.flush();
-
-        // 각 스크립트에 대해 챕터/씬 시드
-        for (UUID scriptId : scriptIds) {
-            seedChaptersAndScenes(scriptId);
-        }
-
-        // 챕터/씬 반영
-        chapterRepository.flush();
-        sceneRepository.flush();
-
-        log.info("Scripts and jobs seeding completed!");
-        // Job 시드는 별도 러너(@Order(2))에서 처리합니다.
     }
-
+    
     /**
-     * 사용자용 API 확인을 위한 영상/진행 더미 데이터.
-     * infra-service에서 가져온 실제 유저 정보를 사용합니다.
+     * 개인정보 보호 교육에만 영상 1개 생성
      */
-    private void seedEducationsVideosAndProgress(List<UserInfo> users) {
-        log.info("Starting to seed educations, videos and progress...");
-        // 이미 영상이 있으면 스킵
-        List<Education> edus = educationRepository.findAll();
-        if (edus.isEmpty()) {
-            log.warn("No education data found. Skipping video and progress seeding.");
+    private void seedVideoForPersonalInfoEducation() {
+        log.info("Starting to seed video for personal info education...");
+        
+        // 개인정보 보호 교육 찾기
+        List<Education> educations = educationRepository.findAll();
+        Education personalInfoEducation = educations.stream()
+            .filter(e -> "개인정보 보호 교육".equals(e.getTitle()))
+            .findFirst()
+            .orElse(null);
+        
+        if (personalInfoEducation == null) {
+            log.warn("Personal info education not found. Skipping video seeding.");
             return;
         }
-        log.info("Found {} education(s) to process.", edus.size());
-
-        // 첫 번째 유저를 기본 유저로 사용 (또는 랜덤 선택)
-        UUID demoUser = users.isEmpty() 
-            ? UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-            : users.get(0).userUuid;
-
-        for (Education edu : edus) {
-            var videos = educationVideoRepository.findByEducationId(edu.getId());
-            // 영상이 없으면 더미 영상 추가
-            if (videos.isEmpty()) {
-                List<com.ctrlf.education.video.entity.EducationVideo> seeds = new ArrayList<>();
-                String[] urls = new String[] {
-                    "s3://ctrl-s3/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
-                    "s3://ctrl-s3/videos/f75a41fb-ff76-4d37-8220-c7647de1679f.mp4"
-                };
-                String[] titles = new String[] {
-                    edu.getTitle() + " - 기본편",
-                    edu.getTitle() + " - 심화편",
-                    edu.getTitle() + " - 사례편",
-                    edu.getTitle() + " - 실무편",
-                    edu.getTitle() + " - 종합편"
-                };
-                int[] durations = new int[] { 1200, 900, 1100, 1000, 950 };
-                // 제작자 UUID는 사용자 목록에서 랜덤 선택 (사용자가 있으면)
-                UUID creatorUuid = users.isEmpty() ? null : users.get(random.nextInt(users.size())).userUuid;
-                for (int i = 0; i < urls.length; i++) {
-                    var v = com.ctrlf.education.video.entity.EducationVideo.create(
-                        edu.getId(),
-                        titles[i],
-                        urls[i],
-                        durations[i],
-                        1,
-                        "PUBLISHED"
-                    );
-                    v.setOrderIndex(i);
-                    v.setCreatorUuid(creatorUuid);
-                    seeds.add(v);
-                }
-                educationVideoRepository.saveAll(seeds);
-                videos = educationVideoRepository.findByEducationId(edu.getId());
-                log.info("Seed created: {} dummy videos for eduId={}", videos.size(), edu.getId());
-            }
-            if (videos.isEmpty()) {
-                log.info("Seed skip: No videos found for education, skipping progress dummy generation. eduId={}", edu.getId());
-                continue;
-            }
-
-            // 각 영상에 대해 source-set 생성 및 연결
-            for (var v : videos) {
-                UUID sourceSetId = createSourceSetForVideo(edu.getId(), v.getId(), demoUser.toString());
-                if (sourceSetId != null) {
-                    v.setSourceSetId(sourceSetId);
-                    educationVideoRepository.save(v);
-                }
-            }
-            
-            // 진행률 더미: 각 유저별로 랜덤하게 진행률 생성
-            // passRatio 기준으로 완료 여부 판단
-            Integer passRatio = edu.getPassRatio() != null ? edu.getPassRatio() : 100;
-            for (UserInfo user : users) {
-                int completedVideoCount = 0;
-                int totalProgress = 0;
-                
-                // 50% 확률로 모든 영상을 완료 상태로 만들기 (통계 데이터 생성을 위해)
-                boolean shouldCompleteAll = random.nextDouble() > 0.5;
-                
-                for (int i = 0; i < videos.size(); i++) {
-                    var v = videos.get(i);
-                    var p = educationVideoProgressRepository
-                        .findByUserUuidAndEducationIdAndVideoId(user.userUuid, edu.getId(), v.getId())
-                        .orElseGet(() -> com.ctrlf.education.video.entity.EducationVideoProgress.create(user.userUuid, edu.getId(), v.getId()));
-                    
-                    // 완료 상태로 만들 경우 passRatio 이상의 진행률 설정, 그렇지 않으면 랜덤
-                    int progress;
-                    if (shouldCompleteAll) {
-                        // passRatio 이상의 진행률 (passRatio ~ 100%)
-                        progress = passRatio + random.nextInt(101 - passRatio);
-                    } else {
-                        // 랜덤 진행률 (0~100%)
-                        progress = random.nextInt(101);
-                    }
-                    
-                    int totalSeconds = v.getDuration() != null ? v.getDuration() : 1200;
-                    int watchedSeconds = (int) (totalSeconds * progress / 100.0);
-                    
-                    p.setLastPositionSeconds(watchedSeconds);
-                    p.setTotalWatchSeconds(watchedSeconds);
-                    p.setProgress(progress);
-                    // passRatio 기준으로 완료 여부 판단
-                    boolean isCompleted = progress >= passRatio;
-                    p.setIsCompleted(isCompleted);
-                    educationVideoProgressRepository.save(p);
-                    
-                    if (isCompleted) {
-                        completedVideoCount++;
-                    }
-                    totalProgress += progress;
-                }
-                
-                // EducationProgress 생성/업데이트
-                // 모든 영상이 완료된 경우에만 완료 처리
-                boolean allVideosCompleted = completedVideoCount == videos.size();
-                int avgProgress = videos.isEmpty() ? 0 : totalProgress / videos.size();
-                
-                EducationProgress eduProgress = educationProgressRepository
-                    .findByUserUuidAndEducationId(user.userUuid, edu.getId())
-                    .orElseGet(() -> {
-                        EducationProgress newProgress = new EducationProgress();
-                        newProgress.setUserUuid(user.userUuid);
-                        newProgress.setEducationId(edu.getId());
-                        return newProgress;
-                    });
-                
-                eduProgress.setProgress(avgProgress);
-                eduProgress.setIsCompleted(allVideosCompleted);
-                
-                // 완료된 경우 completedAt 설정 (최근 30일 내 랜덤 시간 - 다양한 기간 필터 테스트용)
-                if (allVideosCompleted) {
-                    // 최근 30일 내 랜덤 시간 (0~30일 전)
-                    Instant completedAt = Instant.now().minusSeconds(random.nextInt(86400 * 30));
-                    eduProgress.setCompletedAt(completedAt);
-                } else {
-                    eduProgress.setCompletedAt(null);
-                }
-                
-                educationProgressRepository.save(eduProgress);
-            }
+        
+        // 이미 영상이 있으면 스킵
+        var existingVideos = educationVideoRepository.findByEducationId(personalInfoEducation.getId());
+        if (!existingVideos.isEmpty()) {
+            log.info("Video already exists for personal info education. Skipping.");
+            return;
         }
-        log.info("Educations, videos and progress seeding completed!");
+        
+        // 영상 1개 생성
+        var video = com.ctrlf.education.video.entity.EducationVideo.create(
+            personalInfoEducation.getId(),
+            "개인정보 보호 교육 - 기본편",
+            "s3://ctrl-s3/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
+            1200,
+            1,
+            "PUBLISHED"
+        );
+        video.setOrderIndex(0);
+        educationVideoRepository.save(video);
+        
+        log.info("Seed created: 1 video for personal info education, videoId={}", video.getId());
     }
     
     /**
@@ -664,244 +502,6 @@ public class SeedDataRunner implements CommandLineRunner {
         s.setSourceChunkIndexes(sourceChunks);
         s.setConfidenceScore(confidence);
         return s;
-    }
-
-    /**
-     * 실제 유저 데이터 기반으로 퀴즈 시드 데이터 생성.
-     * infra-service를 통해 Keycloak의 실제 유저 정보를 가져와 퀴즈 시도 데이터를 생성합니다.
-     */
-    private void seedQuizData(List<UserInfo> users) {
-        log.info("Starting quiz seed data generation...");
-        
-        List<Education> educations = educationRepository.findAll();
-        if (educations.isEmpty()) {
-            log.warn("No education data found. Skipping quiz seed data generation.");
-            return;
-        }
-
-        if (users.isEmpty()) {
-            log.warn("No user data found. Skipping quiz seed data generation.");
-            return;
-        }
-        
-        log.info("Generating quiz data for {} user(s).", users.size());
-
-        for (UserInfo user : users) {
-            UUID userUuid = user.userUuid;
-            
-            for (Education edu : educations) {
-                // 각 교육당 최대 2번 시도
-                int attemptCount = random.nextInt(2) + 1; // 1 또는 2
-                
-                for (int attemptNo = 1; attemptNo <= attemptCount; attemptNo++) {
-                    QuizAttempt attempt = new QuizAttempt();
-                    attempt.setUserUuid(userUuid);
-                    attempt.setEducationId(edu.getId());
-                    attempt.setVersion(edu.getVersion());
-                    attempt.setAttemptNo(attemptNo);
-                    attempt.setTimeLimit(900); // 15분
-                    attempt.setDepartment(user.department);
-                    // 최근 90일 내 랜덤 시간으로 생성 (다양한 기간 필터 테스트를 위해)
-                    Instant createdAt = Instant.now().minusSeconds(random.nextInt(86400 * 90));
-                    attempt.setCreatedAt(createdAt);
-                    
-                    // 제출 완료된 시도만 점수 설정
-                    boolean submitted = random.nextDouble() > 0.2; // 80% 확률로 제출 완료
-                    if (submitted) {
-                        int score = 60 + random.nextInt(41); // 60~100점
-                        boolean passed = score >= (edu.getPassScore() != null ? edu.getPassScore() : 80);
-                        
-                        attempt.setScore(score);
-                        attempt.setPassed(passed);
-                        // submittedAt은 createdAt보다 나중이지만, 최근 90일 내로 제한
-                        Instant submittedAt = createdAt.plusSeconds(300 + random.nextInt(600)); // 시작 후 5~15분 후 제출
-                        // submittedAt이 현재보다 미래인 경우 현재 시간으로 제한
-                        if (submittedAt.isAfter(Instant.now())) {
-                            submittedAt = Instant.now();
-                        }
-                        attempt.setSubmittedAt(submittedAt);
-                        
-                        // 퀴즈 문항 생성 (5개)
-                        List<QuizQuestion> questions = createQuizQuestions(attempt.getId(), edu);
-                        quizQuestionRepository.saveAll(questions);
-                    }
-                    
-                    quizAttemptRepository.save(attempt);
-                }
-            }
-        }
-        
-        quizAttemptRepository.flush();
-        log.info("Quiz seed data generation completed!");
-    }
-
-    /**
-     * infra-service를 통해 Keycloak 유저 목록 가져오기
-     */
-    private List<UserInfo> fetchUsersFromInfraService() {
-        List<UserInfo> users = new ArrayList<>();
-        
-        // 최대 5번 재시도 (Keycloak 시작 대기)
-        int maxRetries = 5;
-        int retryDelayMs = 2000; // 2초
-        
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                log.info("Fetching user list from infra-service... (baseUrl: {}, attempt: {}/{})", infraBaseUrl, attempt, maxRetries);
-                
-                // infra-service의 /admin/users/search API 호출
-                PageResponse<Map<String, Object>> pageResponse = restClient.get()
-                    .uri("/admin/users/search?page=0&size=200")
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<PageResponse<Map<String, Object>>>() {});
-                
-                if (pageResponse == null || pageResponse.getItems() == null || pageResponse.getItems().isEmpty()) {
-                    log.warn("User list from infra-service is empty.");
-                    return users;
-                }
-            
-            for (Map<String, Object> userMap : pageResponse.getItems()) {
-                try {
-                    String userId = (String) userMap.get("id");
-                    String username = (String) userMap.get("username");
-                    Boolean enabled = (Boolean) userMap.get("enabled");
-                    
-                    // enabled가 false이거나 null인 경우 제외
-                    if (enabled == null || !enabled) {
-                        continue;
-                    }
-                    
-                    // attributes에서 department 추출
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> attributes = (Map<String, Object>) userMap.get("attributes");
-                    String department = "Others";
-                    if (attributes != null) {
-                        @SuppressWarnings("unchecked")
-                        List<String> deptList = (List<String>) attributes.get("department");
-                        if (deptList != null && !deptList.isEmpty()) {
-                            department = deptList.get(0);
-                        }
-                    }
-                    
-                    UUID userUuid = UUID.fromString(userId);
-                    users.add(new UserInfo(userUuid, username, department));
-                    log.debug("User added: username={}, department={}, userId={}", username, department, userId);
-                } catch (Exception e) {
-                    log.warn("Failed to parse user info: {}", userMap, e);
-                }
-            }
-            
-                log.info("Fetched {} user(s) from infra-service.", users.size());
-                return users; // 성공 시 즉시 반환
-                
-            } catch (org.springframework.web.client.HttpClientErrorException e) {
-                if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
-                    log.warn("infra-service authentication error (attempt {}/{}): {}. Keycloak may not have started yet.", 
-                        attempt, maxRetries, e.getMessage());
-                    if (attempt < maxRetries) {
-                        try {
-                            Thread.sleep(retryDelayMs);
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                        continue; // 재시도
-                    }
-                } else {
-                    log.error("infra-service HTTP error (attempt {}/{}): {}", attempt, maxRetries, e.getMessage());
-                    if (attempt < maxRetries) {
-                        try {
-                            Thread.sleep(retryDelayMs);
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                        continue; // 재시도
-                    }
-                }
-            } catch (org.springframework.web.client.ResourceAccessException e) {
-                log.warn("infra-service connection failed (attempt {}/{}): {}. infra-service may not have started yet.", 
-                    attempt, maxRetries, e.getMessage());
-                if (attempt < maxRetries) {
-                    try {
-                        Thread.sleep(retryDelayMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                    continue; // 재시도
-                }
-            } catch (Exception e) {
-                log.error("Error occurred while fetching user list from infra-service (attempt {}/{}): {}", 
-                    attempt, maxRetries, e.getMessage(), e);
-                if (attempt < maxRetries) {
-                    try {
-                        Thread.sleep(retryDelayMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                    continue; // 재시도
-                }
-            }
-        }
-        
-        log.warn("Failed to fetch user list from infra-service after {} attempts. Returning empty list.", maxRetries);
-        return users;
-    }
-
-    /**
-     * 퀴즈 문항 생성
-     */
-    private List<QuizQuestion> createQuizQuestions(UUID attemptId, Education edu) {
-        List<QuizQuestion> questions = new ArrayList<>();
-        String[] questionTemplates = {
-            edu.getTitle() + "에 대한 올바른 설명은?",
-            edu.getTitle() + "에서 중요한 사항은?",
-            edu.getTitle() + "의 목적은?",
-            edu.getTitle() + "에서 주의해야 할 점은?",
-            edu.getTitle() + "의 핵심 내용은?"
-        };
-        
-        String[] optionsTemplate = {"보기 1", "보기 2", "보기 3", "보기 4", "보기 5"};
-        
-        for (int i = 0; i < 5; i++) {
-            QuizQuestion question = new QuizQuestion();
-            question.setAttemptId(attemptId);
-            question.setQuestion(questionTemplates[i]);
-            
-            try {
-                question.setOptions(objectMapper.writeValueAsString(optionsTemplate));
-            } catch (Exception e) {
-                question.setOptions("[\"보기 1\", \"보기 2\", \"보기 3\", \"보기 4\", \"보기 5\"]");
-            }
-            
-            question.setCorrectOptionIdx(random.nextInt(5)); // 0~4 중 랜덤
-            question.setExplanation("Correct answer explanation.");
-            question.setQuestionOrder(i);
-            
-            // 제출된 경우 사용자 선택값 설정
-            question.setUserSelectedOptionIdx(random.nextInt(5)); // 0~4 중 랜덤
-            
-            questions.add(question);
-        }
-        
-        return questions;
-    }
-
-    /**
-     * 유저 정보 클래스
-     */
-    private static class UserInfo {
-        final UUID userUuid;
-        final String username;
-        final String department;
-        
-        UserInfo(UUID userUuid, String username, String department) {
-            this.userUuid = userUuid;
-            this.username = username;
-            this.department = department;
-        }
     }
 }
 
