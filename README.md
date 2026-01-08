@@ -43,9 +43,13 @@ docker compose logs -f postgres
 ### 2. 애플리케이션 실행(개별 서비스)
 
 ```bash
-# infra-service 부터 켜야지 education-service 더미(시드) 데이터가 저장된다
+# 개발 환경: infra-service 부터 켜야지 education-service 더미(시드) 데이터가 저장된다
+# 주의: local-seed는 기존 데이터를 모두 삭제하고 새로 생성합니다
 AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed,keycloak-setup ./gradlew :infra-service:bootRun
 AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=dev,local-seed,keycloak-setup ./gradlew :education-service:bootRun
+
+# 프로덕션 환경: 기존 데이터는 유지하고 없는 데이터만 추가합니다
+AWS_PROFILE=sk_4th_team04 SPRING_PROFILES_ACTIVE=prod,prod-seed ./gradlew :education-service:bootRun
 
 # 키클락 설정이랑 시드 데이터 초기화 필요없는 경우 사용
 AWS_PROFILE=sk_4th_team04 ./gradlew :chat-service:bootRun

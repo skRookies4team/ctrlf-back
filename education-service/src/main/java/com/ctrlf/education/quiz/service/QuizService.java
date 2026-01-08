@@ -90,8 +90,14 @@ public class QuizService {
         // 2. 이전 시도 조회
         Optional<QuizAttempt> existing = attemptRepository.findTopByUserUuidAndEducationIdAndSubmittedAtIsNullOrderByCreatedAtDesc(userUuid, educationId);
         QuizAttempt attempt;
+
+        
         if (existing.isPresent()) {
+            
             attempt = existing.get();
+
+            log.info("@@@ 1. attempt existing: {}", attempt.getId());
+            log.info("@@@ 1. educationId existing: {}", educationId);
         } else {
             // 3. 새 시도 생성
             attempt = new QuizAttempt();
@@ -110,11 +116,32 @@ public class QuizService {
                     .findByEducationIdAndDeletedAtIsNullAndStatusOrderByVersionDesc(educationId, "APPROVED")
                     .stream()
                     .findFirst();
+
+                    // scriptOpt 에대한 데이터를 다 출력하는 로그 만들기
+                    if (scriptOpt.isPresent()) {
+                        EducationScript script = scriptOpt.get();
+                        log.info("@@@ 2. scriptOpt isPresent: true");
+                        log.info("@@@ 2.1. script.id: {}", script.getId());
+                        log.info("@@@ 2.2. script.educationId: {}", script.getEducationId());
+                        log.info("@@@ 2.3. script.title: {}", script.getTitle());
+                        log.info("@@@ 2.4. script.totalDurationSec: {}", script.getTotalDurationSec());
+                        log.info("@@@ 2.5. script.version: {}", script.getVersion());
+                        log.info("@@@ 2.6. script.llmModel: {}", script.getLlmModel());
+                        log.info("@@@ 2.7. script.generationPromptHash: {}", script.getGenerationPromptHash());
+                        log.info("@@@ 2.8. script.rawPayload: {}", script.getRawPayload());
+                        log.info("@@@ 2.9. script.createdBy: {}", script.getCreatedBy());
+                        log.info("@@@ 2.10. script.createdAt: {}", script.getCreatedAt());
+                        log.info("@@@ 2.11. script.deletedAt: {}", script.getDeletedAt());
+                        log.info("@@@ 2.12. script.sourceSetId: {}", script.getSourceSetId());
+                        log.info("@@@ 2.13. script.status: {}", script.getStatus());
+                    } else {
+                        log.info("@@@ 2. scriptOpt isPresent: false (empty)");
+                    }
                 
                 // 5. AI 서버 요청 데이터 생성
                 QuizAiDtos.GenerateRequest req = new QuizAiDtos.GenerateRequest();
                 req.setLanguage("ko");
-                req.setNumQuestions(5);
+                req.setNumQuestions(10);
                 req.setMaxOptions(4); // 기본값 4
                 
                 // 퀴즈 후보 블록 추출 (모든 씬의 텍스트)
@@ -141,6 +168,26 @@ public class QuizService {
                     
                     List<EducationScriptScene> scenes = sceneRepository
                         .findByScriptIdOrderByChapterIdAscSceneIndexAsc(script.getId());
+                    
+                    // scenes에 대한 상세 로그 출력
+                    log.info("@@@ 3. scenes.size(): {}", scenes.size());
+                    for (int i = 0; i < scenes.size(); i++) {
+                        EducationScriptScene scene = scenes.get(i);
+                        log.info("@@@ 3.{}. scene.id: {}", i, scene.getId());
+                        log.info("@@@ 3.{}. scene.scriptId: {}", i, scene.getScriptId());
+                        log.info("@@@ 3.{}. scene.chapterId: {}", i, scene.getChapterId());
+                        log.info("@@@ 3.{}. scene.sceneIndex: {}", i, scene.getSceneIndex());
+                        log.info("@@@ 3.{}. scene.purpose: {}", i, scene.getPurpose());
+                        log.info("@@@ 3.{}. scene.narration: {}", i, scene.getNarration());
+                        log.info("@@@ 3.{}. scene.caption: {}", i, scene.getCaption());
+                        log.info("@@@ 3.{}. scene.visual: {}", i, scene.getVisual());
+                        log.info("@@@ 3.{}. scene.durationSec: {}", i, scene.getDurationSec());
+                        log.info("@@@ 3.{}. scene.sourceChunkIndexes: {}", i, scene.getSourceChunkIndexes());
+                        log.info("@@@ 3.{}. scene.sourceRefs: {}", i, scene.getSourceRefs());
+                        log.info("@@@ 3.{}. scene.confidenceScore: {}", i, scene.getConfidenceScore());
+                        log.info("@@@ 3.{}. scene.createdAt: {}", i, scene.getCreatedAt());
+                        log.info("@@@ 3.{}. scene.deletedAt: {}", i, scene.getDeletedAt());
+                    }
                     
                     for (EducationScriptScene scene : scenes) {
                         if (scene.getDeletedAt() != null) {
@@ -208,6 +255,22 @@ public class QuizService {
 
                 // 8. ai 서버 요청
                 QuizAiDtos.GenerateResponse aiRes = quizAiClient.generate(req);
+                
+                // 8-1. AI 서버 응답 데이터 로깅
+                if (aiRes == null) {
+                    log.warn("AI 서버 퀴즈 생성 응답이 null입니다 (educationId: {}, attemptNo: {})", 
+                        educationId, attempt.getAttemptNo());
+                } else {
+                    try {
+                        String responseJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(aiRes);
+                        log.info("AI 서버 퀴즈 생성 응답 (educationId: {}, attemptNo: {}):\n{}", 
+                            educationId, attempt.getAttemptNo(), responseJson);
+                    } catch (Exception e) {
+                        log.warn("AI 서버 응답 데이터 로깅 실패 (educationId: {}, attemptNo: {}): {}", 
+                            educationId, attempt.getAttemptNo(), e.getMessage(), e);
+                    }
+                }
+                
                 List<QuizQuestion> qs = new ArrayList<>();
                 if (aiRes != null && aiRes.getQuestions() != null) {
                     int order = 0;
@@ -1253,6 +1316,33 @@ public class QuizService {
         items.sort((a, b) -> Double.compare(b.getAverageScore(), a.getAverageScore()));
 
         return new QuizStatsResponse(items);
+    }
+
+    /**
+     * 유저의 해당 교육의 퀴즈 시도 삭제
+     * 
+     * <p>해당 사용자의 특정 교육에 대한 모든 퀴즈 시도를 소프트 삭제합니다.
+     * 
+     * @param educationId 교육 ID
+     * @param userUuid 사용자 UUID
+     * @throws ResponseStatusException 교육을 찾을 수 없으면 404
+     */
+    @Transactional
+    public void deleteAttemptsByEducation(UUID educationId, UUID userUuid) {
+        // 1. 교육 정보 조회
+        Education education = educationRepository.findById(educationId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "education not found"));
+        
+        // 2. 해당 사용자의 해당 교육의 삭제되지 않은 퀴즈 시도 조회
+        List<QuizAttempt> attempts = attemptRepository.findByUserUuidAndEducationIdAndDeletedAtIsNull(userUuid, educationId);
+        
+        // 3. 하드 삭제 처리 (물리적 삭제)
+        int deletedCount = attempts.size();
+        if (!attempts.isEmpty()) {
+            attemptRepository.deleteAll(attempts);
+        }
+        
+        log.info("Hard deleted {} quiz attempts for user {} and education {}", deletedCount, userUuid, educationId);
     }
 }
 

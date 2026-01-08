@@ -24,6 +24,9 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> 
     
     /** 교육별 모든 제출 완료된 퀴즈 시도 조회 (부서별 통계용) */
     List<QuizAttempt> findByEducationIdAndSubmittedAtIsNotNull(UUID educationId);
+    
+    /** 사용자별 교육의 삭제되지 않은 퀴즈 시도 목록 조회 */
+    List<QuizAttempt> findByUserUuidAndEducationIdAndDeletedAtIsNull(UUID userUuid, UUID educationId);
 }
 
 

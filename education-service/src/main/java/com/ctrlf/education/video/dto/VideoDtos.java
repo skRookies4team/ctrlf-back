@@ -368,7 +368,7 @@ public final class VideoDtos {
         @NotBlank(message = "title은 필수입니다")
         String title,
 
-        @Schema(description = "소스셋 도메인", example = "FOUR_MANDATORY")
+        @Schema(description = "소스셋 도메인", example = "직무교육")
         String domain,
 
         @Schema(description = "포함할 문서 ID 목록")
@@ -433,7 +433,8 @@ public final class VideoDtos {
             @Schema(description = "제목") String title,
             @Schema(description = "도메인") String domain,
             @Schema(description = "원본 파일 URL") String sourceUrl,
-            @Schema(description = "상태") String status
+            @Schema(description = "상태") String status,
+            @Schema(description = "문서 버전") Integer version
         ) {}
     }
 

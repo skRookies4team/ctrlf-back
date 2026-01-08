@@ -112,7 +112,8 @@ public class RagDocumentService {
                     d.getVersion(),
                     presignedUrl,
                     d.getDomain(),
-                    d.getDepartment()
+                    d.getDepartment(),
+                    d.getTitle()
                 );
             } catch (Exception e) {
                 log.warn("AI 서버 재처리 요청 실패: id={}, documentId={}, error={}",
@@ -167,7 +168,8 @@ public class RagDocumentService {
                     d.getVersion(),
                     presignedUrl,
                     d.getDomain(),
-                    d.getDepartment()
+                    d.getDepartment(),
+                    d.getTitle()
                 );
                 received = aiResp.isReceived();
                 requestId = aiResp.getRequestId();
@@ -263,7 +265,8 @@ public class RagDocumentService {
             d.getTitle(),
             d.getDomain(),
             d.getSourceUrl(),
-            d.getStatus() != null ? d.getStatus().name() : RagDocumentStatus.QUEUED.name()
+            d.getStatus() != null ? d.getStatus().name() : RagDocumentStatus.QUEUED.name(),
+            d.getVersion()
         );
     }
 
@@ -719,7 +722,8 @@ public class RagDocumentService {
                     doc.getVersion(),
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     doc.getDomain(),
-                    doc.getDepartment()
+                    doc.getDepartment(),
+                    doc.getTitle()
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
@@ -833,7 +837,8 @@ public class RagDocumentService {
                     newVersionDoc.getVersion(),
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     newVersionDoc.getDomain(),
-                    newVersionDoc.getDepartment()
+                    newVersionDoc.getDepartment(),
+                    newVersionDoc.getTitle()
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     newVersionDoc.getId(), newVersionDoc.getDocumentId(), newVersionDoc.getVersion(),
@@ -937,7 +942,8 @@ public class RagDocumentService {
                     doc.getVersion(),
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     doc.getDomain(),
-                    doc.getDepartment()
+                    doc.getDepartment(),
+                    doc.getTitle()
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
@@ -1135,7 +1141,8 @@ public class RagDocumentService {
                     doc.getVersion(),
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     doc.getDomain(),
-                    doc.getDepartment()
+                    doc.getDepartment(),
+                    doc.getTitle()
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),

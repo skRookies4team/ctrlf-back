@@ -81,6 +81,7 @@ public class RagAiClient {
      * @param sourceUrl 원본 파일 URL (S3 또는 presigned URL)
      * @param domain 문서 도메인 (기본값: "POLICY")
      * @param department 부서 범위 (전체 부서, 총무팀, 기획팀, 마케팅팀, 인사팀, 재무팀, 개발팀, 영업팀, 법무팀)
+     * @param title 문서 제목 (파일명.확장자, 예: 보안관리규정.pdf) - RAGFlow doc_id로 사용
      * @return AiResponse(accepted / jobId / status)
      * @throws Exception 네트워크/IO 오류 등
      */
@@ -90,7 +91,8 @@ public class RagAiClient {
         Integer version,
         String sourceUrl,
         String domain,
-        String department
+        String department,
+        String title
     ) throws Exception {
         // requestId와 traceId 생성 (멱등성 및 로그 상관관계)
         UUID requestId = UUID.randomUUID();
@@ -106,6 +108,9 @@ public class RagAiClient {
         requestBody.put("traceId", traceId);
         if (department != null && !department.isBlank()) {
             requestBody.put("department", department);
+        }
+        if (title != null && !title.isBlank()) {
+            requestBody.put("title", title);
         }
 
         try {

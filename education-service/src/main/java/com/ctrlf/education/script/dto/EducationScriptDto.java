@@ -38,6 +38,7 @@ public final class EducationScriptDto {
       @Schema(description = "스크립트 버전") Integer version,
       @Schema(description = "사용 LLM") String llmModel,
       @Schema(description = "원본 JSON") String rawPayload,
+      @Schema(description = "스크립트 상태 (DRAFT, REVIEW_REQUESTED, APPROVED, REJECTED)") String status,
       @Schema(description = "챕터 목록") java.util.List<ChapterItem> chapters) {}
 
   @Schema(description = "챕터 정보")

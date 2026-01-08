@@ -118,45 +118,46 @@ public class SourceSetService {
         }
         sourceSetDocumentRepository.saveAll(documents);
 
-        // 소스셋 생성 후 AI 서버에 작업 시작 요청 (BestEffort)
-        // 트랜잭션 커밋 후 실행하여 SourceSet이 DB에 확실히 저장된 후 AI 서버가 조회할 수 있도록 함
-        final UUID sourceSetId = savedSourceSet.getId();
-        final UUID educationId = savedSourceSet.getEducationId();
-        final UUID videoId = savedSourceSet.getVideoId();
-        final List<String> documentIdsForCallback = req.documentIds();
-        final String sourceSetTitle = savedSourceSet.getTitle();
-        final String departmentForCallback = department; // Education의 departmentScope에서 추출한 부서
-        
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                if (autoSourceSetCallback) {
-                    // 개발 환경: 자동 콜백 시뮬레이션 (비동기 실행)
-                    log.info("[DEV] 자동 콜백 시뮬레이션 활성화: sourceSetId={}", sourceSetId);
-                    // 새로운 트랜잭션에서 실행되도록 별도 메서드로 분리
-                    try {
-                        simulateSourceSetCompleteCallback(sourceSetId, videoId, educationId, documentIdsForCallback, sourceSetTitle);
-                    } catch (Exception e) {
-                        log.error("[DEV] 소스셋 완료 콜백 시뮬레이션 실패 (소스셋은 생성됨): sourceSetId={}, error={}", 
-                            sourceSetId, e.getMessage(), e);
-                        // 실패해도 소스셋 생성은 성공으로 처리 (이미 커밋됨)
-                    }
-                } else {
-                    // 프로덕션: AI 서버에 작업 시작 요청
-                    try {
-                        log.info("트랜잭션 커밋 완료, AI 서버에 작업 시작 요청: sourceSetId={}", sourceSetId);
-                        // 트랜잭션 밖에서 실행되므로 SourceSet을 다시 조회
-                        SourceSet sourceSetAfterCommit = sourceSetRepository.findByIdAndNotDeleted(sourceSetId)
-                            .orElseThrow(() -> new IllegalStateException("SourceSet not found after commit: " + sourceSetId));
-                        startSourceSetProcessing(sourceSetId, sourceSetAfterCommit, documentIdsForCallback, departmentForCallback);
-                    } catch (Exception e) {
-                        log.warn("소스셋 작업 시작 요청 실패 (소스셋은 생성됨): sourceSetId={}, error={}", 
-                            sourceSetId, e.getMessage(), e);
-                        // 실패해도 소스셋 생성은 성공으로 처리
-                    }
-                }
+        // 소스셋 생성 후 AI 서버에 작업 시작 요청
+        // 실패 시 소스셋 생성도 실패로 처리
+        if (autoSourceSetCallback) {
+            // 개발 환경: 자동 콜백 시뮬레이션
+            log.info("[DEV] 자동 콜백 시뮬레이션 활성화: sourceSetId={}", savedSourceSet.getId());
+            try {
+                simulateSourceSetCompleteCallback(
+                    savedSourceSet.getId(),
+                    savedSourceSet.getVideoId(),
+                    savedSourceSet.getEducationId(),
+                    req.documentIds(),
+                    savedSourceSet.getTitle()
+                );
+            } catch (Exception e) {
+                log.error("[DEV] 소스셋 완료 콜백 시뮬레이션 실패: sourceSetId={}, error={}", 
+                    savedSourceSet.getId(), e.getMessage(), e);
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "소스셋 작업 시작 실패: " + e.getMessage(),
+                    e);
             }
-        });
+        } else {
+            // 프로덕션: AI 서버에 작업 시작 요청
+            try {
+                log.info("AI 서버에 작업 시작 요청: sourceSetId={}", savedSourceSet.getId());
+                startSourceSetProcessing(
+                    savedSourceSet.getId(),
+                    savedSourceSet,
+                    req.documentIds(),
+                    department
+                );
+            } catch (Exception e) {
+                log.error("소스셋 작업 시작 요청 실패: sourceSetId={}, error={}", 
+                    savedSourceSet.getId(), e.getMessage(), e);
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "소스셋 작업 시작 실패: " + e.getMessage(),
+                    e);
+            }
+        }
 
         // 응답 생성
         List<String> documentIds = req.documentIds();
@@ -367,6 +368,8 @@ public class SourceSetService {
         List<InternalSourceSetDocumentsResponse.InternalDocumentItem> documentItems = new ArrayList<>();
         for (SourceSetDocument ssd : sourceSetDocuments) {
             try {
+
+                log.info("문서 정보 조회: documentId={}", ssd.getDocumentId());
                 InfraRagClient.DocumentInfoResponse docInfo = infraRagClient.getDocument(
                     ssd.getDocumentId().toString());
                 
@@ -381,8 +384,11 @@ public class SourceSetService {
                         docInfo.getTitle() != null ? docInfo.getTitle() : "",  // null 체크: FastAPI validation 에러 방지
                         docInfo.getDomain() != null ? docInfo.getDomain() : "",  // null 체크
                         sourceUrl != null ? sourceUrl : "",  // null 체크
-                        docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED"
+                        docInfo.getStatus() != null ? docInfo.getStatus() : "QUEUED",
+                        docInfo.getVersion()  // 문서 버전
                     ));
+
+                    log.info("문서 정보 sourceUrl: sourceUrl={}", sourceUrl);
                 }
             } catch (RestClientException e) {
                 log.warn("문서 정보 조회 실패: documentId={}, error={}", 

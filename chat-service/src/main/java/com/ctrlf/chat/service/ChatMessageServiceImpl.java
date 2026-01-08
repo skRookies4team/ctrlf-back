@@ -95,7 +95,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     llmModel         // 관리자 대시보드에서 선택한 LLM 모델
                 );
         } catch (Exception e) {
-            log.error("[AI] call failed", e);
+            log.error("[AI] call failed: {}", e.getMessage(), e);
             long responseTime = System.currentTimeMillis() - startTime;
 
             ChatMessage fallbackMessage =
@@ -150,12 +150,18 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             chatMessageRepository.save(userMessage);
         }
 
-        // 4️⃣ 응답 반환
+        // 4️⃣ 응답 반환 (sources, action 포함)
+        var action = (aiResponse.getMeta() != null) ? aiResponse.getMeta().getAction() : null;
+        log.info("[AI Response Debug] meta={}, action={}",
+            aiResponse.getMeta() != null ? "present" : "null",
+            action != null ? action.getType() : "null");
         return new ChatMessageSendResponse(
             assistantMessage.getId(),
             assistantMessage.getRole(),
             assistantMessage.getContent(),
-            assistantMessage.getCreatedAt()
+            assistantMessage.getCreatedAt(),
+            aiResponse.getSources(),  // RAG 출처 정보
+            action                    // 프론트엔드 액션 (영상 재생 등)
         );
     }
 
