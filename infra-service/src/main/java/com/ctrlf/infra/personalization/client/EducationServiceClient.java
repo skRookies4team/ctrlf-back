@@ -30,7 +30,7 @@ public class EducationServiceClient {
     private final String baseUrl;
 
     public EducationServiceClient(
-        @Value("${app.education-service.base-url:http://localhost:9002}") String baseUrl,
+        @Value("${app.education-service.base-url:http://education-service:9002}") String baseUrl,
         @Value("${app.education-service.timeout-seconds:10}") long timeoutSeconds
     ) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;

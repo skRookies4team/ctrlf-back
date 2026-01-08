@@ -79,7 +79,7 @@ public class SeedDataRunner implements CommandLineRunner {
         VideoGenerationJobRepository videoGenerationJobRepository,
         SourceSetDocumentRepository sourceSetDocumentRepository,
         SourceSetRepository sourceSetRepository,
-        @Value("${app.infra.base-url:http://localhost:9003}") String infraBaseUrl
+        @Value("${app.infra.base-url:http://infra-service:9003}") String infraBaseUrl
     ) {
         this.educationRepository = educationRepository;
         this.scriptRepository = scriptRepository;
@@ -106,6 +106,7 @@ public class SeedDataRunner implements CommandLineRunner {
             // 교육 시드만 생성
             seedEducations();
             seedVideoForPersonalInfoEducation();
+            seedMoreVideos();
             
             log.info("Seed data generation completed successfully!");
         } catch (Exception e) {
@@ -503,5 +504,39 @@ public class SeedDataRunner implements CommandLineRunner {
         s.setConfidenceScore(confidence);
         return s;
     }
+    private void createVideo(String educationTitle, String videoTitle, String videoUrl, int durationSec, int orderIndex) {
+    // 1. 교육 찾기
+    Education education = educationRepository.findAll().stream()
+        .filter(e -> e.getTitle().equals(educationTitle)) // 제목으로 매칭
+        .findFirst()
+        .orElse(null);
+
+    if (education == null) {
+        log.warn("Education not found: {}", educationTitle);
+        return;
+    }
+
+    // 2. 영상 생성 및 저장
+    var video = com.ctrlf.education.video.entity.EducationVideo.create(
+        education.getId(),
+        videoTitle,
+        videoUrl,   // S3 URL 등 실제 재생 가능한 주소
+        durationSec,
+        1,          // version
+        "PUBLISHED" // status
+    );
+    video.setOrderIndex(orderIndex); // 영상 순서 (0부터 시작)
+    
+    educationVideoRepository.save(video);
+    log.info("Video created: [{}] in [{}]", videoTitle, educationTitle);
+  }
+  private void seedMoreVideos() {
+    log.info("Starting to seed additional videos...");
+
+    // 예시 1: 성희롱 예방 교육에 영상 2개 넣기
+    createVideo("개인정보 보호 교육", "개인정보 보호 교육", 
+                "s3://ctrl-s3/videos/edu.mp4", 600, 0);
+    
+  }
 }
 

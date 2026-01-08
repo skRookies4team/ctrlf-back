@@ -60,7 +60,7 @@ public class AiRestClient {
      */
     public AiRestClient(
         AiRestClientBuilder aiRestClientBuilder,
-        @Value("${app.ai.base-url:http://localhost:8000}") String baseUrl
+        @Value("${app.ai.base-url:http://192.168.0.112:8000}") String baseUrl
     ) {
         this.restClient = aiRestClientBuilder.build(baseUrl);
     }

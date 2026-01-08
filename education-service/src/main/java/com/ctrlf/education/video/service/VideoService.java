@@ -95,7 +95,7 @@ public class VideoService {
     private final EducationVideoProgressRepository videoProgressRepository;
     private final InfraRagClient infraRagClient;
 
-    @Value("${ctrlf.infra.base-url:http://localhost:9003}")
+    @Value("${ctrlf.infra.base-url:http://infra-service:9003}")
     private String infraBaseUrl;
 
     /**

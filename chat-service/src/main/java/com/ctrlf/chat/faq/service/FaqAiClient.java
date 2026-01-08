@@ -17,7 +17,7 @@ public class FaqAiClient {
     public FaqAiClient(RestClient.Builder builder) {
         this.restClient = builder
             // AI Gateway base-url (필요 시 application.yml로 빼도 됨)
-            .baseUrl("http://localhost:8000")
+            .baseUrl("http://192.168.0.112:8000")
             .build();
     }
 

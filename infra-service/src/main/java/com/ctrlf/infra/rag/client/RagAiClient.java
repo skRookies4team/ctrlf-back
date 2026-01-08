@@ -39,7 +39,7 @@ public class RagAiClient {
      * @param timeoutSeconds HTTP 타임아웃(초)
      */
     public RagAiClient(
-        @Value("${app.rag.ai.base-url:http://localhost:8000}") String baseUrl,
+        @Value("${app.rag.ai.base-url:http://192.168.0.112:8000}") String baseUrl,
         @Value("${app.rag.ai.token:}") String internalToken,
         @Value("${app.rag.ai.timeout-seconds:10}") long timeoutSeconds
     ) {
