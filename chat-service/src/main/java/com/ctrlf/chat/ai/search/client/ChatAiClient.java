@@ -57,7 +57,7 @@ public class ChatAiClient {
         log.info("[CHAT → AI/MESSAGES] 요청 전송: sessionId={}, userId={}, traceId={}, deptId={}, domain={}, route={}",
             sessionId, userId, traceId, deptIdStr, domain, channel);
 
-        return aiWebClient.post()
+        String rawJson = aiWebClient.post()
             .uri("/ai/chat/messages")
             .header("X-Trace-Id", traceId.toString())
             .header("X-User-Id", userIdStr)
@@ -65,8 +65,20 @@ public class ChatAiClient {
             .header("X-Conversation-Id", sessionId.toString())
             .bodyValue(request)
             .retrieve()
-            .bodyToMono(ChatAiResponse.class)
+            .bodyToMono(String.class)
             .block();
+
+        log.info("[AI Response Raw] {}", rawJson != null && rawJson.length() > 500
+            ? rawJson.substring(0, 500) + "..." : rawJson);
+
+        // JSON 파싱
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(rawJson, ChatAiResponse.class);
+        } catch (Exception e) {
+            log.error("[AI Response Parse Error] {}", e.getMessage(), e);
+            throw new RuntimeException("AI response parse failed", e);
+        }
     }
 
     // ✅ 기존 채팅 응답용 (llmModel 없음) - 후방 호환성
