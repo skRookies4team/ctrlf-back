@@ -263,7 +263,8 @@ public class RagDocumentService {
             d.getTitle(),
             d.getDomain(),
             d.getSourceUrl(),
-            d.getStatus() != null ? d.getStatus().name() : RagDocumentStatus.QUEUED.name()
+            d.getStatus() != null ? d.getStatus().name() : RagDocumentStatus.QUEUED.name(),
+            d.getVersion()
         );
     }
 
