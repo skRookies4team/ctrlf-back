@@ -32,6 +32,9 @@ logs/
 *.tmp
 *.temp
 
+# ===== Java Heap Dumps =====
+*.hprof
+
 # ===== Spring Boot local config =====
 application-local.yml
 application-local.yaml
