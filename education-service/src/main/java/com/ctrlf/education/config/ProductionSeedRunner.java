@@ -248,7 +248,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         );
         createVideo(
             "장애인 인식 개선 교육", 
-            "함께 일하는 동료, 장애인 인식 개선", 
+            "장애인 인식 개선 우리의 동료", 
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/hurt2.mp4",
             850, 
             1
@@ -282,7 +282,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         // 6. 마케팅팀 직무 교육
         createVideo(
             "개발팀 직무 역량 강화 교육", 
-            "2025년 디지털 마케팅 트렌드", 
+            "2025년 디지털 트렌드", 
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/marketing_trend_2025.mp4", 
             1100, 
             2
