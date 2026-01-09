@@ -203,10 +203,11 @@ public class VideoService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "영상 컨텐츠를 찾을 수 없습니다: " + request.videoId()));
 
         // 스크립트 승인 상태 확인 (1차 승인 후에만 영상 생성 가능)
-        if (!"SCRIPT_APPROVED".equals(video.getStatus())) {
+        final String prevVideoStatus = video.getStatus();
+        if (!("SCRIPT_APPROVED".equals(prevVideoStatus) || "READY".equals(prevVideoStatus))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                "영상 생성은 SCRIPT_APPROVED 상태에서만 가능합니다. " +
-                "스크립트 검토 승인을 먼저 받아주세요. 현재 상태: " + video.getStatus());
+                "영상 생성은 SCRIPT_APPROVED 또는 READY 상태에서만 가능합니다. " +
+                "스크립트 검토 승인을 먼저 받아주세요. 현재 상태: " + prevVideoStatus);
         }
 
         // Job 생성
@@ -247,7 +248,7 @@ public class VideoService {
                 job.setStatus(STATUS_FAILED);
                 job.setFailReason("AI 서버 요청 실패");
                 jobRepository.save(job);
-                video.setStatus("SCRIPT_APPROVED"); // 상태 롤백
+                video.setStatus(prevVideoStatus); // 상태 롤백
                 videoRepository.save(video);
             }
         } catch (Exception e) {
@@ -256,7 +257,7 @@ public class VideoService {
             job.setStatus(STATUS_FAILED);
             job.setFailReason("AI 서버 요청 중 오류: " + e.getMessage());
             jobRepository.save(job);
-            video.setStatus("SCRIPT_APPROVED"); // 상태 롤백
+            video.setStatus(prevVideoStatus); // 상태 롤백
             videoRepository.save(video);
         }
 
