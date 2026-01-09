@@ -1,0 +1,44 @@
+server:
+  port: 9005
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        default_schema: chat
+        format_sql: true
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    schemas: chat
+    default-schema: chat
+    locations: classpath:db/migration
+    validate-on-migrate: false
+  profiles:
+    active: dev
+management:
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  api:
+    title: Chat Service API
+    description: Chat endpoints with JWT authorize
+    security:
+      enabled: true
+
+# A/B 테스트 설정
+ab-test:
+  # OpenAI 모델 할당 비율 (0.0 ~ 1.0)
+  # 예: 0.5 = 50:50, 0.7 = 70:30 (openai:sroberta)
+  openai-ratio: 0.5
+

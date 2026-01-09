@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://keycloak-db:5432/keycloak
+    username: keycloak
+    password: keycloak
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak-service:8090/auth/realms/ctrlf
+
+keycloak:
+  admin:
+    base-url: http://keycloak-service:8090
+    realm: ctrlf
+    client-id: infra-admin
+    client-secret: changeme
+
+app:
+  rag:
+    ai:
+      base-url: http://ai-service:8000
+      token: ${AI_INTERNAL_TOKEN}
+      timeout-seconds: 50

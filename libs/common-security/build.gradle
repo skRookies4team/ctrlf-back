@@ -1,0 +1,19 @@
+plugins {
+    id 'java-library'
+    id 'org.springframework.boot' version '3.3.3'
+    id 'io.spring.dependency-management'
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+dependencies {
+    // Pin versions to avoid BOM resolution issues
+    api 'org.springframework.boot:spring-boot-starter-security:3.3.3'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.3.3'
+}

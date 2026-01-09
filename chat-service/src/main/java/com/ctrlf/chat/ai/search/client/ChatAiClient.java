@@ -1,0 +1,137 @@
+package com.ctrlf.chat.ai.search.client;
+
+import com.ctrlf.chat.ai.search.dto.ChatAiMessage;
+import com.ctrlf.chat.ai.search.dto.ChatAiRequest;
+import com.ctrlf.chat.ai.search.dto.ChatAiResponse;
+// ⚠️ session-summary 기능 주석 처리로 인해 사용 안 함
+// import com.ctrlf.chat.dto.summary.ChatSessionSummaryMessage;
+// import com.ctrlf.chat.dto.summary.ChatSessionSummaryRequest;
+// import com.ctrlf.chat.dto.summary.ChatSessionSummaryResponse;
+// import com.ctrlf.chat.entity.ChatMessage;
+import java.util.List;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ChatAiClient {
+
+    private final WebClient aiWebClient;
+
+    // ✅ LLM 모델 선택 포함 채팅 응답용
+    public ChatAiResponse ask(
+        UUID sessionId,
+        UUID userId,
+        String userRole,
+        String department,
+        String domain,
+        String channel,
+        String message,
+        String model,
+        String llmModel
+    ) {
+        ChatAiRequest request =
+            new ChatAiRequest(
+                sessionId,
+                userId,
+                userRole,
+                department,
+                domain,
+                channel,
+                List.of(new ChatAiMessage("user", message)),
+                model,
+                llmModel
+            );
+
+        // 필수 헤더 생성
+        UUID traceId = UUID.randomUUID();
+        String userIdStr = userId != null ? userId.toString() : "";
+        String deptIdStr = department != null ? department : "";
+
+        log.info("[CHAT → AI/MESSAGES] 요청 전송: sessionId={}, userId={}, traceId={}, deptId={}, domain={}, route={}",
+            sessionId, userId, traceId, deptIdStr, domain, channel);
+
+        String rawJson = aiWebClient.post()
+            .uri("/ai/chat/messages")
+            .header("X-Trace-Id", traceId.toString())
+            .header("X-User-Id", userIdStr)
+            .header("X-Dept-Id", deptIdStr)
+            .header("X-Conversation-Id", sessionId.toString())
+            .bodyValue(request)
+            .retrieve()
+            .bodyToMono(String.class)
+            .block();
+
+        log.info("[AI Response Raw] {}", rawJson != null && rawJson.length() > 500
+            ? rawJson.substring(0, 500) + "..." : rawJson);
+
+        // JSON 파싱
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(rawJson, ChatAiResponse.class);
+        } catch (Exception e) {
+            log.error("[AI Response Parse Error] {}", e.getMessage(), e);
+            throw new RuntimeException("AI response parse failed", e);
+        }
+    }
+
+    // ✅ 기존 채팅 응답용 (llmModel 없음) - 후방 호환성
+    public ChatAiResponse ask(
+        UUID sessionId,
+        UUID userId,
+        String userRole,
+        String department,
+        String domain,
+        String channel,
+        String message,
+        String model
+    ) {
+        return ask(sessionId, userId, userRole, department, domain, channel, message, model, null);
+    }
+
+    // ✅ 후방 호환용 (model, llmModel 없음) - 기본값 사용
+    public ChatAiResponse ask(
+        UUID sessionId,
+        UUID userId,
+        String userRole,
+        String department,
+        String domain,
+        String channel,
+        String message
+    ) {
+        return ask(sessionId, userId, userRole, department, domain, channel, message, null, null);
+    }
+
+    // ⚠️ 세션 요약 전용 (현재 AI 서비스에 해당 엔드포인트가 없어 주석 처리)
+    // AI 서비스에는 FAQ 관련 API만 제공되며, session-summary 엔드포인트는 구현되지 않음
+    /*
+    public ChatSessionSummaryResponse summarizeSession(
+        UUID sessionId,
+        List<ChatMessage> messages
+    ) {
+        ChatSessionSummaryRequest request =
+            new ChatSessionSummaryRequest(
+                sessionId,
+                messages.stream()
+                    .map(ChatSessionSummaryMessage::from)
+                    .toList(),
+                150
+            );
+
+        log.info("[AI][SUMMARY] request -> {}", request);
+
+        return aiWebClient.post()
+            .uri("/ai/chat/session-summary")
+            .bodyValue(request)
+            .retrieve()
+            .bodyToMono(ChatSessionSummaryResponse.class)
+            .block();
+    }
+    */
+}

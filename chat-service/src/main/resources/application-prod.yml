@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://keycloak-db:5432/keycloak
+    username: keycloak
+    password: keycloak
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak-service:8090/auth/realms/ctrlf
+ai:
+  gateway:
+    url: http://ai-service:8000

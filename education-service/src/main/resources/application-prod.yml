@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://keycloak-db:5432/keycloak
+    username: keycloak
+    password: keycloak
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak-service:8090/auth/realms/ctrlf
+app:
+  video:
+    ai:
+      base-url: http://ai-service:8000
+      token: "" # 내부 호출 토큰 (필요시 설정)
+  quiz:
+    ai:
+      base-url: http://ai-service:8000
+      token: "" # 내부 호출 토큰 (필요시 설정).
+  infra:
+    base-url: http://infra-service:9003 # infra-service 베이스 URL

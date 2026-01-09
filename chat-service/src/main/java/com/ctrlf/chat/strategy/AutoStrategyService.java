@@ -1,0 +1,65 @@
+package com.ctrlf.chat.strategy;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.ctrlf.chat.strategy.StrategyState.*;
+
+public class AutoStrategyService {
+
+    public static Map<String, Object> decideStrategy(String domain) {
+
+        double avgLatency =
+            PrometheusClient.query(
+                "sum(rate(ctrlf_ai_request_latency_seconds_sum{domain=\"" + domain + "\"}[1m]))"
+                    + " / "
+                    + "sum(rate(ctrlf_ai_request_latency_seconds_count{domain=\"" + domain + "\"}[1m]))"
+            );
+
+        double ragRatio =
+            PrometheusClient.query(
+                "sum(rate(ctrlf_ai_requests_total{domain=\"" + domain + "\",rag_used=\"True\"}[1m]))"
+                    + " / "
+                    + "sum(rate(ctrlf_ai_requests_total{domain=\"" + domain + "\"}[1m]))"
+            );
+
+        // ==================================================
+        // 🛡️ 안전장치 (메트릭 없을 때)
+        // ==================================================
+        if (Double.isNaN(avgLatency) || avgLatency == 0.0) {
+            return DEFAULT_STRATEGY;
+        }
+
+        // ✅ 여기서 단 한 번만 선언
+        Map<String, Object> newStrategy = new HashMap<>();
+
+        // ==================================================
+        // 🔥 Rule 적용
+        // ==================================================
+        if (avgLatency > 5.0 && ragRatio > 0.5) {
+            newStrategy.put("useRag", false);
+            newStrategy.put("model", "quality-gate");
+            newStrategy.put("reason", "HIGH_LATENCY_HIGH_RAG");
+        } else {
+            newStrategy.put("useRag", true);
+            newStrategy.put("model", null);
+            newStrategy.put("reason", "DEFAULT");
+        }
+
+        // ==================================================
+        // 🔁 변경 감지 & 이벤트 기록
+        // ==================================================
+        Map<String, Object> oldStrategy = LAST_STRATEGY.get(domain);
+
+        if (!newStrategy.equals(oldStrategy)) {
+            StrategyState.recordEvent(
+                domain,
+                oldStrategy == null ? Map.of() : oldStrategy,
+                newStrategy
+            );
+            LAST_STRATEGY.put(domain, newStrategy);
+        }
+
+        return newStrategy;
+    }
+}

@@ -1,0 +1,11 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'com.ctrlf'
+version = '0.1.0'
+
+dependencies {
+    // no external deps
+}
+
