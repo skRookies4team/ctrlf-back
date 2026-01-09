@@ -115,6 +115,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
 
             createEducationIfNotExists("장애인 인식 개선 교육", EducationTopic.DISABILITY_AWARENESS,
                 "장애인에 대한 인식 개선 및 편견 해소를 위한 법정 필수 교육입니다.", EducationCategory.MANDATORY, 15, 165);
+
             
             log.info("Education seeding completed (production mode)");
         } catch (Exception e) {
@@ -247,7 +248,17 @@ public class ProductionSeedRunner implements CommandLineRunner {
             850, 
             0
         );
+        createVideoIfNotExists("개발팀 직무 역량 강화 교육", "MSA 아키텍처 패턴", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/MSA.mp4", 2000, 2);
+        createVideoIfNotExists("인사팀 직무 역량 강화 교육", "인사직무 핵심 교육", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/insa.mp4", 1500, 0);
+        createVideoIfNotExists("개발팀 직무 역량 강화 교육", "CI/CD 실무 마스터", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/cicd.mp4", 1800, 1);
 
+
+        // 6. 마케팅팀 직무 교육
+        createVideoIfNotExists("마케팅팀 직무 역량 강화 교육", "2025년 디지털 마케팅 트렌드", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/marketing_trend_2025.mp4", 1100, 0);
         log.info("Video seeding completed.");
     }
 }
