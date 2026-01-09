@@ -39,13 +39,8 @@ public class RagAiClient {
      * @param timeoutSeconds HTTP 타임아웃(초)
      */
     public RagAiClient(
-<<<<<<< HEAD
-        @Value("${app.rag.ai.base-url:http://192.168.0.112:8000}") String baseUrl,
-        @Value("${app.rag.ai.token:}") String internalToken,
-=======
         @Value("${app.rag.ai.base-url:http://localhost:8000}") String baseUrl,
         @Value("${AI_INTERNAL_TOKEN:${app.ai.token:${app.internal.token:}}}") String internalToken,
->>>>>>> main
         @Value("${app.rag.ai.timeout-seconds:10}") long timeoutSeconds
     ) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
