@@ -67,6 +67,7 @@ public class RagDocumentService {
         d.setDomain(req.getDomain());
         d.setUploaderUuid(uploaderUuid.toString());
         d.setSourceUrl(req.getFileUrl());
+        d.setVersion(1);  // 기본 버전 1 설정
         // DB 체크 제약 조건: QUEUED, PROCESSING, SUCCEEDED, FAILED, REPROCESSING만 허용
         d.setStatus(RagDocumentStatus.QUEUED);
         d.setCreatedAt(Instant.now());
