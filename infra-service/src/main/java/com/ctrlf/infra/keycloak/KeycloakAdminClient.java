@@ -206,24 +206,19 @@ public class KeycloakAdminClient {
     }
 
     public Map<String, Object> getUser(String userId) {
-        String url = adminApi("/users?briefRepresentation=false&max=1000");
+        // Keycloak Admin API의 단일 사용자 조회 엔드포인트 사용
+        String url = adminApi("/users/" + userId);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(getAccessToken());
         HttpEntity<Void> req = new HttpEntity<>(headers);
         try {
-            ResponseEntity<List<Map<String, Object>>> resp = restTemplate.exchange(
-                url, HttpMethod.GET, req, new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+            ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
+                url, HttpMethod.GET, req, new ParameterizedTypeReference<Map<String, Object>>() {});
             
-            List<Map<String, Object>> users = resp.getBody();
-            if (users == null) {
+            Map<String, Object> user = resp.getBody();
+            if (user == null) {
                 throw new IllegalStateException("사용자를 찾을 수 없습니다: " + userId);
             }
-            
-            // userId로 필터링
-            Map<String, Object> user = users.stream()
-                .filter(u -> userId.equals(u.get("id")))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다: " + userId));
             
             // attributes에서 모든 속성을 추출하여 최상위 레벨에 추가
             @SuppressWarnings("unchecked")
@@ -240,6 +235,8 @@ public class KeycloakAdminClient {
             }
             
             return user;
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new IllegalStateException("사용자를 찾을 수 없습니다: " + userId, e);
         } catch (HttpClientErrorException.Forbidden e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 접근 권한이 없습니다. " +
