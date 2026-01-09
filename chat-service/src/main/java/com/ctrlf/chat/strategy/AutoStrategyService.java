@@ -3,12 +3,13 @@ package com.ctrlf.chat.strategy;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.ctrlf.chat.strategy.StrategyState.*;
-
 public class AutoStrategyService {
 
     public static Map<String, Object> decideStrategy(String domain) {
 
+        // ==================================================
+        // 📊 Prometheus 메트릭 조회
+        // ==================================================
         double avgLatency =
             PrometheusClient.query(
                 "sum(rate(ctrlf_ai_request_latency_seconds_sum{domain=\"" + domain + "\"}[1m]))"
@@ -27,15 +28,14 @@ public class AutoStrategyService {
         // 🛡️ 안전장치 (메트릭 없을 때)
         // ==================================================
         if (Double.isNaN(avgLatency) || avgLatency == 0.0) {
-            return DEFAULT_STRATEGY;
+            return StrategyState.DEFAULT_STRATEGY;
         }
 
-        // ✅ 여기서 단 한 번만 선언
+        // ==================================================
+        // 🧠 새 전략 계산
+        // ==================================================
         Map<String, Object> newStrategy = new HashMap<>();
 
-        // ==================================================
-        // 🔥 Rule 적용
-        // ==================================================
         if (avgLatency > 5.0 && ragRatio > 0.5) {
             newStrategy.put("useRag", false);
             newStrategy.put("model", "quality-gate");
@@ -49,7 +49,8 @@ public class AutoStrategyService {
         // ==================================================
         // 🔁 변경 감지 & 이벤트 기록
         // ==================================================
-        Map<String, Object> oldStrategy = LAST_STRATEGY.get(domain);
+        Map<String, Object> oldStrategy =
+            StrategyState.LAST_STRATEGY.get(domain);
 
         if (!newStrategy.equals(oldStrategy)) {
             StrategyState.recordEvent(
@@ -57,7 +58,7 @@ public class AutoStrategyService {
                 oldStrategy == null ? Map.of() : oldStrategy,
                 newStrategy
             );
-            LAST_STRATEGY.put(domain, newStrategy);
+            StrategyState.LAST_STRATEGY.put(domain, newStrategy);
         }
 
         return newStrategy;
