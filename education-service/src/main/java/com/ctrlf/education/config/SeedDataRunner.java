@@ -42,9 +42,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 로컬 개발용 시드 데이터 주입기.
- * 활성화: --spring.profiles.active=dev,local-seed (또는 다른 프로파일과 함께 local-seed)
+ * 활성화: --spring.profiles.active=dev,local-seed 또는 dev,dev-seed
  */
-@Profile("local-seed")
+@Profile({"local-seed", "dev-seed"})
 @Order(1)
 @Component
 public class SeedDataRunner implements CommandLineRunner {
