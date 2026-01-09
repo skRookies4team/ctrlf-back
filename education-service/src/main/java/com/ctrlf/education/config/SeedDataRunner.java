@@ -570,7 +570,36 @@ public class SeedDataRunner implements CommandLineRunner {
     // 예시 1: 성희롱 예방 교육에 영상 2개 넣기
     createVideo("개인정보 보호 교육", "개인정보 보호 교육", 
                 "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4", 600, 0);
-    
+    createVideoIfNotExists(
+            "성희롱 예방 교육", 
+            "1강. 성희롱의 개념과 유형", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
+            600, 
+            0
+        );
+
+        // ==========================================
+        // 3. 직장 내 괴롭힘 예방 교육 (1개)
+        // ==========================================
+    createVideoIfNotExists(
+            "직장 내 괴롭힘 예방 교육", 
+            "직장 내 괴롭힘 판단 기준 및 대응", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/compa.mp4",
+            1200, 
+            0
+        );
+
+        // ==========================================
+        // 4. 장애인 인식 개선 교육 (1개)
+        // ==========================================
+    createVideoIfNotExists(
+            "장애인 인식 개선 교육", 
+            "함께 일하는 동료, 장애인 인식 개선", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/hurt.mp4",
+            850, 
+            0
+        );
+
   }
 }
 
