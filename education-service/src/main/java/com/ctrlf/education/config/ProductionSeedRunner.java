@@ -212,12 +212,19 @@ public class ProductionSeedRunner implements CommandLineRunner {
             1200, 
             0
         );
+        createVideo(
+            "개인정보 보호 교육", 
+            "개인정보 보호 교육 ", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%A0%95%EB%B3%B4%EB%B3%B4%ED%98%B8.mp4",
+            1200, 
+            1
+        );
 
         // 2. 성희롱 예방 교육
         createVideo(
             "성희롱 예방 교육", 
-            "1강. 성희롱의 개념과 유형", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
+            "직장 내 성희롱 예방 교육 ", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%84%B1%ED%9D%AC%EB%A1%B1.mp4",
             600, 
             0
         );
@@ -238,6 +245,13 @@ public class ProductionSeedRunner implements CommandLineRunner {
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/hurt.mp4",
             850, 
             0
+        );
+        createVideo(
+            "장애인 인식 개선 교육", 
+            "함께 일하는 동료, 장애인 인식 개선", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/hurt2.mp4",
+            850, 
+            1
         );
         
         // 5. 직무 역량 강화 교육 (개발, 인사)
@@ -267,11 +281,11 @@ public class ProductionSeedRunner implements CommandLineRunner {
 
         // 6. 마케팅팀 직무 교육
         createVideo(
-            "마케팅팀 직무 역량 강화 교육", 
+            "개발팀 직무 역량 강화 교육", 
             "2025년 디지털 마케팅 트렌드", 
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/marketing_trend_2025.mp4", 
             1100, 
-            0
+            2
         );
 
         log.info("Video seeding completed.");
