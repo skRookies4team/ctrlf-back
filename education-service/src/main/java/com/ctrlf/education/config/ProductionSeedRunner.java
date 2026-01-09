@@ -198,41 +198,58 @@ public class ProductionSeedRunner implements CommandLineRunner {
     /**
      * 개인정보 보호 교육에만 영상 1개 생성 (기존 데이터는 유지)
      */
-    private void seedVideoForPersonalInfoEducation() {
-        log.info("Starting to seed video for personal info education (production mode)...");
-        
-        // 개인정보 보호 교육 찾기
-        List<Education> allEducations = educationRepository.findAll();
-        Education personalInfoEducation = allEducations.stream()
-            .filter(e -> "개인정보 보호 교육".equals(e.getTitle()) && e.getDeletedAt() == null)
-            .findFirst()
-            .orElse(null);
-        
-        if (personalInfoEducation == null) {
-            log.warn("Personal info education not found. Skipping video seeding.");
-            return;
-        }
-        
-        // 이미 영상이 있으면 스킵
-        var existingVideos = educationVideoRepository.findByEducationId(personalInfoEducation.getId());
-        if (!existingVideos.isEmpty()) {
-            log.info("Video already exists for personal info education. Skipping.");
-            return;
-        }
-        
-        // 영상 1개 생성
-        var video = EducationVideo.create(
-            personalInfoEducation.getId(),
-            "개인정보 보호 교육 - 기본편",
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4",
-            1200,
-            1,
-            "PUBLISHED"
+/**
+     * 다양한 교육에 대한 영상 시드 일괄 생성
+     */
+    private void seedVideos() {
+        log.info("Starting to seed videos with specific URLs...");
+
+        // ==========================================
+        // 1. 개인정보 보호 교육 (1개)
+        // ==========================================
+        createVideoIfNotExists(
+            "개인정보 보호 교육", 
+            "개인정보 보호 교육 - 기본편", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4", // [변경 포인트] 실제 URL 입력
+            1200, 
+            0
         );
-        video.setOrderIndex(0);
-        educationVideoRepository.save(video);
-        
-        log.info("Seed created: 1 video for personal info education, videoId={}", video.getId());
+
+        // ==========================================
+        // 2. 성희롱 예방 교육 (2개)
+        // ==========================================
+        createVideoIfNotExists(
+            "성희롱 예방 교육", 
+            "1강. 성희롱의 개념과 유형", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/f75a41fb-ff76-4d37-8220-c7647de1679f.mp4", // [변경 포인트] 1강 URL
+            600, 
+            0
+        );
+
+
+        // ==========================================
+        // 3. 직장 내 괴롭힘 예방 교육 (1개)
+        // ==========================================
+        createVideoIfNotExists(
+            "직장 내 괴롭힘 예방 교육", 
+            "직장 내 괴롭힘 판단 기준 및 대응", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%A7%81%EC%9E%A5_%EA%B4%B4%EB%A1%AD%ED%9E%98.mp4", // [변경 포인트] 괴롭힘 예방 URL
+            1200, 
+            0
+        );
+
+        // ==========================================
+        // 4. 장애인 인식 개선 교육 (1개)
+        // ==========================================
+        createVideoIfNotExists(
+            "장애인 인식 개선 교육", 
+            "함께 일하는 동료, 장애인 인식 개선", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%9E%A5%EC%95%A0%EC%9D%B8.mp4", // [변경 포인트] 장애인 인식 URL
+            850, 
+            0
+        );
+
+
+        log.info("Video seeding completed.");
     }
 }
-
