@@ -89,17 +89,17 @@ public class AdminNotificationsController {
         // 에러 및 완료 핸들러
         emitter.onCompletion(() -> {
             log.debug("SSE 연결 완료 (클라이언트 종료)");
-            emitters.remove(emitter);
+            removeEmitter(emitter);
         });
 
         emitter.onError((ex) -> {
-            log.warn("SSE 연결 오류", ex);
-            emitters.remove(emitter);
+            log.debug("SSE 연결 오류: {}", ex.getMessage());
+            removeEmitter(emitter);
         });
 
         emitter.onTimeout(() -> {
             log.debug("SSE 연결 타임아웃");
-            emitters.remove(emitter);
+            removeEmitter(emitter);
         });
 
         emitters.add(emitter);
@@ -293,15 +293,27 @@ public class AdminNotificationsController {
         try {
             emitter.send(event);
         } catch (IllegalStateException e) {
-            // 이미 완료된 emitter에 대한 send 시도
+            // 이미 완료된 emitter에 대한 send 시도 (정상적인 상황)
             log.debug("SSE emitter already completed, removing from list");
-            emitters.remove(emitter);
+            removeEmitter(emitter);
         } catch (IOException e) {
-            log.warn("IO error while sending SSE event", e);
-            emitters.remove(emitter);
+            // 클라이언트 연결이 이미 종료된 경우 (정상적인 상황)
+            // 스택 트레이스를 출력하지 않고 간단히 로그만 남김
+            log.debug("SSE connection closed by client: {}", e.getMessage());
+            removeEmitter(emitter);
         } catch (Exception e) {
-            log.warn("Unexpected error while sending SSE event", e);
-            emitters.remove(emitter);
+            // 예상치 못한 오류만 WARN 레벨로 로깅
+            log.warn("Unexpected error while sending SSE event: {}", e.getMessage());
+            removeEmitter(emitter);
+        }
+    }
+
+    /**
+     * Emitter를 리스트에서 안전하게 제거합니다 (중복 제거 방지).
+     */
+    private void removeEmitter(SseEmitter emitter) {
+        if (emitters.remove(emitter)) {
+            log.debug("SSE emitter removed from list: 현재 연결 수 = {}", emitters.size());
         }
     }
 }
