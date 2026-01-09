@@ -6,6 +6,10 @@ import java.util.Map;
 public class AutoStrategyService {
 
     public static Map<String, Object> decideStrategy(String domain) {
+        // domain이 null이면 기본값 사용
+        if (domain == null || domain.isBlank()) {
+            domain = "ETC";
+        }
 
         // ==================================================
         // 📊 Prometheus 메트릭 조회

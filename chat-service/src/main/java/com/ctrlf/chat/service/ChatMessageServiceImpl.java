@@ -81,11 +81,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         // 세션에 저장된 LLM 모델 사용 (관리자 대시보드에서 설정)
         String llmModel = session.getLlmModel();
 
+        // domain이 null이면 기본값 사용 (AI 서비스가 필수로 요구할 수 있음)
+        String finalDomain = (domain != null && !domain.isBlank()) ? domain : "ETC";
+
         // ===============================
         // 🔥 자동 전략 결정 & 적용
         // ===============================
         Map<String, Object> strategy =
-            AutoStrategyService.decideStrategy(domain);
+            AutoStrategyService.decideStrategy(finalDomain);
 
         // 기본값
         String finalEmbeddingModel = embeddingModel;
@@ -110,7 +113,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     userId,
                     "EMPLOYEE",   // TODO: JWT에서 추출
                     department,
-                    domain,
+                    finalDomain,  // null 방지된 domain 사용
                     "WEB",
                     request.content(),
                     finalEmbeddingModel,  // Frontend에서 전달받은 model 값 그대로 전달
@@ -305,6 +308,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         // 세션에 저장된 LLM 모델 사용 (관리자 대시보드에서 설정)
         String llmModel = session.getLlmModel();
 
+        // domain이 null이면 기본값 사용 (AI 서비스가 필수로 요구할 수 있음)
+        String retryDomain = session.getDomain();
+        if (retryDomain == null || retryDomain.isBlank()) {
+            retryDomain = "ETC";
+        }
+
         long startTime = System.currentTimeMillis();
         ChatAiResponse aiResponse;
         try {
@@ -313,7 +322,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 session.getUserUuid(),
                 "EMPLOYEE",   // TODO: JWT에서 추출
                 department,
-                session.getDomain(),
+                retryDomain,  // null 방지된 domain 사용
                 "WEB",
                 userMessage.getContent(),
                 embeddingModel,  // 세션에 저장된 모델 사용
