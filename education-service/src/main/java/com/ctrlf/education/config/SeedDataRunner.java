@@ -297,16 +297,11 @@ public class SeedDataRunner implements CommandLineRunner {
         UUID creatorUuid = UUID.fromString("00000000-0000-0000-0000-000000000001");
         var video = com.ctrlf.education.video.entity.EducationVideo.createDraft(
             personalInfoEducation.getId(),
-<<<<<<< HEAD
             "개인정보 보호 교육 - 기본편",
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4",
             1200,
             1,
             "PUBLISHED"
-=======
-            "개인정보 보호 교육 - 테스트 컨텐츠(시드)",
-            creatorUuid
->>>>>>> main
         );
         video.setOrderIndex(0);
         educationVideoRepository.save(video);
