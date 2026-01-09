@@ -2,7 +2,6 @@ package com.ctrlf.infra.rag.client;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,7 @@ import org.springframework.web.client.RestClientException;
      * - 문서 처리(텍스트 추출/청킹/임베딩) 요청을 AI 서버로 전달합니다.
      *
      * 엔드포인트
-     * - POST {baseUrl}/v1/internal_ragflow/internal/ai/rag-documents/ingest
+     * - POST {baseUrl}/internal/ai/rag-documents/ingest
      */
 @Component
 public class RagAiClient {
@@ -115,7 +114,7 @@ public class RagAiClient {
 
         try {
             AiResponse response = restClient.post()
-                .uri("/v1/internal_ragflow/internal/ai/rag-documents/ingest")
+                .uri("/internal/ai/rag-documents/ingest")
                 .header("X-Request-Id", requestId.toString())
                 .body(requestBody)
                 .retrieve()
