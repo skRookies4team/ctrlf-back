@@ -9,6 +9,8 @@ import com.ctrlf.education.video.repository.EducationVideoRepository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID; 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -20,11 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 프로덕션 환경용 시드 데이터 주입기.
  * 활성화: --spring.profiles.active=prod,prod-seed
- * 
- * 주의사항:
- * - 기존 데이터를 삭제하지 않음
- * - 이미 존재하는 데이터는 스킵
- * - 새로운 데이터만 추가
  */
 @Profile("prod-seed")
 @Order(1)
@@ -49,15 +46,15 @@ public class ProductionSeedRunner implements CommandLineRunner {
         try {
             log.info("Starting production seed data generation...");
             
-            // 교육 시드 생성 (기존 데이터는 유지)
+            // 1. 교육 생성
             seedEducations();
-            seedVideoForPersonalInfoEducation();
+            
+            // 2. 영상 생성 (수정된 메서드 호출)
+            seedVideos();
             
             log.info("Production seed data generation completed successfully!");
         } catch (Exception e) {
-            // 프로덕션에서는 시드 실패해도 서비스 시작을 막지 않음
             log.error("Failed to generate production seed data (non-blocking): {}", e.getMessage(), e);
-            // 예외를 다시 던지지 않아서 서비스 시작이 계속됨
         }
     }
 
@@ -68,7 +65,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         log.info("Starting to seed educations (production mode - no deletion)...");
         
         try {
-            // 1. 직무 교육 (JOB_DUTY) - edu_type: JOB - 8개 부서별로 생성
+            // 직무 교육 생성
             String[] departments = {"총무팀", "기획팀", "마케팅팀", "인사팀", "재무팀", "개발팀", "영업팀", "법무팀"};
             String[] departmentDescriptions = {
                 "총무 업무 수행에 필요한 핵심 역량을 강화하는 직무 교육입니다.",
@@ -84,12 +81,9 @@ public class ProductionSeedRunner implements CommandLineRunner {
             
             for (int i = 0; i < departments.length; i++) {
                 String title = departments[i] + " 직무 역량 강화 교육";
-                // 이미 존재하는지 확인 (findAll 대신 findByTitleAndDeletedAtIsNull 사용)
                 if (educationRepository.findByTitleAndDeletedAtIsNull(title).isPresent()) {
-                    log.debug("Education already exists, skipping: {}", title);
                     continue;
                 }
-                
                 try {
                     Education edu = new Education();
                     edu.setTitle(title);
@@ -104,63 +98,31 @@ public class ProductionSeedRunner implements CommandLineRunner {
                     edu.setEndAt(Instant.now().plusSeconds(86400L * (180 - startDaysAgo[i])));
                     edu.setDepartmentScope(new String[]{departments[i]});
                     educationRepository.save(edu);
-                    log.info("Created education: {}", title);
                 } catch (Exception e) {
                     log.warn("Failed to create education '{}': {}", title, e.getMessage());
-                    // 개별 실패해도 계속 진행
                 }
             }
 
-            // 2. 성희롱 예방 교육 (SEXUAL_HARASSMENT_PREVENTION) - edu_type: MANDATORY
-            createEducationIfNotExists(
-                "성희롱 예방 교육",
-                EducationTopic.SEXUAL_HARASSMENT_PREVENTION,
-                "직장 내 성희롱 예방 및 대응 방법에 대한 법정 필수 교육입니다.",
-                EducationCategory.MANDATORY,
-                60,
-                120
-            );
+            // 법정 의무 교육 생성
+            createEducationIfNotExists("성희롱 예방 교육", EducationTopic.SEXUAL_HARASSMENT_PREVENTION,
+                "직장 내 성희롱 예방 및 대응 방법에 대한 법정 필수 교육입니다.", EducationCategory.MANDATORY, 60, 120);
 
-            // 3. 개인정보 보호 교육 (PERSONAL_INFO_PROTECTION) - edu_type: MANDATORY
-            createEducationIfNotExists(
-                "개인정보 보호 교육",
-                EducationTopic.PERSONAL_INFO_PROTECTION,
-                "개인정보 보호법에 따른 개인정보 취급 및 보호에 관한 법정 필수 교육입니다.",
-                EducationCategory.MANDATORY,
-                90,
-                90
-            );
+            createEducationIfNotExists("개인정보 보호 교육", EducationTopic.PERSONAL_INFO_PROTECTION,
+                "개인정보 보호법에 따른 개인정보 취급 및 보호에 관한 법정 필수 교육입니다.", EducationCategory.MANDATORY, 90, 90);
 
-            // 4. 직장 내 괴롭힘 예방 교육 (WORKPLACE_BULLYING) - edu_type: MANDATORY
-            createEducationIfNotExists(
-                "직장 내 괴롭힘 예방 교육",
-                EducationTopic.WORKPLACE_BULLYING,
-                "직장 내 괴롭힘 예방 및 대응 방법에 대한 법정 필수 교육입니다.",
-                EducationCategory.MANDATORY,
-                120,
-                60
-            );
+            createEducationIfNotExists("직장 내 괴롭힘 예방 교육", EducationTopic.WORKPLACE_BULLYING,
+                "직장 내 괴롭힘 예방 및 대응 방법에 대한 법정 필수 교육입니다.", EducationCategory.MANDATORY, 120, 60);
 
-            // 5. 장애인 인식 개선 교육 (DISABILITY_AWARENESS) - edu_type: MANDATORY
-            createEducationIfNotExists(
-                "장애인 인식 개선 교육",
-                EducationTopic.DISABILITY_AWARENESS,
-                "장애인에 대한 인식 개선 및 편견 해소를 위한 법정 필수 교육입니다.",
-                EducationCategory.MANDATORY,
-                15,
-                165
-            );
+            createEducationIfNotExists("장애인 인식 개선 교육", EducationTopic.DISABILITY_AWARENESS,
+                "장애인에 대한 인식 개선 및 편견 해소를 위한 법정 필수 교육입니다.", EducationCategory.MANDATORY, 15, 165);
             
             log.info("Education seeding completed (production mode)");
         } catch (Exception e) {
             log.error("Error during education seeding: {}", e.getMessage(), e);
-            throw e; // 상위에서 처리하도록
+            throw e;
         }
     }
     
-    /**
-     * 교육이 없으면 생성하는 헬퍼 메서드
-     */
     private void createEducationIfNotExists(
         String title,
         EducationTopic category,
@@ -171,10 +133,8 @@ public class ProductionSeedRunner implements CommandLineRunner {
     ) {
         try {
             if (educationRepository.findByTitleAndDeletedAtIsNull(title).isPresent()) {
-                log.debug("Education already exists, skipping: {}", title);
                 return;
             }
-            
             Education edu = new Education();
             edu.setTitle(title);
             edu.setCategory(category);
@@ -191,15 +151,55 @@ public class ProductionSeedRunner implements CommandLineRunner {
             log.info("Created education: {}", title);
         } catch (Exception e) {
             log.warn("Failed to create education '{}': {}", title, e.getMessage());
-            // 개별 실패해도 계속 진행
         }
     }
     
     /**
-     * 개인정보 보호 교육에만 영상 1개 생성 (기존 데이터는 유지)
+     * 영상 생성을 위한 헬퍼 메서드 (이게 누락되어 에러가 났었습니다)
      */
-/**
-     * 다양한 교육에 대한 영상 시드 일괄 생성
+    private void createVideoIfNotExists(String educationTitle, String videoTitle, String videoUrl, int durationSec, int orderIndex) {
+        try {
+            List<Education> allEducations = educationRepository.findAll();
+            Education education = allEducations.stream()
+                .filter(e -> e.getTitle().equals(educationTitle) && e.getDeletedAt() == null)
+                .findFirst()
+                .orElse(null);
+
+            if (education == null) {
+                log.warn("Education not found for video: {}", educationTitle);
+                return;
+            }
+
+            boolean exists = educationVideoRepository.findByEducationId(education.getId()).stream()
+                .anyMatch(v -> v.getTitle().equals(videoTitle));
+            
+            if (exists) {
+                log.debug("Video already exists, skipping: [{}]", videoTitle);
+                return;
+            }
+
+            // createDraft + Setter 패턴 사용 (빌드 오류 방지)
+            var video = EducationVideo.createDraft(
+                education.getId(),
+                videoTitle,
+                UUID.randomUUID()
+            );
+
+            video.setFileUrl(videoUrl);
+            video.setDuration(durationSec);
+            video.setOrderIndex(orderIndex);
+            video.setStatus("PUBLISHED");
+
+            educationVideoRepository.save(video);
+            log.info("Created video: [{}] in [{}]", videoTitle, educationTitle);
+
+        } catch (Exception e) {
+            log.error("Failed to create video '{}': {}", videoTitle, e.getMessage());
+        }
+    }
+
+    /**
+     * 다양한 교육에 대한 영상 시드 일괄 생성 (요청하신 URL 적용)
      */
     private void seedVideos() {
         log.info("Starting to seed videos with specific URLs...");
@@ -210,22 +210,21 @@ public class ProductionSeedRunner implements CommandLineRunner {
         createVideoIfNotExists(
             "개인정보 보호 교육", 
             "개인정보 보호 교육 - 기본편", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4", // [변경 포인트] 실제 URL 입력
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4",
             1200, 
             0
         );
 
         // ==========================================
-        // 2. 성희롱 예방 교육 (2개)
+        // 2. 성희롱 예방 교육 (1개)
         // ==========================================
         createVideoIfNotExists(
             "성희롱 예방 교육", 
             "1강. 성희롱의 개념과 유형", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/f75a41fb-ff76-4d37-8220-c7647de1679f.mp4", // [변경 포인트] 1강 URL
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/f75a41fb-ff76-4d37-8220-c7647de1679f.mp4",
             600, 
             0
         );
-
 
         // ==========================================
         // 3. 직장 내 괴롭힘 예방 교육 (1개)
@@ -233,7 +232,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         createVideoIfNotExists(
             "직장 내 괴롭힘 예방 교육", 
             "직장 내 괴롭힘 판단 기준 및 대응", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%A7%81%EC%9E%A5_%EA%B4%B4%EB%A1%AD%ED%9E%98.mp4", // [변경 포인트] 괴롭힘 예방 URL
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%A7%81%EC%9E%A5_%EA%B4%B4%EB%A1%AD%ED%9E%98.mp4",
             1200, 
             0
         );
@@ -244,11 +243,10 @@ public class ProductionSeedRunner implements CommandLineRunner {
         createVideoIfNotExists(
             "장애인 인식 개선 교육", 
             "함께 일하는 동료, 장애인 인식 개선", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%9E%A5%EC%95%A0%EC%9D%B8.mp4", // [변경 포인트] 장애인 인식 URL
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/%EC%9E%A5%EC%95%A0%EC%9D%B8.mp4",
             850, 
             0
         );
-
 
         log.info("Video seeding completed.");
     }
