@@ -25,12 +25,29 @@ public class KeycloakAdminService {
 
     /**
      * 사용자 정보를 조회하고, Keycloak DB의 user_attribute 테이블에서 attributes를 가져와 추가합니다.
+     * realmRoles 필드도 함께 추가합니다.
      */
     public Map<String, Object> getUser(String userId) {
         Map<String, Object> user = client.getUser(userId);
 
         if (user == null) {
             return null;
+        }
+
+        // 역할 정보 추가 (listUsersWithFilters와 동일하게)
+        try {
+            List<Map<String, Object>> userRoles = client.getUserRealmRoles(userId);
+            // 역할 이름만 추출하여 배열로 변환
+            List<String> roleNames = userRoles.stream()
+                .map(role -> (String) role.get("name"))
+                .filter(name -> name != null)
+                .toList();
+            user.put("realmRoles", roleNames);
+            log.debug("사용자 정보 조회: userId={}, realmRoles={}", userId, roleNames);
+        } catch (Exception e) {
+            // 역할 조회 실패 시 빈 리스트로 설정
+            user.put("realmRoles", new ArrayList<>());
+            log.warn("사용자 역할 조회 실패: userId={}, error={}", userId, e.getMessage());
         }
 
         return user;
@@ -214,17 +231,32 @@ public class KeycloakAdminService {
      * @param roleNames 할당할 커스텀 역할 이름 목록 (예: ["SYSTEM_ADMIN", "EMPLOYEE"])
      */
     public void updateUserRoles(String userId, List<String> roleNames) {
+        // null 체크 및 빈 리스트로 변환 (effectively final을 위해 final 변수에 할당)
+        final List<String> targetRoleNames = roleNames != null ? roleNames : List.of();
+        
+        log.debug("사용자 역할 업데이트 시작: userId={}, 요청된 역할={}", userId, targetRoleNames);
+        
         // 1. 모든 커스텀 realm 역할 조회
         List<Map<String, Object>> allCustomRoles = client.getRealmRoles();
+        log.debug("전체 커스텀 역할 수: {}", allCustomRoles.size());
         
         // 2. 현재 사용자의 커스텀 역할 조회 (getUserRealmRoles는 이미 필터링된 결과 반환)
         List<Map<String, Object>> currentCustomRoles = client.getUserRealmRoles(userId);
+        List<String> currentRoleNames = currentCustomRoles.stream()
+            .map(role -> (String) role.get("name"))
+            .filter(name -> name != null)
+            .toList();
+        log.debug("현재 사용자 역할: userId={}, 현재 역할={}", userId, currentRoleNames);
         
         // 3. 제거할 커스텀 역할 찾기 (현재 커스텀 역할 중 새 역할 목록에 없는 것)
         List<Map<String, Object>> rolesToRemove = currentCustomRoles.stream()
             .filter(role -> {
                 String roleName = (String) role.get("name");
-                return roleName != null && !roleNames.contains(roleName);
+                boolean shouldRemove = roleName != null && !targetRoleNames.contains(roleName);
+                if (shouldRemove) {
+                    log.debug("제거할 역할: {}", roleName);
+                }
+                return shouldRemove;
             })
             .toList();
         
@@ -232,20 +264,41 @@ public class KeycloakAdminService {
         List<Map<String, Object>> rolesToAdd = allCustomRoles.stream()
             .filter(role -> {
                 String roleName = (String) role.get("name");
-                return roleName != null && roleNames.contains(roleName) 
-                    && !currentCustomRoles.stream().anyMatch(cr -> cr.get("name").equals(roleName));
+                boolean shouldAdd = roleName != null && targetRoleNames.contains(roleName) 
+                    && !currentRoleNames.contains(roleName);
+                if (shouldAdd) {
+                    log.debug("추가할 역할: {}", roleName);
+                }
+                return shouldAdd;
             })
             .toList();
         
+        log.info("역할 업데이트 실행: userId={}, 제거할 역할 수={}, 추가할 역할 수={}", 
+            userId, rolesToRemove.size(), rolesToAdd.size());
+        
         // 5. 역할 제거
         if (!rolesToRemove.isEmpty()) {
+            log.debug("역할 제거 실행: userId={}, 역할={}", 
+                userId, rolesToRemove.stream().map(r -> r.get("name")).toList());
             client.removeRealmRolesFromUser(userId, rolesToRemove);
+            log.info("역할 제거 완료: userId={}, 제거된 역할 수={}", userId, rolesToRemove.size());
         }
         
         // 6. 역할 추가
         if (!rolesToAdd.isEmpty()) {
+            log.debug("역할 추가 실행: userId={}, 역할={}", 
+                userId, rolesToAdd.stream().map(r -> r.get("name")).toList());
             client.assignRealmRolesToUser(userId, rolesToAdd);
+            log.info("역할 추가 완료: userId={}, 추가된 역할 수={}", userId, rolesToAdd.size());
         }
+        
+        // 7. 업데이트 후 최종 역할 확인
+        List<Map<String, Object>> finalRoles = client.getUserRealmRoles(userId);
+        List<String> finalRoleNames = finalRoles.stream()
+            .map(role -> (String) role.get("name"))
+            .filter(name -> name != null)
+            .toList();
+        log.info("역할 업데이트 완료: userId={}, 최종 역할={}", userId, finalRoleNames);
     }
 
     /**
