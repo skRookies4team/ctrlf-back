@@ -9,7 +9,7 @@ import com.ctrlf.education.video.repository.EducationVideoRepository;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID; 
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
             // 1. 교육 생성
             seedEducations();
             
-            // 2. 영상 생성 (수정된 메서드 호출)
+            // 2. 영상 생성
             seedVideos();
             
             log.info("Production seed data generation completed successfully!");
@@ -116,7 +116,6 @@ public class ProductionSeedRunner implements CommandLineRunner {
             createEducationIfNotExists("장애인 인식 개선 교육", EducationTopic.DISABILITY_AWARENESS,
                 "장애인에 대한 인식 개선 및 편견 해소를 위한 법정 필수 교육입니다.", EducationCategory.MANDATORY, 15, 165);
 
-            
             log.info("Education seeding completed (production mode)");
         } catch (Exception e) {
             log.error("Error during education seeding: {}", e.getMessage(), e);
@@ -156,9 +155,9 @@ public class ProductionSeedRunner implements CommandLineRunner {
     }
     
     /**
-     * 영상 생성을 위한 헬퍼 메서드 (이게 누락되어 에러가 났었습니다)
+     * 영상 생성을 위한 헬퍼 메서드 (이름을 createVideo로 통일)
      */
-    private void createVideoIfNotExists(String educationTitle, String videoTitle, String videoUrl, int durationSec, int orderIndex) {
+    private void createVideo(String educationTitle, String videoTitle, String videoUrl, int durationSec, int orderIndex) {
         try {
             List<Education> allEducations = educationRepository.findAll();
             Education education = allEducations.stream()
@@ -179,7 +178,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
                 return;
             }
 
-            // createDraft + Setter 패턴 사용 (빌드 오류 방지)
+            // createDraft + Setter 패턴 사용
             var video = EducationVideo.createDraft(
                 education.getId(),
                 videoTitle,
@@ -200,14 +199,12 @@ public class ProductionSeedRunner implements CommandLineRunner {
     }
 
     /**
-     * 다양한 교육에 대한 영상 시드 일괄 생성 (요청하신 URL 적용)
+     * 다양한 교육에 대한 영상 시드 일괄 생성
      */
     private void seedVideos() {
         log.info("Starting to seed videos with specific URLs...");
 
-        // ==========================================
-        // 1. 개인정보 보호 교육 (1개)
-        // ==========================================
+        // 1. 개인정보 보호 교육
         createVideo(
             "개인정보 보호 교육", 
             "개인정보 보호 교육 - 기본편", 
@@ -216,9 +213,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
             0
         );
 
-        // ==========================================
-        // 2. 성희롱 예방 교육 (1개)
-        // ==========================================
+        // 2. 성희롱 예방 교육
         createVideo(
             "성희롱 예방 교육", 
             "1강. 성희롱의 개념과 유형", 
@@ -227,9 +222,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
             0
         );
 
-        // ==========================================
-        // 3. 직장 내 괴롭힘 예방 교육 (1개)
-        // ==========================================
+        // 3. 직장 내 괴롭힘 예방 교육
         createVideo(
             "직장 내 괴롭힘 예방 교육", 
             "직장 내 괴롭힘 판단 기준 및 대응", 
@@ -238,9 +231,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
             0
         );
 
-        // ==========================================
-        // 4. 장애인 인식 개선 교육 (1개)
-        // ==========================================
+        // 4. 장애인 인식 개선 교육
         createVideo(
             "장애인 인식 개선 교육", 
             "함께 일하는 동료, 장애인 인식 개선", 
@@ -248,17 +239,41 @@ public class ProductionSeedRunner implements CommandLineRunner {
             850, 
             0
         );
-        createVideoIfNotExists("개발팀 직무 역량 강화 교육", "MSA 아키텍처 패턴", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/MSA.mp4", 2000, 2);
-        createVideoIfNotExists("인사팀 직무 역량 강화 교육", "인사직무 핵심 교육", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/insa.mp4", 1500, 0);
-        createVideoIfNotExists("개발팀 직무 역량 강화 교육", "CI/CD 실무 마스터", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/cicd.mp4", 1800, 1);
-
+        
+        // 5. 직무 역량 강화 교육 (개발, 인사)
+        createVideo(
+            "개발팀 직무 역량 강화 교육", 
+            "MSA 아키텍처 패턴", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/MSA.mp4", 
+            2000, 
+            2
+        );
+        
+        createVideo(
+            "인사팀 직무 역량 강화 교육", 
+            "인사직무 핵심 교육", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/insa.mp4", 
+            1500, 
+            0
+        );
+        
+        createVideo(
+            "개발팀 직무 역량 강화 교육", 
+            "CI/CD 실무 마스터", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/cicd.mp4", 
+            1800, 
+            1
+        );
 
         // 6. 마케팅팀 직무 교육
-        createVideoIfNotExists("마케팅팀 직무 역량 강화 교육", "2025년 디지털 마케팅 트렌드", 
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/marketing_trend_2025.mp4", 1100, 0);
+        createVideo(
+            "마케팅팀 직무 역량 강화 교육", 
+            "2025년 디지털 마케팅 트렌드", 
+            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/marketing_trend_2025.mp4", 
+            1100, 
+            0
+        );
+
         log.info("Video seeding completed.");
     }
 }
