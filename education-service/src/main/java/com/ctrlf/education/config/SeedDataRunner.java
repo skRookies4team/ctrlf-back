@@ -295,14 +295,16 @@ public class SeedDataRunner implements CommandLineRunner {
         // 1) 영상 컨텐츠(DRAFT) 생성 (AdminVideoController.createVideo 흐름과 유사)
         // =========================================================
         UUID creatorUuid = UUID.fromString("00000000-0000-0000-0000-000000000001");
+// 1. 필수 인자 3개로 객체 생성 (3번째 인자는 작성자 ID로 추정되므로 임의값 생성)
         var video = com.ctrlf.education.video.entity.EducationVideo.createDraft(
-            personalInfoEducation.getId(),
-            "개인정보 보호 교육 - 기본편",
-            "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4",
-            1200,
-            1,
-            "PUBLISHED"
+            personalInfoEducation.getId(),   // 1. educationId (UUID)
+            "개인정보 보호 교육 - 기본편",      // 2. title (String)
+            UUID.randomUUID()                // 3. memberId/creatorId (UUID) -> 적절한 ID로 변경 가능
         );
+
+        // 2. 나머지 정보는 Setter로 설정
+        video.setFileUrl("s3://ctrl-s3/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4");
+        video.setDuration(1200);
         video.setOrderIndex(0);
         educationVideoRepository.save(video);
 
