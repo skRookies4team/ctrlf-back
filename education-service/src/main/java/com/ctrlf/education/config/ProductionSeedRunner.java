@@ -207,7 +207,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         // ==========================================
         // 1. 개인정보 보호 교육 (1개)
         // ==========================================
-        createVideoIfNotExists(
+        createVideo(
             "개인정보 보호 교육", 
             "개인정보 보호 교육 - 기본편", 
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/edu.mp4",
@@ -218,7 +218,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         // ==========================================
         // 2. 성희롱 예방 교육 (1개)
         // ==========================================
-        createVideoIfNotExists(
+        createVideo(
             "성희롱 예방 교육", 
             "1강. 성희롱의 개념과 유형", 
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/videos/bc36db11-d500-4a7d-9a13-af71c06d5f5c.mp4",
@@ -229,7 +229,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         // ==========================================
         // 3. 직장 내 괴롭힘 예방 교육 (1개)
         // ==========================================
-        createVideoIfNotExists(
+        createVideo(
             "직장 내 괴롭힘 예방 교육", 
             "직장 내 괴롭힘 판단 기준 및 대응", 
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/compa.mp4",
@@ -240,7 +240,7 @@ public class ProductionSeedRunner implements CommandLineRunner {
         // ==========================================
         // 4. 장애인 인식 개선 교육 (1개)
         // ==========================================
-        createVideoIfNotExists(
+        createVideo(
             "장애인 인식 개선 교육", 
             "함께 일하는 동료, 장애인 인식 개선", 
             "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/hurt.mp4",
