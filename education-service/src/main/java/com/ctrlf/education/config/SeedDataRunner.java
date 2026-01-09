@@ -100,7 +100,7 @@ public class SeedDataRunner implements CommandLineRunner {
             
             // 교육 시드만 생성
             seedEducations();
-            seedVideoForPersonalInfoEducation();
+            seedAllEducationVideos();
             
             log.info("Seed data generation completed successfully!");
         } catch (Exception e) {
@@ -266,77 +266,115 @@ public class SeedDataRunner implements CommandLineRunner {
     }
     
     /**
-     * 개인정보 보호 교육에만 영상 1개 생성
+     * 모든 교육에 대한 영상 시드 생성
      */
-    private void seedVideoForPersonalInfoEducation() {
-        log.info("Starting to seed video for personal info education...");
+    private void seedAllEducationVideos() {
+        log.info("Starting to seed all education videos...");
         
-        // 개인정보 보호 교육 찾기
         List<Education> educations = educationRepository.findAll();
-        Education personalInfoEducation = educations.stream()
-            .filter(e -> "개인정보 보호 교육".equals(e.getTitle()))
-            .findFirst()
-            .orElse(null);
-        
-        if (personalInfoEducation == null) {
-            log.warn("Personal info education not found. Skipping video seeding.");
-            return;
-        }
-        
-        // 이미 영상이 있으면 스킵
-        var existingVideos = educationVideoRepository.findByEducationId(personalInfoEducation.getId());
-        if (!existingVideos.isEmpty()) {
-            log.info("Video already exists for personal info education. Skipping.");
-            return;
-        }
-
-        // =========================================================
-        // 1) 영상 컨텐츠(DRAFT) 생성 (AdminVideoController.createVideo 흐름과 유사)
-        // =========================================================
         UUID creatorUuid = UUID.fromString("00000000-0000-0000-0000-000000000001");
-        var video = com.ctrlf.education.video.entity.EducationVideo.createDraft(
-            personalInfoEducation.getId(),
-            "개인정보 보호 교육 - 테스트 컨텐츠(시드)",
-            creatorUuid
+        
+        // 비디오 시드 데이터 정의
+        List<VideoSeedData> videoSeeds = List.of(
+            // 1. 개인정보 보호 교육 - 8초
+            new VideoSeedData("개인정보 보호 교육", "정보보호", 
+                "s3://ctrl-s3/education_videos/정보보호.mp4", 8),
+            // 2. 개인정보 보호 교육 - 1초
+            new VideoSeedData("개인정보 보호 교육", "개인정보 보호 교육", 
+                "s3://ctrl-s3/education_videos/정보보호.mp4", 1),
+            // 3. 성희롱 예방 교육 - 1초
+            new VideoSeedData("성희롱 예방 교육", "직장 내 성희롱 예방 교육", 
+                "s3://ctrl-s3/education_videos/성희롱.mp4", 1),
+            // 4. 직장 내 괴롭힘 예방 교육 - 25초
+            new VideoSeedData("직장 내 괴롭힘 예방 교육", "직장 내 괴롭힘 판단 기준 및 대응", 
+                "s3://ctrl-s3/education_videos/compa.mp4", 25),
+            // 5. 장애인 인식 개선 교육 - 6초
+            new VideoSeedData("장애인 인식 개선 교육", "함께 일하는 동료, 장애인 인식 개선", 
+                "https://ctrl-s3.s3.ap-northeast-2.amazonaws.com/education_videos/hurt.mp4", 6),
+            // 6. 장애인 인식 개선 교육 - 1초
+            new VideoSeedData("장애인 인식 개선 교육", "장애인 인식 개선 우리의 동료", 
+                "s3://ctrl-s3/education_videos/hurt.mp4", 1),
+            // 7. 개발팀 직무 역량 강화 교육 - MSA - 8초
+            new VideoSeedData("개발팀 직무 역량 강화 교육", "MSA 아키텍처 패턴", 
+                "s3://ctrl-s3/education_videos/MSA.mp4", 8),
+            // 8. 인사팀 직무 역량 강화 교육 - 4초
+            new VideoSeedData("인사팀 직무 역량 강화 교육", "인사직무 핵심 교육", 
+                "s3://ctrl-s3/education_videos/insa.mp4", 4),
+            // 9. 개발팀 직무 역량 강화 교육 - CI/CD - 3초
+            new VideoSeedData("개발팀 직무 역량 강화 교육", "CI/CD 실무 마스터", 
+                "s3://ctrl-s3/education_videos/cicd.mp4", 3)
         );
-        video.setOrderIndex(0);
-        educationVideoRepository.save(video);
-
-        // =========================================================
-        // 2) SourceSet + Document 연결 (렌더-spec/추적용)
-        // =========================================================
-        UUID sourceSetId = createSourceSetForVideo(
-            personalInfoEducation.getId(),
-            video.getId(),
-            creatorUuid.toString()
-        );
-        video.setSourceSetId(sourceSetId);
-
-        // =========================================================
-        // 3) Script + Chapter/Scene 생성
-        // =========================================================
-        UUID scriptId = insertScript(
-            personalInfoEducation.getId(),
-            null,
-            "{\"chapters\":[]}", // raw_payload는 참고용 (실제 렌더-spec은 chapter/scene 테이블 기반)
-            1,
-            "개인정보 보호 교육 스크립트(시드)"
-        );
-        seedChaptersAndScenes(scriptId);
-
-        video.setScriptId(scriptId);
-
-        // =========================================================
-        // 4) 렌더링 테스트를 위해 상태를 SCRIPT_APPROVED로 설정
-        //    (VideoService.createVideoJob()에서 이 상태여야 렌더링 가능)
-        // =========================================================
-        video.setStatus("SCRIPT_APPROVED");
-        educationVideoRepository.save(video);
-
-        log.info(
-            "Seed created: video + sourceset + script. eduId={}, videoId={}, sourceSetId={}, scriptId={}",
-            personalInfoEducation.getId(), video.getId(), sourceSetId, scriptId
-        );
+        
+        int orderIndex = 0;
+        for (VideoSeedData seed : videoSeeds) {
+            Education education = educations.stream()
+                .filter(e -> seed.educationTitle.equals(e.getTitle()))
+                .findFirst()
+                .orElse(null);
+            
+            if (education == null) {
+                log.warn("Education not found: {}. Skipping video: {}", seed.educationTitle, seed.videoTitle);
+                continue;
+            }
+            
+            // 영상 생성 (ACTIVE 상태, 이미 렌더링 완료된 영상)
+            var video = com.ctrlf.education.video.entity.EducationVideo.create(
+                education.getId(),
+                seed.videoTitle,
+                seed.fileUrl,
+                seed.duration,
+                1,      // version
+                "PUBLISHED" // status - 바로 재생 가능
+            );
+            
+            // 같은 교육 내 기존 비디오 수 계산하여 orderIndex 설정
+            int existingCount = educationVideoRepository.findByEducationId(education.getId()).size();
+            video.setOrderIndex(existingCount);
+            video.setCreatorUuid(creatorUuid);
+            educationVideoRepository.save(video);
+            
+            // SourceSet 생성
+            UUID sourceSetId = createSourceSetForVideo(
+                education.getId(),
+                video.getId(),
+                creatorUuid.toString()
+            );
+            video.setSourceSetId(sourceSetId);
+            
+            // Script 생성
+            UUID scriptId = insertScript(
+                education.getId(),
+                null,
+                "{\"chapters\":[]}",
+                1,
+                seed.videoTitle + " 스크립트"
+            );
+            video.setScriptId(scriptId);
+            educationVideoRepository.save(video);
+            
+            log.info("Seed created: video eduTitle={}, videoTitle={}, fileUrl={}, duration={}s",
+                seed.educationTitle, seed.videoTitle, seed.fileUrl, seed.duration);
+            orderIndex++;
+        }
+        
+        log.info("Completed seeding {} education videos", videoSeeds.size());
+    }
+    
+    /**
+     * 비디오 시드 데이터를 담는 내부 클래스
+     */
+    private static class VideoSeedData {
+        final String educationTitle;
+        final String videoTitle;
+        final String fileUrl;
+        final int duration;
+        
+        VideoSeedData(String educationTitle, String videoTitle, String fileUrl, int duration) {
+            this.educationTitle = educationTitle;
+            this.videoTitle = videoTitle;
+            this.fileUrl = fileUrl;
+            this.duration = duration;
+        }
     }
     
     /**
@@ -461,6 +499,7 @@ public class SeedDataRunner implements CommandLineRunner {
             : "{\"script\":\"" + content.replace("\"", "\\\"") + "\"}";
         s.setRawPayload(payload);
         s.setVersion(version);
+        s.setStatus("APPROVED"); // 스크립트 상태를 APPROVED로 설정
         scriptRepository.save(s);
         log.info("Seed created: EducationScript scriptId={}, eduId={}, title={}", s.getId(), eduId, title);
         return s.getId();
