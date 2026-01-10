@@ -167,13 +167,18 @@ public class S3Service {
             String safeType = (type == null ? "misc" : type.trim()).replaceAll("[^a-zA-Z0-9_\\-/]", "_");
             String ext = "";
             String base = UUID.randomUUID().toString();
+            System.out.println("[DEBUG] buildUploadPath: filename=" + filename + ", type=" + type);
             if (filename != null) {
                 int dot = filename.lastIndexOf('.');
                 if (dot > -1 && dot < filename.length() - 1) {
                     ext = filename.substring(dot);
                 }
+                System.out.println("[DEBUG] extracted ext=" + ext);
+            } else {
+                System.out.println("[DEBUG] filename is NULL!");
             }
             String key = safeType + "/" + base + ext;
+            System.out.println("[DEBUG] final key=" + key);
             return new S3Path(defaultBucket, key);
         }
     }
