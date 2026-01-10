@@ -103,3 +103,17 @@ BEGIN
     ON CONFLICT DO NOTHING;
 END $$;
 
+-- chat.chat_session 테이블 생성 추가
+CREATE TABLE IF NOT EXISTS chat.chat_session (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_uuid UUID,
+    title VARCHAR(255),
+    domain VARCHAR(255),
+    summary TEXT,
+    intent VARCHAR(50),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted BOOLEAN,
+    embedding_model VARCHAR(20),
+    llm_model VARCHAR(20)
+);
