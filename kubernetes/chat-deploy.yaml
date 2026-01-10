@@ -37,8 +37,8 @@ spec:
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: "update"
             # AI 서비스 설정 추가
-            - name: AI_GATEWAY_URL
-              value: "http://192.168.0.112:8000"
+            # - name: AI_GATEWAY_URL
+            #   value: "http://192.168.0.112:8000"
             # 기존 시크릿 설정들
             - name: AI_INTERNAL_TOKEN
               valueFrom:
