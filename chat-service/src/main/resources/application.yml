@@ -36,7 +36,7 @@ app:
     security:
       enabled: true
   elasticsearch:
-    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    uris: ${ELASTICSEARCH_URIS:http://ctrlf-elasticsearch:9200}
     username: ${ELASTICSEARCH_USERNAME:}
     password: ${ELASTICSEARCH_PASSWORD:}
     chat-log-index: chat_log
