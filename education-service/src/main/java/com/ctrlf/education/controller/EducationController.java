@@ -34,6 +34,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 /**
  * 교육 도메인 REST 컨트롤러.
  * <p>
@@ -43,6 +44,7 @@ import lombok.RequiredArgsConstructor;
  * <p>
  * JWT 값을 사용자 UUID로 해석하여 사용자별 진행 정보를 처리합니다.
  */
+@Slf4j
 @RestController
 @Tag(name = "Education", description = "교육 리소스 API")
 @SecurityRequirement(name = "bearer-jwt")
@@ -115,6 +117,7 @@ public class EducationController {
         @Parameter(description = "정렬 기준(UPDATED|TITLE)") @RequestParam(name = "sort", required = false, defaultValue = "UPDATED") String sort,
         @AuthenticationPrincipal Jwt jwt
     ) {
+        log.info("@@@ jwt 111: {}", jwt);
         Optional<UUID> userUuid = SecurityUtils.extractUserUuid(jwt);
         List<String> userDepartments = SecurityUtils.extractDepartments(jwt);
         List<EducationResponses.EducationListItem> res =
