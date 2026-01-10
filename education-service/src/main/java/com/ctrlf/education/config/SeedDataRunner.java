@@ -100,12 +100,7 @@ public class SeedDataRunner implements CommandLineRunner {
             
             // 교육 시드만 생성
             seedEducations();
-<<<<<<< HEAD
-            seedVideoForPersonalInfoEducation();
-            seedMoreVideos();
-=======
             seedAllEducationVideos();
->>>>>>> main
             
             log.info("Seed data generation completed successfully!");
         } catch (Exception e) {
