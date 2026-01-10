@@ -102,7 +102,7 @@ public class RagAiClient {
         requestBody.put("documentId", documentId);
         requestBody.put("version", version);
         requestBody.put("sourceUrl", sourceUrl);
-        requestBody.put("domain", domain != null && !domain.isBlank() ? domain : "POLICY");
+        requestBody.put("domain", domain != null && !domain.isBlank() ? domain : "'사내규정");
         requestBody.put("requestId", requestId.toString());
         requestBody.put("traceId", traceId);
         if (department != null && !department.isBlank()) {
@@ -114,7 +114,8 @@ public class RagAiClient {
 
         try {
             AiResponse response = restClient.post()
-                .uri("/internal/ai/rag-documents/ingest")
+                // .uri("/internal/ai/rag-documents/ingest")
+                .uri("/v1/internal_ragflow/internal/ai/rag-documents/ingest")
                 .header("X-Request-Id", requestId.toString())
                 .body(requestBody)
                 .retrieve()
