@@ -829,17 +829,13 @@ public class VideoService {
                     // infra-service에서 문서 정보 조회
                     try {
                         InfraRagClient.DocumentInfoResponse docInfo = infraRagClient.getDocument(documentId.toString());
-                        if (docInfo != null && docInfo.getSourceUrl() != null) {
-                            sourceFileUrl = docInfo.getSourceUrl();
-                            // sourceUrl에서 파일명 추출 (URL의 마지막 부분)
-                            String url = docInfo.getSourceUrl();
-                            if (url.contains("/")) {
-                                String fileName = url.substring(url.lastIndexOf("/") + 1);
-                                // 쿼리 파라미터 제거
-                                if (fileName.contains("?")) {
-                                    fileName = fileName.substring(0, fileName.indexOf("?"));
-                                }
-                                sourceFileName = fileName;
+                        if (docInfo != null) {
+                            if (docInfo.getSourceUrl() != null) {
+                                sourceFileUrl = docInfo.getSourceUrl();
+                            }
+                            // title을 원본 파일명으로 사용 (sourceUrl은 UUID 형식이므로 사용 불가)
+                            if (docInfo.getTitle() != null && !docInfo.getTitle().isBlank()) {
+                                sourceFileName = docInfo.getTitle();
                             }
                         }
                     } catch (Exception e) {
