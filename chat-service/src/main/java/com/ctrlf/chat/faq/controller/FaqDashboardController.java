@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/faq/dashboard")
+@RequestMapping("/api/faq/dashboard")
 public class FaqDashboardController {
 
     private final FaqDashboardService faqDashboardService;
