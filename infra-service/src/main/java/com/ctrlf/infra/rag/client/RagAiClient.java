@@ -91,7 +91,8 @@ public class RagAiClient {
         String sourceUrl,
         String domain,
         String department,
-        String title
+        String title,
+        String fileExtension
     ) throws Exception {
         // requestId와 traceId 생성 (멱등성 및 로그 상관관계)
         UUID requestId = UUID.randomUUID();
@@ -110,6 +111,10 @@ public class RagAiClient {
         }
         if (title != null && !title.isBlank()) {
             requestBody.put("title", title);
+        }
+        if (fileExtension != null && !fileExtension.isBlank()) {
+            requestBody.put("fileExtension", fileExtension);
+            log.info("Adding fileExtension to request: {}", fileExtension);
         }
 
         try {
@@ -207,6 +212,34 @@ public class RagAiClient {
         public boolean isAccepted() { return received; }
         @Deprecated
         public String getJobId() { return requestId; } // jobId 대신 requestId 반환
+    }
+
+    /**
+     * URL에서 파일 확장자를 추출합니다.
+     * 쿼리스트링을 제거한 후 경로에서 확장자를 추출합니다.
+     * 
+     * @param url 파일 URL (예: s3://bucket/docs/uuid.pdf 또는 https://s3.../docs/uuid.pdf?X-Amz-...)
+     * @return 확장자 (예: ".pdf"), 없으면 null
+     */
+    public static String extractFileExtension(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            // 쿼리스트링 제거
+            String path = url.split("\\?")[0];
+            // 마지막 슬래시 이후의 파일명 추출
+            int lastSlash = path.lastIndexOf('/');
+            String filename = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+            // 확장자 추출
+            int dot = filename.lastIndexOf('.');
+            if (dot > 0 && dot < filename.length() - 1) {
+                return filename.substring(dot); // ".pdf"
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract file extension from URL: {}, error: {}", url, e.getMessage());
+        }
+        return null;
     }
 }
 

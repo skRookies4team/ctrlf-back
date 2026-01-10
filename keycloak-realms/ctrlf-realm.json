@@ -42,11 +42,7 @@
       "secret": "changeme",
       "directAccessGrantsEnabled": true,
       "redirectUris": [],
-      "defaultClientScopes": [
-        "profile",
-        "email",
-        "roles"
-      ],
+      "defaultClientScopes": ["profile", "email", "roles"],
       "protocolMappers": [
         {
           "name": "realm-roles",
@@ -99,13 +95,8 @@
       "protocol": "openid-connect",
       "publicClient": true,
       "standardFlowEnabled": true,
-      "redirectUris": [
-        "http://localhost:5173/",
-        "http://localhost:5173/*"
-      ],
-      "webOrigins": [
-        "http://localhost:5173"
-      ],
+      "redirectUris": ["http://localhost:5173/", "http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
       "attributes": {
         "backchannel.logout.session.required": "false",
         "display.on.consent.screen": "false",
@@ -340,56 +331,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "CONTENTS_REVIEWER"
-      ],
+      "realmRoles": ["EMPLOYEE", "CONTENTS_REVIEWER"],
       "attributes": {
-        "employeeNo": [
-          "3001"
-        ],
-        "fullName": [
-          "콘텐츠 검토자"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "31"
-        ],
-        "tenureYears": [
-          "6"
-        ],
-        "hireYear": [
-          "2019"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "기획팀"
-        ],
-        "overtimeHours": [
-          "17"
-        ],
-        "performanceScore": [
-          "4.6"
-        ],
-        "unusedVacationDays": [
-          "6"
-        ],
-        "salary": [
-          "52000000"
-        ],
-        "companyEmail": [
-          "reviewer1@a.com"
-        ],
-        "residentRegistrationNumber": [
-          "900101-2000001"
-        ],
-        "phoneNumber": [
-          "010-3001-0001"
-        ]
+        "employeeNo": ["3001"],
+        "fullName": ["콘텐츠 검토자"],
+        "gender": ["F"],
+        "age": ["31"],
+        "tenureYears": ["6"],
+        "hireYear": ["2019"],
+        "position": ["대리"],
+        "department": ["기획팀"],
+        "overtimeHours": ["17"],
+        "performanceScore": ["4.6"],
+        "unusedVacationDays": ["6"],
+        "salary": ["52000000"],
+        "companyEmail": ["reviewer1@a.com"],
+        "residentRegistrationNumber": ["900101-2000001"],
+        "phoneNumber": ["010-3001-0001"]
       }
     },
     {
@@ -405,56 +363,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "VIDEO_CREATOR"
-      ],
+      "realmRoles": ["EMPLOYEE", "VIDEO_CREATOR"],
       "attributes": {
-        "employeeNo": [
-          "4001"
-        ],
-        "fullName": [
-          "교육 영상 제작자"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "28"
-        ],
-        "tenureYears": [
-          "2"
-        ],
-        "hireYear": [
-          "2023"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "기획팀"
-        ],
-        "overtimeHours": [
-          "24"
-        ],
-        "performanceScore": [
-          "4.2"
-        ],
-        "unusedVacationDays": [
-          "11"
-        ],
-        "salary": [
-          "41000000"
-        ],
-        "companyEmail": [
-          "creator1@a.com"
-        ],
-        "residentRegistrationNumber": [
-          "950101-1000001"
-        ],
-        "phoneNumber": [
-          "010-4001-0001"
-        ]
+        "employeeNo": ["4001"],
+        "fullName": ["교육 영상 제작자"],
+        "gender": ["M"],
+        "age": ["28"],
+        "tenureYears": ["2"],
+        "hireYear": ["2023"],
+        "position": ["사원"],
+        "department": ["기획팀"],
+        "overtimeHours": ["24"],
+        "performanceScore": ["4.2"],
+        "unusedVacationDays": ["11"],
+        "salary": ["41000000"],
+        "companyEmail": ["creator1@a.com"],
+        "residentRegistrationNumber": ["950101-1000001"],
+        "phoneNumber": ["010-4001-0001"]
       }
     },
     {
@@ -470,56 +395,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "SYSTEM_ADMIN"
-      ],
+      "realmRoles": ["EMPLOYEE", "SYSTEM_ADMIN"],
       "attributes": {
-        "employeeNo": [
-          "2222"
-        ],
-        "fullName": [
-          "시스템 관리자"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "32"
-        ],
-        "tenureYears": [
-          "5"
-        ],
-        "hireYear": [
-          "2020"
-        ],
-        "position": [
-          "과장"
-        ],
-        "department": [
-          "개발팀"
-        ],
-        "overtimeHours": [
-          "8.0"
-        ],
-        "performanceScore": [
-          "4.8"
-        ],
-        "unusedVacationDays": [
-          "2"
-        ],
-        "salary": [
-          "60000000"
-        ],
-        "companyEmail": [
-          "admin1@example.com"
-        ],
-        "residentRegistrationNumber": [
-          "000000-0000001"
-        ],
-        "phoneNumber": [
-          "010-1111-2222"
-        ]
+        "employeeNo": ["2222"],
+        "fullName": ["시스템 관리자"],
+        "gender": ["M"],
+        "age": ["32"],
+        "tenureYears": ["5"],
+        "hireYear": ["2020"],
+        "position": ["과장"],
+        "department": ["개발팀"],
+        "overtimeHours": ["8.0"],
+        "performanceScore": ["4.8"],
+        "unusedVacationDays": ["2"],
+        "salary": ["60000000"],
+        "companyEmail": ["admin1@example.com"],
+        "residentRegistrationNumber": ["000000-0000001"],
+        "phoneNumber": ["010-1111-2222"]
       }
     },
     {
@@ -535,56 +427,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "VIDEO_CREATOR"
-      ],
+      "realmRoles": ["EMPLOYEE", "VIDEO_CREATOR"],
       "attributes": {
-        "employeeNo": [
-          "3999"
-        ],
-        "fullName": [
-          "윤 규만"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "39"
-        ],
-        "tenureYears": [
-          "19"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "영업"
-        ],
-        "overtimeHours": [
-          "20"
-        ],
-        "performanceScore": [
-          "51"
-        ],
-        "unusedVacationDays": [
-          "14"
-        ],
-        "salary": [
-          "61002987"
-        ],
-        "companyEmail": [
-          "yungyuma71328@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "860819-2149679"
-        ],
-        "phoneNumber": [
-          "010-5261-3262"
-        ]
+        "employeeNo": ["3999"],
+        "fullName": ["윤 규만"],
+        "gender": ["M"],
+        "age": ["39"],
+        "tenureYears": ["19"],
+        "hireYear": ["2015"],
+        "position": ["사원"],
+        "department": ["영업"],
+        "overtimeHours": ["20"],
+        "performanceScore": ["51"],
+        "unusedVacationDays": ["14"],
+        "salary": ["61002987"],
+        "companyEmail": ["yungyuma71328@gmail.com"],
+        "residentRegistrationNumber": ["860819-2149679"],
+        "phoneNumber": ["010-5261-3262"]
       }
     },
     {
@@ -600,56 +459,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "CONTENTS_REVIEWER"
-      ],
+      "realmRoles": ["EMPLOYEE", "CONTENTS_REVIEWER"],
       "attributes": {
-        "employeeNo": [
-          "7001"
-        ],
-        "fullName": [
-          "송 예은"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "29"
-        ],
-        "tenureYears": [
-          "4"
-        ],
-        "hireYear": [
-          "2021"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "기획팀"
-        ],
-        "overtimeHours": [
-          "42"
-        ],
-        "performanceScore": [
-          "4.6"
-        ],
-        "unusedVacationDays": [
-          "9"
-        ],
-        "salary": [
-          "57000000"
-        ],
-        "companyEmail": [
-          "user11@a.com"
-        ],
-        "residentRegistrationNumber": [
-          "950201-2000001"
-        ],
-        "phoneNumber": [
-          "010-7001-0001"
-        ]
+        "employeeNo": ["7001"],
+        "fullName": ["송 예은"],
+        "gender": ["F"],
+        "age": ["29"],
+        "tenureYears": ["4"],
+        "hireYear": ["2021"],
+        "position": ["대리"],
+        "department": ["기획팀"],
+        "overtimeHours": ["42"],
+        "performanceScore": ["4.6"],
+        "unusedVacationDays": ["9"],
+        "salary": ["57000000"],
+        "companyEmail": ["user11@a.com"],
+        "residentRegistrationNumber": ["950201-2000001"],
+        "phoneNumber": ["010-7001-0001"]
       }
     },
     {
@@ -665,56 +491,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE",
-        "CONTENTS_REVIEWER"
-      ],
+      "realmRoles": ["EMPLOYEE", "CONTENTS_REVIEWER"],
       "attributes": {
-        "employeeNo": [
-          "7004"
-        ],
-        "fullName": [
-          "엄 시온"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "33"
-        ],
-        "tenureYears": [
-          "8"
-        ],
-        "hireYear": [
-          "2017"
-        ],
-        "position": [
-          "과장"
-        ],
-        "department": [
-          "기획팀"
-        ],
-        "overtimeHours": [
-          "34"
-        ],
-        "performanceScore": [
-          "4.8"
-        ],
-        "unusedVacationDays": [
-          "3"
-        ],
-        "salary": [
-          "71000000"
-        ],
-        "companyEmail": [
-          "user23@a.com"
-        ],
-        "residentRegistrationNumber": [
-          "910301-1000001"
-        ],
-        "phoneNumber": [
-          "010-7004-0001"
-        ]
+        "employeeNo": ["7004"],
+        "fullName": ["엄 시온"],
+        "gender": ["M"],
+        "age": ["33"],
+        "tenureYears": ["8"],
+        "hireYear": ["2017"],
+        "position": ["과장"],
+        "department": ["기획팀"],
+        "overtimeHours": ["34"],
+        "performanceScore": ["4.8"],
+        "unusedVacationDays": ["3"],
+        "salary": ["71000000"],
+        "companyEmail": ["user23@a.com"],
+        "residentRegistrationNumber": ["910301-1000001"],
+        "phoneNumber": ["010-7004-0001"]
       }
     },
     {
@@ -730,55 +523,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "1365"
-        ],
-        "fullName": [
-          "주 강필"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "32"
-        ],
-        "tenureYears": [
-          "13"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "마케팅"
-        ],
-        "overtimeHours": [
-          "201"
-        ],
-        "performanceScore": [
-          "32"
-        ],
-        "unusedVacationDays": [
-          "22"
-        ],
-        "salary": [
-          "83001494"
-        ],
-        "companyEmail": [
-          "jugangpi2985@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "930626-2513462"
-        ],
-        "phoneNumber": [
-          "010-2982-6038"
-        ]
+        "employeeNo": ["1365"],
+        "fullName": ["주 강필"],
+        "gender": ["M"],
+        "age": ["32"],
+        "tenureYears": ["13"],
+        "hireYear": ["2011"],
+        "position": ["주임"],
+        "department": ["마케팅"],
+        "overtimeHours": ["201"],
+        "performanceScore": ["32"],
+        "unusedVacationDays": ["22"],
+        "salary": ["83001494"],
+        "companyEmail": ["jugangpi2985@gmail.com"],
+        "residentRegistrationNumber": ["930626-2513462"],
+        "phoneNumber": ["010-2982-6038"]
       }
     },
     {
@@ -794,55 +555,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "1291"
-        ],
-        "fullName": [
-          "최 규백"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "36"
-        ],
-        "tenureYears": [
-          "18"
-        ],
-        "hireYear": [
-          "2010"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "재무"
-        ],
-        "overtimeHours": [
-          "283"
-        ],
-        "performanceScore": [
-          "71"
-        ],
-        "unusedVacationDays": [
-          "10"
-        ],
-        "salary": [
-          "96316633"
-        ],
-        "companyEmail": [
-          "coegyuba67268@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "890909-3675826"
-        ],
-        "phoneNumber": [
-          "010-4153-6024"
-        ]
+        "employeeNo": ["1291"],
+        "fullName": ["최 규백"],
+        "gender": ["M"],
+        "age": ["36"],
+        "tenureYears": ["18"],
+        "hireYear": ["2010"],
+        "position": ["주임"],
+        "department": ["재무"],
+        "overtimeHours": ["283"],
+        "performanceScore": ["71"],
+        "unusedVacationDays": ["10"],
+        "salary": ["96316633"],
+        "companyEmail": ["coegyuba67268@gmail.com"],
+        "residentRegistrationNumber": ["890909-3675826"],
+        "phoneNumber": ["010-4153-6024"]
       }
     },
     {
@@ -858,55 +587,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "5531"
-        ],
-        "fullName": [
-          "정 경선"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "28"
-        ],
-        "tenureYears": [
-          "13"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "법무"
-        ],
-        "overtimeHours": [
-          "1"
-        ],
-        "performanceScore": [
-          "33"
-        ],
-        "unusedVacationDays": [
-          "16"
-        ],
-        "salary": [
-          "57572709"
-        ],
-        "companyEmail": [
-          "jeonggye40540@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "970118-4655033"
-        ],
-        "phoneNumber": [
-          "010-7307-5727"
-        ]
+        "employeeNo": ["5531"],
+        "fullName": ["정 경선"],
+        "gender": ["F"],
+        "age": ["28"],
+        "tenureYears": ["13"],
+        "hireYear": ["2015"],
+        "position": ["사원"],
+        "department": ["법무"],
+        "overtimeHours": ["1"],
+        "performanceScore": ["33"],
+        "unusedVacationDays": ["16"],
+        "salary": ["57572709"],
+        "companyEmail": ["jeonggye40540@gmail.com"],
+        "residentRegistrationNumber": ["970118-4655033"],
+        "phoneNumber": ["010-7307-5727"]
       }
     },
     {
@@ -922,55 +619,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "2767"
-        ],
-        "fullName": [
-          "조 고운"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "45"
-        ],
-        "tenureYears": [
-          "30"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "인사"
-        ],
-        "overtimeHours": [
-          "152"
-        ],
-        "performanceScore": [
-          "64"
-        ],
-        "unusedVacationDays": [
-          "9"
-        ],
-        "salary": [
-          "58987050"
-        ],
-        "companyEmail": [
-          "jogoun51291@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "800810-4330695"
-        ],
-        "phoneNumber": [
-          "010-8043-6497"
-        ]
+        "employeeNo": ["2767"],
+        "fullName": ["조 고운"],
+        "gender": ["F"],
+        "age": ["45"],
+        "tenureYears": ["30"],
+        "hireYear": ["2014"],
+        "position": ["사원"],
+        "department": ["인사"],
+        "overtimeHours": ["152"],
+        "performanceScore": ["64"],
+        "unusedVacationDays": ["9"],
+        "salary": ["58987050"],
+        "companyEmail": ["jogoun51291@gmail.com"],
+        "residentRegistrationNumber": ["800810-4330695"],
+        "phoneNumber": ["010-8043-6497"]
       }
     },
     {
@@ -986,55 +651,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "2815"
-        ],
-        "fullName": [
-          "정 경규"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "41"
-        ],
-        "tenureYears": [
-          "24"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "총무"
-        ],
-        "overtimeHours": [
-          "241"
-        ],
-        "performanceScore": [
-          "38"
-        ],
-        "unusedVacationDays": [
-          "13"
-        ],
-        "salary": [
-          "50860557"
-        ],
-        "companyEmail": [
-          "jeonggye56427@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "840309-1095611"
-        ],
-        "phoneNumber": [
-          "010-1859-2532"
-        ]
+        "employeeNo": ["2815"],
+        "fullName": ["정 경규"],
+        "gender": ["M"],
+        "age": ["41"],
+        "tenureYears": ["24"],
+        "hireYear": ["2016"],
+        "position": ["사원"],
+        "department": ["총무"],
+        "overtimeHours": ["241"],
+        "performanceScore": ["38"],
+        "unusedVacationDays": ["13"],
+        "salary": ["50860557"],
+        "companyEmail": ["jeonggye56427@gmail.com"],
+        "residentRegistrationNumber": ["840309-1095611"],
+        "phoneNumber": ["010-1859-2532"]
       }
     },
     {
@@ -1050,55 +683,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "2884"
-        ],
-        "fullName": [
-          "윤 가선"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "44"
-        ],
-        "tenureYears": [
-          "29"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "인턴"
-        ],
-        "department": [
-          "기획"
-        ],
-        "overtimeHours": [
-          "153"
-        ],
-        "performanceScore": [
-          "41"
-        ],
-        "unusedVacationDays": [
-          "4"
-        ],
-        "salary": [
-          "32558265"
-        ],
-        "companyEmail": [
-          "yungaseo24107@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "810902-3026435"
-        ],
-        "phoneNumber": [
-          "010-6663-2250"
-        ]
+        "employeeNo": ["2884"],
+        "fullName": ["윤 가선"],
+        "gender": ["F"],
+        "age": ["44"],
+        "tenureYears": ["29"],
+        "hireYear": ["2014"],
+        "position": ["인턴"],
+        "department": ["기획"],
+        "overtimeHours": ["153"],
+        "performanceScore": ["41"],
+        "unusedVacationDays": ["4"],
+        "salary": ["32558265"],
+        "companyEmail": ["yungaseo24107@gmail.com"],
+        "residentRegistrationNumber": ["810902-3026435"],
+        "phoneNumber": ["010-6663-2250"]
       }
     },
     {
@@ -1114,55 +715,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "1196"
-        ],
-        "fullName": [
-          "주 경택"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "29"
-        ],
-        "tenureYears": [
-          "17"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "마케팅"
-        ],
-        "overtimeHours": [
-          "54"
-        ],
-        "performanceScore": [
-          "40"
-        ],
-        "unusedVacationDays": [
-          "16"
-        ],
-        "salary": [
-          "76002987"
-        ],
-        "companyEmail": [
-          "jugyeong59095@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "961210-4171070"
-        ],
-        "phoneNumber": [
-          "010-8713-7925"
-        ]
+        "employeeNo": ["1196"],
+        "fullName": ["주 경택"],
+        "gender": ["M"],
+        "age": ["29"],
+        "tenureYears": ["17"],
+        "hireYear": ["2016"],
+        "position": ["사원"],
+        "department": ["마케팅"],
+        "overtimeHours": ["54"],
+        "performanceScore": ["40"],
+        "unusedVacationDays": ["16"],
+        "salary": ["76002987"],
+        "companyEmail": ["jugyeong59095@gmail.com"],
+        "residentRegistrationNumber": ["961210-4171070"],
+        "phoneNumber": ["010-8713-7925"]
       }
     },
     {
@@ -1178,55 +747,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4785"
-        ],
-        "fullName": [
-          "조 규로"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "26"
-        ],
-        "tenureYears": [
-          "11"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "영업"
-        ],
-        "overtimeHours": [
-          "158"
-        ],
-        "performanceScore": [
-          "26"
-        ],
-        "unusedVacationDays": [
-          "13"
-        ],
-        "salary": [
-          "69428785"
-        ],
-        "companyEmail": [
-          "jogyuro28822@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "991003-2887320"
-        ],
-        "phoneNumber": [
-          "010-7022-9334"
-        ]
+        "employeeNo": ["4785"],
+        "fullName": ["조 규로"],
+        "gender": ["M"],
+        "age": ["26"],
+        "tenureYears": ["11"],
+        "hireYear": ["2016"],
+        "position": ["사원"],
+        "department": ["영업"],
+        "overtimeHours": ["158"],
+        "performanceScore": ["26"],
+        "unusedVacationDays": ["13"],
+        "salary": ["69428785"],
+        "companyEmail": ["jogyuro28822@gmail.com"],
+        "residentRegistrationNumber": ["991003-2887320"],
+        "phoneNumber": ["010-7022-9334"]
       }
     },
     {
@@ -1242,55 +779,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4573"
-        ],
-        "fullName": [
-          "조 경륜"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "33"
-        ],
-        "tenureYears": [
-          "14"
-        ],
-        "hireYear": [
-          "2012"
-        ],
-        "position": [
-          "인턴"
-        ],
-        "department": [
-          "개발"
-        ],
-        "overtimeHours": [
-          "193"
-        ],
-        "performanceScore": [
-          "38"
-        ],
-        "unusedVacationDays": [
-          "8"
-        ],
-        "salary": [
-          "29430278"
-        ],
-        "companyEmail": [
-          "jogyeong22183@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "920718-2064964"
-        ],
-        "phoneNumber": [
-          "010-2977-9618"
-        ]
+        "employeeNo": ["4573"],
+        "fullName": ["조 경륜"],
+        "gender": ["M"],
+        "age": ["33"],
+        "tenureYears": ["14"],
+        "hireYear": ["2012"],
+        "position": ["인턴"],
+        "department": ["개발"],
+        "overtimeHours": ["193"],
+        "performanceScore": ["38"],
+        "unusedVacationDays": ["8"],
+        "salary": ["29430278"],
+        "companyEmail": ["jogyeong22183@gmail.com"],
+        "residentRegistrationNumber": ["920718-2064964"],
+        "phoneNumber": ["010-2977-9618"]
       }
     },
     {
@@ -1306,55 +811,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4937"
-        ],
-        "fullName": [
-          "주 규화"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "41"
-        ],
-        "tenureYears": [
-          "23"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "재무"
-        ],
-        "overtimeHours": [
-          "205"
-        ],
-        "performanceScore": [
-          "25"
-        ],
-        "unusedVacationDays": [
-          "10"
-        ],
-        "salary": [
-          "67271911"
-        ],
-        "companyEmail": [
-          "jugyuhwa46792@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "840414-2678868"
-        ],
-        "phoneNumber": [
-          "010-7121-1726"
-        ]
+        "employeeNo": ["4937"],
+        "fullName": ["주 규화"],
+        "gender": ["F"],
+        "age": ["41"],
+        "tenureYears": ["23"],
+        "hireYear": ["2015"],
+        "position": ["사원"],
+        "department": ["재무"],
+        "overtimeHours": ["205"],
+        "performanceScore": ["25"],
+        "unusedVacationDays": ["10"],
+        "salary": ["67271911"],
+        "companyEmail": ["jugyuhwa46792@gmail.com"],
+        "residentRegistrationNumber": ["840414-2678868"],
+        "phoneNumber": ["010-7121-1726"]
       }
     },
     {
@@ -1370,55 +843,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "5269"
-        ],
-        "fullName": [
-          "임 경욱"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "42"
-        ],
-        "tenureYears": [
-          "25"
-        ],
-        "hireYear": [
-          "2013"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "법무"
-        ],
-        "overtimeHours": [
-          "13"
-        ],
-        "performanceScore": [
-          "45"
-        ],
-        "unusedVacationDays": [
-          "14"
-        ],
-        "salary": [
-          "93914341"
-        ],
-        "companyEmail": [
-          "imgyeong59980@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "831017-3483782"
-        ],
-        "phoneNumber": [
-          "010-7613-6074"
-        ]
+        "employeeNo": ["5269"],
+        "fullName": ["임 경욱"],
+        "gender": ["M"],
+        "age": ["42"],
+        "tenureYears": ["25"],
+        "hireYear": ["2013"],
+        "position": ["주임"],
+        "department": ["법무"],
+        "overtimeHours": ["13"],
+        "performanceScore": ["45"],
+        "unusedVacationDays": ["14"],
+        "salary": ["93914341"],
+        "companyEmail": ["imgyeong59980@gmail.com"],
+        "residentRegistrationNumber": ["831017-3483782"],
+        "phoneNumber": ["010-7613-6074"]
       }
     },
     {
@@ -1434,55 +875,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4132"
-        ],
-        "fullName": [
-          "강 강백"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "41"
-        ],
-        "tenureYears": [
-          "23"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "인사"
-        ],
-        "overtimeHours": [
-          "101"
-        ],
-        "performanceScore": [
-          "41"
-        ],
-        "unusedVacationDays": [
-          "12"
-        ],
-        "salary": [
-          "90860557"
-        ],
-        "companyEmail": [
-          "ganggang30105@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "840824-4385025"
-        ],
-        "phoneNumber": [
-          "010-9879-3372"
-        ]
+        "employeeNo": ["4132"],
+        "fullName": ["강 강백"],
+        "gender": ["M"],
+        "age": ["41"],
+        "tenureYears": ["23"],
+        "hireYear": ["2016"],
+        "position": ["주임"],
+        "department": ["인사"],
+        "overtimeHours": ["101"],
+        "performanceScore": ["41"],
+        "unusedVacationDays": ["12"],
+        "salary": ["90860557"],
+        "companyEmail": ["ganggang30105@gmail.com"],
+        "residentRegistrationNumber": ["840824-4385025"],
+        "phoneNumber": ["010-9879-3372"]
       }
     },
     {
@@ -1498,55 +907,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "5341"
-        ],
-        "fullName": [
-          "장 국만"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "47"
-        ],
-        "tenureYears": [
-          "27"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "총무"
-        ],
-        "overtimeHours": [
-          "57"
-        ],
-        "performanceScore": [
-          "47"
-        ],
-        "unusedVacationDays": [
-          "8"
-        ],
-        "salary": [
-          "92433265"
-        ],
-        "companyEmail": [
-          "janggugm23080@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "780828-4938308"
-        ],
-        "phoneNumber": [
-          "010-1998-2600"
-        ]
+        "employeeNo": ["5341"],
+        "fullName": ["장 국만"],
+        "gender": ["M"],
+        "age": ["47"],
+        "tenureYears": ["27"],
+        "hireYear": ["2015"],
+        "position": ["주임"],
+        "department": ["총무"],
+        "overtimeHours": ["57"],
+        "performanceScore": ["47"],
+        "unusedVacationDays": ["8"],
+        "salary": ["92433265"],
+        "companyEmail": ["janggugm23080@gmail.com"],
+        "residentRegistrationNumber": ["780828-4938308"],
+        "phoneNumber": ["010-1998-2600"]
       }
     },
     {
@@ -1562,55 +939,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4120"
-        ],
-        "fullName": [
-          "정 규영"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "36"
-        ],
-        "tenureYears": [
-          "13"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "기획"
-        ],
-        "overtimeHours": [
-          "48"
-        ],
-        "performanceScore": [
-          "26"
-        ],
-        "unusedVacationDays": [
-          "21"
-        ],
-        "salary": [
-          "98716633"
-        ],
-        "companyEmail": [
-          "jeonggyu23097@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "890927-4603529"
-        ],
-        "phoneNumber": [
-          "010-9352-5564"
-        ]
+        "employeeNo": ["4120"],
+        "fullName": ["정 규영"],
+        "gender": ["M"],
+        "age": ["36"],
+        "tenureYears": ["13"],
+        "hireYear": ["2016"],
+        "position": ["대리"],
+        "department": ["기획"],
+        "overtimeHours": ["48"],
+        "performanceScore": ["26"],
+        "unusedVacationDays": ["21"],
+        "salary": ["98716633"],
+        "companyEmail": ["jeonggyu23097@gmail.com"],
+        "residentRegistrationNumber": ["890927-4603529"],
+        "phoneNumber": ["010-9352-5564"]
       }
     },
     {
@@ -1626,55 +971,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "372"
-        ],
-        "fullName": [
-          "조 귀연"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "35"
-        ],
-        "tenureYears": [
-          "18"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "마케팅"
-        ],
-        "overtimeHours": [
-          "62"
-        ],
-        "performanceScore": [
-          "76"
-        ],
-        "unusedVacationDays": [
-          "9"
-        ],
-        "salary": [
-          "58374202"
-        ],
-        "companyEmail": [
-          "jogwiyeo67723@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "900611-1358451"
-        ],
-        "phoneNumber": [
-          "010-3846-1010"
-        ]
+        "employeeNo": ["372"],
+        "fullName": ["조 귀연"],
+        "gender": ["F"],
+        "age": ["35"],
+        "tenureYears": ["18"],
+        "hireYear": ["2011"],
+        "position": ["사원"],
+        "department": ["마케팅"],
+        "overtimeHours": ["62"],
+        "performanceScore": ["76"],
+        "unusedVacationDays": ["9"],
+        "salary": ["58374202"],
+        "companyEmail": ["jogwiyeo67723@gmail.com"],
+        "residentRegistrationNumber": ["900611-1358451"],
+        "phoneNumber": ["010-3846-1010"]
       }
     },
     {
@@ -1690,55 +1003,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "1859"
-        ],
-        "fullName": [
-          "정 가혜"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "39"
-        ],
-        "tenureYears": [
-          "22"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "재무"
-        ],
-        "overtimeHours": [
-          "20"
-        ],
-        "performanceScore": [
-          "54"
-        ],
-        "unusedVacationDays": [
-          "13"
-        ],
-        "salary": [
-          "70464341"
-        ],
-        "companyEmail": [
-          "jeonggah69429@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "860209-1582155"
-        ],
-        "phoneNumber": [
-          "010-8482-1643"
-        ]
+        "employeeNo": ["1859"],
+        "fullName": ["정 가혜"],
+        "gender": ["F"],
+        "age": ["39"],
+        "tenureYears": ["22"],
+        "hireYear": ["2011"],
+        "position": ["사원"],
+        "department": ["재무"],
+        "overtimeHours": ["20"],
+        "performanceScore": ["54"],
+        "unusedVacationDays": ["13"],
+        "salary": ["70464341"],
+        "companyEmail": ["jeonggah69429@gmail.com"],
+        "residentRegistrationNumber": ["860209-1582155"],
+        "phoneNumber": ["010-8482-1643"]
       }
     },
     {
@@ -1754,55 +1035,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3064"
-        ],
-        "fullName": [
-          "장 규광"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "40"
-        ],
-        "tenureYears": [
-          "21"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "인턴"
-        ],
-        "department": [
-          "법무"
-        ],
-        "overtimeHours": [
-          "153"
-        ],
-        "performanceScore": [
-          "52"
-        ],
-        "unusedVacationDays": [
-          "4"
-        ],
-        "salary": [
-          "31556772"
-        ],
-        "companyEmail": [
-          "janggyug12693@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "850418-4683446"
-        ],
-        "phoneNumber": [
-          "010-7587-3238"
-        ]
+        "employeeNo": ["3064"],
+        "fullName": ["장 규광"],
+        "gender": ["M"],
+        "age": ["40"],
+        "tenureYears": ["21"],
+        "hireYear": ["2014"],
+        "position": ["인턴"],
+        "department": ["법무"],
+        "overtimeHours": ["153"],
+        "performanceScore": ["52"],
+        "unusedVacationDays": ["4"],
+        "salary": ["31556772"],
+        "companyEmail": ["janggyug12693@gmail.com"],
+        "residentRegistrationNumber": ["850418-4683446"],
+        "phoneNumber": ["010-7587-3238"]
       }
     },
     {
@@ -1818,55 +1067,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3014"
-        ],
-        "fullName": [
-          "강 경욱"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "31"
-        ],
-        "tenureYears": [
-          "12"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "과장"
-        ],
-        "department": [
-          "총무"
-        ],
-        "overtimeHours": [
-          "191"
-        ],
-        "performanceScore": [
-          "34"
-        ],
-        "unusedVacationDays": [
-          "7"
-        ],
-        "salary": [
-          "126572709"
-        ],
-        "companyEmail": [
-          "ganggyeo57382@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "940228-2884406"
-        ],
-        "phoneNumber": [
-          "010-5894-9241"
-        ]
+        "employeeNo": ["3014"],
+        "fullName": ["강 경욱"],
+        "gender": ["M"],
+        "age": ["31"],
+        "tenureYears": ["12"],
+        "hireYear": ["2014"],
+        "position": ["과장"],
+        "department": ["총무"],
+        "overtimeHours": ["191"],
+        "performanceScore": ["34"],
+        "unusedVacationDays": ["7"],
+        "salary": ["126572709"],
+        "companyEmail": ["ganggyeo57382@gmail.com"],
+        "residentRegistrationNumber": ["940228-2884406"],
+        "phoneNumber": ["010-5894-9241"]
       }
     },
     {
@@ -1882,55 +1099,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4705"
-        ],
-        "fullName": [
-          "조 기륭"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "31"
-        ],
-        "tenureYears": [
-          "20"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "영업"
-        ],
-        "overtimeHours": [
-          "382"
-        ],
-        "performanceScore": [
-          "84"
-        ],
-        "unusedVacationDays": [
-          "16"
-        ],
-        "salary": [
-          "115385557"
-        ],
-        "companyEmail": [
-          "jogiryun84417@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "940824-3298783"
-        ],
-        "phoneNumber": [
-          "010-6839-8735"
-        ]
+        "employeeNo": ["4705"],
+        "fullName": ["조 기륭"],
+        "gender": ["M"],
+        "age": ["31"],
+        "tenureYears": ["20"],
+        "hireYear": ["2014"],
+        "position": ["대리"],
+        "department": ["영업"],
+        "overtimeHours": ["382"],
+        "performanceScore": ["84"],
+        "unusedVacationDays": ["16"],
+        "salary": ["115385557"],
+        "companyEmail": ["jogiryun84417@gmail.com"],
+        "residentRegistrationNumber": ["940824-3298783"],
+        "phoneNumber": ["010-6839-8735"]
       }
     },
     {
@@ -1946,55 +1131,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3146"
-        ],
-        "fullName": [
-          "최 강필"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "40"
-        ],
-        "tenureYears": [
-          "28"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "기획"
-        ],
-        "overtimeHours": [
-          "52"
-        ],
-        "performanceScore": [
-          "49"
-        ],
-        "unusedVacationDays": [
-          "13"
-        ],
-        "salary": [
-          "101844620"
-        ],
-        "companyEmail": [
-          "coegangp69977@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "850219-3097023"
-        ],
-        "phoneNumber": [
-          "010-6554-9522"
-        ]
+        "employeeNo": ["3146"],
+        "fullName": ["최 강필"],
+        "gender": ["M"],
+        "age": ["40"],
+        "tenureYears": ["28"],
+        "hireYear": ["2014"],
+        "position": ["대리"],
+        "department": ["기획"],
+        "overtimeHours": ["52"],
+        "performanceScore": ["49"],
+        "unusedVacationDays": ["13"],
+        "salary": ["101844620"],
+        "companyEmail": ["coegangp69977@gmail.com"],
+        "residentRegistrationNumber": ["850219-3097023"],
+        "phoneNumber": ["010-6554-9522"]
       }
     },
     {
@@ -2010,55 +1163,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "154"
-        ],
-        "fullName": [
-          "장 건도"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "42"
-        ],
-        "tenureYears": [
-          "21"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "영업"
-        ],
-        "overtimeHours": [
-          "205"
-        ],
-        "performanceScore": [
-          "46"
-        ],
-        "unusedVacationDays": [
-          "3"
-        ],
-        "salary": [
-          "72914341"
-        ],
-        "companyEmail": [
-          "janggeon4953@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "830109-2744585"
-        ],
-        "phoneNumber": [
-          "010-8231-2873"
-        ]
+        "employeeNo": ["154"],
+        "fullName": ["장 건도"],
+        "gender": ["M"],
+        "age": ["42"],
+        "tenureYears": ["21"],
+        "hireYear": ["2011"],
+        "position": ["사원"],
+        "department": ["영업"],
+        "overtimeHours": ["205"],
+        "performanceScore": ["46"],
+        "unusedVacationDays": ["3"],
+        "salary": ["72914341"],
+        "companyEmail": ["janggeon4953@gmail.com"],
+        "residentRegistrationNumber": ["830109-2744585"],
+        "phoneNumber": ["010-8231-2873"]
       }
     },
     {
@@ -2074,55 +1195,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "1906"
-        ],
-        "fullName": [
-          "최 교묵"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "42"
-        ],
-        "tenureYears": [
-          "22"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "마케팅"
-        ],
-        "overtimeHours": [
-          "8"
-        ],
-        "performanceScore": [
-          "63"
-        ],
-        "unusedVacationDays": [
-          "11"
-        ],
-        "salary": [
-          "101808091"
-        ],
-        "companyEmail": [
-          "coegyomu8455@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "830626-3242314"
-        ],
-        "phoneNumber": [
-          "010-3018-5180"
-        ]
+        "employeeNo": ["1906"],
+        "fullName": ["최 교묵"],
+        "gender": ["M"],
+        "age": ["42"],
+        "tenureYears": ["22"],
+        "hireYear": ["2011"],
+        "position": ["대리"],
+        "department": ["마케팅"],
+        "overtimeHours": ["8"],
+        "performanceScore": ["63"],
+        "unusedVacationDays": ["11"],
+        "salary": ["101808091"],
+        "companyEmail": ["coegyomu8455@gmail.com"],
+        "residentRegistrationNumber": ["830626-3242314"],
+        "phoneNumber": ["010-3018-5180"]
       }
     },
     {
@@ -2138,55 +1227,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3027"
-        ],
-        "fullName": [
-          "최 건표"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "38"
-        ],
-        "tenureYears": [
-          "24"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "재무"
-        ],
-        "overtimeHours": [
-          "29"
-        ],
-        "performanceScore": [
-          "29"
-        ],
-        "unusedVacationDays": [
-          "12"
-        ],
-        "salary": [
-          "63699202"
-        ],
-        "companyEmail": [
-          "coegeonp43376@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "871103-4759270"
-        ],
-        "phoneNumber": [
-          "010-3855-9526"
-        ]
+        "employeeNo": ["3027"],
+        "fullName": ["최 건표"],
+        "gender": ["M"],
+        "age": ["38"],
+        "tenureYears": ["24"],
+        "hireYear": ["2014"],
+        "position": ["사원"],
+        "department": ["재무"],
+        "overtimeHours": ["29"],
+        "performanceScore": ["29"],
+        "unusedVacationDays": ["12"],
+        "salary": ["63699202"],
+        "companyEmail": ["coegeonp43376@gmail.com"],
+        "residentRegistrationNumber": ["871103-4759270"],
+        "phoneNumber": ["010-3855-9526"]
       }
     },
     {
@@ -2202,55 +1259,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3323"
-        ],
-        "fullName": [
-          "강 공민"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "43"
-        ],
-        "tenureYears": [
-          "23"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "영업"
-        ],
-        "overtimeHours": [
-          "153"
-        ],
-        "performanceScore": [
-          "45"
-        ],
-        "unusedVacationDays": [
-          "10"
-        ],
-        "salary": [
-          "63843126"
-        ],
-        "companyEmail": [
-          "ganggong44822@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "820421-3457598"
-        ],
-        "phoneNumber": [
-          "010-4097-2156"
-        ]
+        "employeeNo": ["3323"],
+        "fullName": ["강 공민"],
+        "gender": ["M"],
+        "age": ["43"],
+        "tenureYears": ["23"],
+        "hireYear": ["2014"],
+        "position": ["사원"],
+        "department": ["영업"],
+        "overtimeHours": ["153"],
+        "performanceScore": ["45"],
+        "unusedVacationDays": ["10"],
+        "salary": ["63843126"],
+        "companyEmail": ["ganggong44822@gmail.com"],
+        "residentRegistrationNumber": ["820421-3457598"],
+        "phoneNumber": ["010-4097-2156"]
       }
     },
     {
@@ -2266,55 +1291,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3893"
-        ],
-        "fullName": [
-          "장 규백"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "37"
-        ],
-        "tenureYears": [
-          "18"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "법무"
-        ],
-        "overtimeHours": [
-          "54"
-        ],
-        "performanceScore": [
-          "32"
-        ],
-        "unusedVacationDays": [
-          "10"
-        ],
-        "salary": [
-          "95145417"
-        ],
-        "companyEmail": [
-          "janggyub45084@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "880811-4162492"
-        ],
-        "phoneNumber": [
-          "010-8556-1932"
-        ]
+        "employeeNo": ["3893"],
+        "fullName": ["장 규백"],
+        "gender": ["M"],
+        "age": ["37"],
+        "tenureYears": ["18"],
+        "hireYear": ["2016"],
+        "position": ["주임"],
+        "department": ["법무"],
+        "overtimeHours": ["54"],
+        "performanceScore": ["32"],
+        "unusedVacationDays": ["10"],
+        "salary": ["95145417"],
+        "companyEmail": ["janggyub45084@gmail.com"],
+        "residentRegistrationNumber": ["880811-4162492"],
+        "phoneNumber": ["010-8556-1932"]
       }
     },
     {
@@ -2330,55 +1323,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "1342"
-        ],
-        "fullName": [
-          "정 강린"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "36"
-        ],
-        "tenureYears": [
-          "29"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "인사"
-        ],
-        "overtimeHours": [
-          "95"
-        ],
-        "performanceScore": [
-          "45"
-        ],
-        "unusedVacationDays": [
-          "12"
-        ],
-        "salary": [
-          "111965835"
-        ],
-        "companyEmail": [
-          "jeonggan54259@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "890802-2468364"
-        ],
-        "phoneNumber": [
-          "010-6412-1594"
-        ]
+        "employeeNo": ["1342"],
+        "fullName": ["정 강린"],
+        "gender": ["F"],
+        "age": ["36"],
+        "tenureYears": ["29"],
+        "hireYear": ["2011"],
+        "position": ["대리"],
+        "department": ["인사"],
+        "overtimeHours": ["95"],
+        "performanceScore": ["45"],
+        "unusedVacationDays": ["12"],
+        "salary": ["111965835"],
+        "companyEmail": ["jeonggan54259@gmail.com"],
+        "residentRegistrationNumber": ["890802-2468364"],
+        "phoneNumber": ["010-6412-1594"]
       }
     },
     {
@@ -2394,55 +1355,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "2953"
-        ],
-        "fullName": [
-          "하 경린"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "36"
-        ],
-        "tenureYears": [
-          "23"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "총무"
-        ],
-        "overtimeHours": [
-          "152"
-        ],
-        "performanceScore": [
-          "38"
-        ],
-        "unusedVacationDays": [
-          "13"
-        ],
-        "salary": [
-          "43127987"
-        ],
-        "companyEmail": [
-          "hagyeong39730@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "890922-1446311"
-        ],
-        "phoneNumber": [
-          "010-5634-8998"
-        ]
+        "employeeNo": ["2953"],
+        "fullName": ["하 경린"],
+        "gender": ["F"],
+        "age": ["36"],
+        "tenureYears": ["23"],
+        "hireYear": ["2014"],
+        "position": ["사원"],
+        "department": ["총무"],
+        "overtimeHours": ["152"],
+        "performanceScore": ["38"],
+        "unusedVacationDays": ["13"],
+        "salary": ["43127987"],
+        "companyEmail": ["hagyeong39730@gmail.com"],
+        "residentRegistrationNumber": ["890922-1446311"],
+        "phoneNumber": ["010-5634-8998"]
       }
     },
     {
@@ -2458,55 +1387,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3256"
-        ],
-        "fullName": [
-          "임 규영"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "40"
-        ],
-        "tenureYears": [
-          "19"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "기획"
-        ],
-        "overtimeHours": [
-          "202"
-        ],
-        "performanceScore": [
-          "26"
-        ],
-        "unusedVacationDays": [
-          "31"
-        ],
-        "salary": [
-          "60194272"
-        ],
-        "companyEmail": [
-          "imgyuyeo11266@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "850205-3853435"
-        ],
-        "phoneNumber": [
-          "010-1574-4933"
-        ]
+        "employeeNo": ["3256"],
+        "fullName": ["임 규영"],
+        "gender": ["M"],
+        "age": ["40"],
+        "tenureYears": ["19"],
+        "hireYear": ["2014"],
+        "position": ["사원"],
+        "department": ["기획"],
+        "overtimeHours": ["202"],
+        "performanceScore": ["26"],
+        "unusedVacationDays": ["31"],
+        "salary": ["60194272"],
+        "companyEmail": ["imgyuyeo11266@gmail.com"],
+        "residentRegistrationNumber": ["850205-3853435"],
+        "phoneNumber": ["010-1574-4933"]
       }
     },
     {
@@ -2522,55 +1419,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4652"
-        ],
-        "fullName": [
-          "한 건우"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "28"
-        ],
-        "tenureYears": [
-          "9"
-        ],
-        "hireYear": [
-          "2013"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "마케팅"
-        ],
-        "overtimeHours": [
-          "241"
-        ],
-        "performanceScore": [
-          "58"
-        ],
-        "unusedVacationDays": [
-          "19"
-        ],
-        "salary": [
-          "39136354"
-        ],
-        "companyEmail": [
-          "hangeonu98584@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "970103-3756676"
-        ],
-        "phoneNumber": [
-          "010-1865-4012"
-        ]
+        "employeeNo": ["4652"],
+        "fullName": ["한 건우"],
+        "gender": ["M"],
+        "age": ["28"],
+        "tenureYears": ["9"],
+        "hireYear": ["2013"],
+        "position": ["사원"],
+        "department": ["마케팅"],
+        "overtimeHours": ["241"],
+        "performanceScore": ["58"],
+        "unusedVacationDays": ["19"],
+        "salary": ["39136354"],
+        "companyEmail": ["hangeonu98584@gmail.com"],
+        "residentRegistrationNumber": ["970103-3756676"],
+        "phoneNumber": ["010-1865-4012"]
       }
     },
     {
@@ -2586,55 +1451,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4484"
-        ],
-        "fullName": [
-          "최 국길"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "36"
-        ],
-        "tenureYears": [
-          "15"
-        ],
-        "hireYear": [
-          "2012"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "재무"
-        ],
-        "overtimeHours": [
-          "176"
-        ],
-        "performanceScore": [
-          "47"
-        ],
-        "unusedVacationDays": [
-          "11"
-        ],
-        "salary": [
-          "65722883"
-        ],
-        "companyEmail": [
-          "coeguggi52598@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "890326-1319246"
-        ],
-        "phoneNumber": [
-          "010-9228-9976"
-        ]
+        "employeeNo": ["4484"],
+        "fullName": ["최 국길"],
+        "gender": ["M"],
+        "age": ["36"],
+        "tenureYears": ["15"],
+        "hireYear": ["2012"],
+        "position": ["사원"],
+        "department": ["재무"],
+        "overtimeHours": ["176"],
+        "performanceScore": ["47"],
+        "unusedVacationDays": ["11"],
+        "salary": ["65722883"],
+        "companyEmail": ["coeguggi52598@gmail.com"],
+        "residentRegistrationNumber": ["890326-1319246"],
+        "phoneNumber": ["010-9228-9976"]
       }
     },
     {
@@ -2650,55 +1483,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4859"
-        ],
-        "fullName": [
-          "주 경륜"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "33"
-        ],
-        "tenureYears": [
-          "14"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "법무"
-        ],
-        "overtimeHours": [
-          "303"
-        ],
-        "performanceScore": [
-          "42"
-        ],
-        "unusedVacationDays": [
-          "9"
-        ],
-        "salary": [
-          "108630278"
-        ],
-        "companyEmail": [
-          "jugyeong29328@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "921004-3873065"
-        ],
-        "phoneNumber": [
-          "010-1981-1048"
-        ]
+        "employeeNo": ["4859"],
+        "fullName": ["주 경륜"],
+        "gender": ["M"],
+        "age": ["33"],
+        "tenureYears": ["14"],
+        "hireYear": ["2011"],
+        "position": ["대리"],
+        "department": ["법무"],
+        "overtimeHours": ["303"],
+        "performanceScore": ["42"],
+        "unusedVacationDays": ["9"],
+        "salary": ["108630278"],
+        "companyEmail": ["jugyeong29328@gmail.com"],
+        "residentRegistrationNumber": ["921004-3873065"],
+        "phoneNumber": ["010-1981-1048"]
       }
     },
     {
@@ -2714,55 +1515,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3770"
-        ],
-        "fullName": [
-          "윤 규건"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "45"
-        ],
-        "tenureYears": [
-          "22"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "인사"
-        ],
-        "overtimeHours": [
-          "78"
-        ],
-        "performanceScore": [
-          "44"
-        ],
-        "unusedVacationDays": [
-          "4"
-        ],
-        "salary": [
-          "74575696"
-        ],
-        "companyEmail": [
-          "yungyuge38095@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "800426-2328493"
-        ],
-        "phoneNumber": [
-          "010-5075-8931"
-        ]
+        "employeeNo": ["3770"],
+        "fullName": ["윤 규건"],
+        "gender": ["M"],
+        "age": ["45"],
+        "tenureYears": ["22"],
+        "hireYear": ["2015"],
+        "position": ["사원"],
+        "department": ["인사"],
+        "overtimeHours": ["78"],
+        "performanceScore": ["44"],
+        "unusedVacationDays": ["4"],
+        "salary": ["74575696"],
+        "companyEmail": ["yungyuge38095@gmail.com"],
+        "residentRegistrationNumber": ["800426-2328493"],
+        "phoneNumber": ["010-5075-8931"]
       }
     },
     {
@@ -2778,55 +1547,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "2466"
-        ],
-        "fullName": [
-          "윤 규만"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "44"
-        ],
-        "tenureYears": [
-          "25"
-        ],
-        "hireYear": [
-          "2013"
-        ],
-        "position": [
-          "과장"
-        ],
-        "department": [
-          "총무"
-        ],
-        "overtimeHours": [
-          "129"
-        ],
-        "performanceScore": [
-          "52"
-        ],
-        "unusedVacationDays": [
-          "10"
-        ],
-        "salary": [
-          "128271911"
-        ],
-        "companyEmail": [
-          "yungyuma77914@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "810802-3649604"
-        ],
-        "phoneNumber": [
-          "010-6744-8013"
-        ]
+        "employeeNo": ["2466"],
+        "fullName": ["윤 규만"],
+        "gender": ["M"],
+        "age": ["44"],
+        "tenureYears": ["25"],
+        "hireYear": ["2013"],
+        "position": ["과장"],
+        "department": ["총무"],
+        "overtimeHours": ["129"],
+        "performanceScore": ["52"],
+        "unusedVacationDays": ["10"],
+        "salary": ["128271911"],
+        "companyEmail": ["yungyuma77914@gmail.com"],
+        "residentRegistrationNumber": ["810802-3649604"],
+        "phoneNumber": ["010-6744-8013"]
       }
     },
     {
@@ -2842,55 +1579,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "1244"
-        ],
-        "fullName": [
-          "윤 경백"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "35"
-        ],
-        "tenureYears": [
-          "17"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "기획"
-        ],
-        "overtimeHours": [
-          "158"
-        ],
-        "performanceScore": [
-          "45"
-        ],
-        "unusedVacationDays": [
-          "3"
-        ],
-        "salary": [
-          "47287848"
-        ],
-        "companyEmail": [
-          "yungyeon26032@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "900618-3383612"
-        ],
-        "phoneNumber": [
-          "010-1377-6124"
-        ]
+        "employeeNo": ["1244"],
+        "fullName": ["윤 경백"],
+        "gender": ["M"],
+        "age": ["35"],
+        "tenureYears": ["17"],
+        "hireYear": ["2016"],
+        "position": ["사원"],
+        "department": ["기획"],
+        "overtimeHours": ["158"],
+        "performanceScore": ["45"],
+        "unusedVacationDays": ["3"],
+        "salary": ["47287848"],
+        "companyEmail": ["yungyeon26032@gmail.com"],
+        "residentRegistrationNumber": ["900618-3383612"],
+        "phoneNumber": ["010-1377-6124"]
       }
     },
     {
@@ -2906,55 +1611,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "548"
-        ],
-        "fullName": [
-          "정 경모"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "46"
-        ],
-        "tenureYears": [
-          "23"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "마케팅"
-        ],
-        "overtimeHours": [
-          "77"
-        ],
-        "performanceScore": [
-          "39"
-        ],
-        "unusedVacationDays": [
-          "12"
-        ],
-        "salary": [
-          "91004481"
-        ],
-        "companyEmail": [
-          "jeonggye36567@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "790106-1706821"
-        ],
-        "phoneNumber": [
-          "010-8431-6941"
-        ]
+        "employeeNo": ["548"],
+        "fullName": ["정 경모"],
+        "gender": ["M"],
+        "age": ["46"],
+        "tenureYears": ["23"],
+        "hireYear": ["2015"],
+        "position": ["주임"],
+        "department": ["마케팅"],
+        "overtimeHours": ["77"],
+        "performanceScore": ["39"],
+        "unusedVacationDays": ["12"],
+        "salary": ["91004481"],
+        "companyEmail": ["jeonggye36567@gmail.com"],
+        "residentRegistrationNumber": ["790106-1706821"],
+        "phoneNumber": ["010-8431-6941"]
       }
     },
     {
@@ -2970,55 +1643,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "818"
-        ],
-        "fullName": [
-          "이 가희"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "28"
-        ],
-        "tenureYears": [
-          "14"
-        ],
-        "hireYear": [
-          "2012"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "재무"
-        ],
-        "overtimeHours": [
-          "175"
-        ],
-        "performanceScore": [
-          "48"
-        ],
-        "unusedVacationDays": [
-          "4"
-        ],
-        "salary": [
-          "71035209"
-        ],
-        "companyEmail": [
-          "igahyi33129@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "970416-1836557"
-        ],
-        "phoneNumber": [
-          "010-5326-8321"
-        ]
+        "employeeNo": ["818"],
+        "fullName": ["이 가희"],
+        "gender": ["F"],
+        "age": ["28"],
+        "tenureYears": ["14"],
+        "hireYear": ["2012"],
+        "position": ["사원"],
+        "department": ["재무"],
+        "overtimeHours": ["175"],
+        "performanceScore": ["48"],
+        "unusedVacationDays": ["4"],
+        "salary": ["71035209"],
+        "companyEmail": ["igahyi33129@gmail.com"],
+        "residentRegistrationNumber": ["970416-1836557"],
+        "phoneNumber": ["010-5326-8321"]
       }
     },
     {
@@ -3034,55 +1675,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4440"
-        ],
-        "fullName": [
-          "임 경채"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "28"
-        ],
-        "tenureYears": [
-          "12"
-        ],
-        "hireYear": [
-          "2012"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "법무"
-        ],
-        "overtimeHours": [
-          "21"
-        ],
-        "performanceScore": [
-          "54"
-        ],
-        "unusedVacationDays": [
-          "5"
-        ],
-        "salary": [
-          "100772709"
-        ],
-        "companyEmail": [
-          "imgyeong77405@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "970318-2857682"
-        ],
-        "phoneNumber": [
-          "010-3639-9232"
-        ]
+        "employeeNo": ["4440"],
+        "fullName": ["임 경채"],
+        "gender": ["F"],
+        "age": ["28"],
+        "tenureYears": ["12"],
+        "hireYear": ["2012"],
+        "position": ["대리"],
+        "department": ["법무"],
+        "overtimeHours": ["21"],
+        "performanceScore": ["54"],
+        "unusedVacationDays": ["5"],
+        "salary": ["100772709"],
+        "companyEmail": ["imgyeong77405@gmail.com"],
+        "residentRegistrationNumber": ["970318-2857682"],
+        "phoneNumber": ["010-3639-9232"]
       }
     },
     {
@@ -3098,55 +1707,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3839"
-        ],
-        "fullName": [
-          "강 가선"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "48"
-        ],
-        "tenureYears": [
-          "42"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "과장"
-        ],
-        "department": [
-          "인사"
-        ],
-        "overtimeHours": [
-          "85"
-        ],
-        "performanceScore": [
-          "54"
-        ],
-        "unusedVacationDays": [
-          "7"
-        ],
-        "salary": [
-          "128436252"
-        ],
-        "companyEmail": [
-          "ganggase7801@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "771208-3929485"
-        ],
-        "phoneNumber": [
-          "010-7741-9119"
-        ]
+        "employeeNo": ["3839"],
+        "fullName": ["강 가선"],
+        "gender": ["F"],
+        "age": ["48"],
+        "tenureYears": ["42"],
+        "hireYear": ["2015"],
+        "position": ["과장"],
+        "department": ["인사"],
+        "overtimeHours": ["85"],
+        "performanceScore": ["54"],
+        "unusedVacationDays": ["7"],
+        "salary": ["128436252"],
+        "companyEmail": ["ganggase7801@gmail.com"],
+        "residentRegistrationNumber": ["771208-3929485"],
+        "phoneNumber": ["010-7741-9119"]
       }
     },
     {
@@ -3162,55 +1739,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4653"
-        ],
-        "fullName": [
-          "정 규리"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "30"
-        ],
-        "tenureYears": [
-          "16"
-        ],
-        "hireYear": [
-          "2013"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "총무"
-        ],
-        "overtimeHours": [
-          "20"
-        ],
-        "performanceScore": [
-          "33"
-        ],
-        "unusedVacationDays": [
-          "7"
-        ],
-        "salary": [
-          "51355278"
-        ],
-        "companyEmail": [
-          "jeonggyu92746@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "950311-1902086"
-        ],
-        "phoneNumber": [
-          "010-6436-3739"
-        ]
+        "employeeNo": ["4653"],
+        "fullName": ["정 규리"],
+        "gender": ["F"],
+        "age": ["30"],
+        "tenureYears": ["16"],
+        "hireYear": ["2013"],
+        "position": ["사원"],
+        "department": ["총무"],
+        "overtimeHours": ["20"],
+        "performanceScore": ["33"],
+        "unusedVacationDays": ["7"],
+        "salary": ["51355278"],
+        "companyEmail": ["jeonggyu92746@gmail.com"],
+        "residentRegistrationNumber": ["950311-1902086"],
+        "phoneNumber": ["010-6436-3739"]
       }
     },
     {
@@ -3226,55 +1771,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "557"
-        ],
-        "fullName": [
-          "장 기담"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "36"
-        ],
-        "tenureYears": [
-          "18"
-        ],
-        "hireYear": [
-          "2011"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "기획"
-        ],
-        "overtimeHours": [
-          "100"
-        ],
-        "performanceScore": [
-          "42"
-        ],
-        "unusedVacationDays": [
-          "6"
-        ],
-        "salary": [
-          "48006633"
-        ],
-        "companyEmail": [
-          "janggida57093@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "890303-3687011"
-        ],
-        "phoneNumber": [
-          "010-9461-5934"
-        ]
+        "employeeNo": ["557"],
+        "fullName": ["장 기담"],
+        "gender": ["M"],
+        "age": ["36"],
+        "tenureYears": ["18"],
+        "hireYear": ["2011"],
+        "position": ["사원"],
+        "department": ["기획"],
+        "overtimeHours": ["100"],
+        "performanceScore": ["42"],
+        "unusedVacationDays": ["6"],
+        "salary": ["48006633"],
+        "companyEmail": ["janggida57093@gmail.com"],
+        "residentRegistrationNumber": ["890303-3687011"],
+        "phoneNumber": ["010-9461-5934"]
       }
     },
     {
@@ -3290,55 +1803,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "942"
-        ],
-        "fullName": [
-          "주 강필"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "32"
-        ],
-        "tenureYears": [
-          "22"
-        ],
-        "hireYear": [
-          "2012"
-        ],
-        "position": [
-          "주임"
-        ],
-        "department": [
-          "마케팅"
-        ],
-        "overtimeHours": [
-          "226"
-        ],
-        "performanceScore": [
-          "52"
-        ],
-        "unusedVacationDays": [
-          "10"
-        ],
-        "salary": [
-          "86489341"
-        ],
-        "companyEmail": [
-          "jugangpi51479@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "930815-2634575"
-        ],
-        "phoneNumber": [
-          "010-4534-2618"
-        ]
+        "employeeNo": ["942"],
+        "fullName": ["주 강필"],
+        "gender": ["M"],
+        "age": ["32"],
+        "tenureYears": ["22"],
+        "hireYear": ["2012"],
+        "position": ["주임"],
+        "department": ["마케팅"],
+        "overtimeHours": ["226"],
+        "performanceScore": ["52"],
+        "unusedVacationDays": ["10"],
+        "salary": ["86489341"],
+        "companyEmail": ["jugangpi51479@gmail.com"],
+        "residentRegistrationNumber": ["930815-2634575"],
+        "phoneNumber": ["010-4534-2618"]
       }
     },
     {
@@ -3354,55 +1835,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4148"
-        ],
-        "fullName": [
-          "이 기표"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "38"
-        ],
-        "tenureYears": [
-          "17"
-        ],
-        "hireYear": [
-          "2016"
-        ],
-        "position": [
-          "대리"
-        ],
-        "department": [
-          "재무"
-        ],
-        "overtimeHours": [
-          "91"
-        ],
-        "performanceScore": [
-          "55"
-        ],
-        "unusedVacationDays": [
-          "10"
-        ],
-        "salary": [
-          "101574202"
-        ],
-        "companyEmail": [
-          "igipyo39949@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "870923-3522693"
-        ],
-        "phoneNumber": [
-          "010-3667-1807"
-        ]
+        "employeeNo": ["4148"],
+        "fullName": ["이 기표"],
+        "gender": ["M"],
+        "age": ["38"],
+        "tenureYears": ["17"],
+        "hireYear": ["2016"],
+        "position": ["대리"],
+        "department": ["재무"],
+        "overtimeHours": ["91"],
+        "performanceScore": ["55"],
+        "unusedVacationDays": ["10"],
+        "salary": ["101574202"],
+        "companyEmail": ["igipyo39949@gmail.com"],
+        "residentRegistrationNumber": ["870923-3522693"],
+        "phoneNumber": ["010-3667-1807"]
       }
     },
     {
@@ -3418,55 +1867,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "2819"
-        ],
-        "fullName": [
-          "최 기민"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "40"
-        ],
-        "tenureYears": [
-          "20"
-        ],
-        "hireYear": [
-          "2014"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "법무"
-        ],
-        "overtimeHours": [
-          "186"
-        ],
-        "performanceScore": [
-          "45"
-        ],
-        "unusedVacationDays": [
-          "1"
-        ],
-        "salary": [
-          "76556772"
-        ],
-        "companyEmail": [
-          "coegimin78251@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "851012-2673011"
-        ],
-        "phoneNumber": [
-          "010-4384-2866"
-        ]
+        "employeeNo": ["2819"],
+        "fullName": ["최 기민"],
+        "gender": ["M"],
+        "age": ["40"],
+        "tenureYears": ["20"],
+        "hireYear": ["2014"],
+        "position": ["사원"],
+        "department": ["법무"],
+        "overtimeHours": ["186"],
+        "performanceScore": ["45"],
+        "unusedVacationDays": ["1"],
+        "salary": ["76556772"],
+        "companyEmail": ["coegimin78251@gmail.com"],
+        "residentRegistrationNumber": ["851012-2673011"],
+        "phoneNumber": ["010-4384-2866"]
       }
     },
     {
@@ -3482,55 +1899,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "4006"
-        ],
-        "fullName": [
-          "한 경택"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "39"
-        ],
-        "tenureYears": [
-          "19"
-        ],
-        "hireYear": [
-          "2015"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "인사"
-        ],
-        "overtimeHours": [
-          "213"
-        ],
-        "performanceScore": [
-          "42"
-        ],
-        "unusedVacationDays": [
-          "14"
-        ],
-        "salary": [
-          "66002987"
-        ],
-        "companyEmail": [
-          "hangyeon72112@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "860921-3933039"
-        ],
-        "phoneNumber": [
-          "010-3258-9666"
-        ]
+        "employeeNo": ["4006"],
+        "fullName": ["한 경택"],
+        "gender": ["M"],
+        "age": ["39"],
+        "tenureYears": ["19"],
+        "hireYear": ["2015"],
+        "position": ["사원"],
+        "department": ["인사"],
+        "overtimeHours": ["213"],
+        "performanceScore": ["42"],
+        "unusedVacationDays": ["14"],
+        "salary": ["66002987"],
+        "companyEmail": ["hangyeon72112@gmail.com"],
+        "residentRegistrationNumber": ["860921-3933039"],
+        "phoneNumber": ["010-3258-9666"]
       }
     },
     {
@@ -3546,55 +1931,23 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "3337"
-        ],
-        "fullName": [
-          "임 경화"
-        ],
-        "gender": [
-          "F"
-        ],
-        "age": [
-          "33"
-        ],
-        "tenureYears": [
-          "17"
-        ],
-        "hireYear": [
-          "2012"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "총무"
-        ],
-        "overtimeHours": [
-          "324"
-        ],
-        "performanceScore": [
-          "49"
-        ],
-        "unusedVacationDays": [
-          "9"
-        ],
-        "salary": [
-          "58479133"
-        ],
-        "companyEmail": [
-          "imgyeong88296@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "920608-4942233"
-        ],
-        "phoneNumber": [
-          "010-9435-4789"
-        ]
+        "employeeNo": ["3337"],
+        "fullName": ["임 경화"],
+        "gender": ["F"],
+        "age": ["33"],
+        "tenureYears": ["17"],
+        "hireYear": ["2012"],
+        "position": ["사원"],
+        "department": ["총무"],
+        "overtimeHours": ["324"],
+        "performanceScore": ["49"],
+        "unusedVacationDays": ["9"],
+        "salary": ["58479133"],
+        "companyEmail": ["imgyeong88296@gmail.com"],
+        "residentRegistrationNumber": ["920608-4942233"],
+        "phoneNumber": ["010-9435-4789"]
       }
     },
     {
@@ -3610,56 +1963,32 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "EMPLOYEE"
-      ],
+      "realmRoles": ["EMPLOYEE"],
       "attributes": {
-        "employeeNo": [
-          "2543"
-        ],
-        "fullName": [
-          "이 규경"
-        ],
-        "gender": [
-          "M"
-        ],
-        "age": [
-          "46"
-        ],
-        "tenureYears": [
-          "27"
-        ],
-        "hireYear": [
-          "2013"
-        ],
-        "position": [
-          "사원"
-        ],
-        "department": [
-          "기획"
-        ],
-        "overtimeHours": [
-          "192"
-        ],
-        "performanceScore": [
-          "40"
-        ],
-        "unusedVacationDays": [
-          "22"
-        ],
-        "salary": [
-          "46179481"
-        ],
-        "companyEmail": [
-          "igyugyeo63506@gmail.com"
-        ],
-        "residentRegistrationNumber": [
-          "791118-4861402"
-        ],
-        "phoneNumber": [
-          "010-8710-3117"
-        ]
+        "employeeNo": ["2543"],
+        "fullName": ["이 규경"],
+        "gender": ["M"],
+        "age": ["46"],
+        "tenureYears": ["27"],
+        "hireYear": ["2013"],
+        "position": ["사원"],
+        "department": ["기획"],
+        "overtimeHours": ["192"],
+        "performanceScore": ["40"],
+        "unusedVacationDays": ["22"],
+        "salary": ["46179481"],
+        "companyEmail": ["igyugyeo63506@gmail.com"],
+        "residentRegistrationNumber": ["791118-4861402"],
+        "phoneNumber": ["010-8710-3117"]
       }
     }
-  ]
+  ],
+  "clientScopeMappings": {
+    "realm-management": [
+      {
+        "client": "infra-admin",
+        "roles": ["view-users", "query-users", "manage-users"]
+      }
+    ]
+  }
 }

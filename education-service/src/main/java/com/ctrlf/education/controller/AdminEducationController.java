@@ -328,25 +328,16 @@ public class AdminEducationController {
 
                             try {
                                 InfraRagClient.DocumentInfoResponse docInfo = infraRagClient.getDocument(documentId.toString());
-                                log.info("11111");
-                                log.info("docInfo.getSourceUrl(): {}", docInfo.getSourceUrl());
+                                log.info("docInfo: sourceUrl={}, title={}", docInfo.getSourceUrl(), docInfo.getTitle());
 
-                                if (docInfo != null && docInfo.getSourceUrl() != null) {
-                                    sourceFileUrl = docInfo.getSourceUrl();
-                                    // sourceUrl에서 파일명 추출 (URL의 마지막 부분)
-                                    String url = docInfo.getSourceUrl();
-                                    if (url.contains("/")) {
-                                        String fileName = url.substring(url.lastIndexOf("/") + 1);
-                                        // 쿼리 파라미터 제거
-                                        if (fileName.contains("?")) {
-                                            fileName = fileName.substring(0, fileName.indexOf("?"));
-                                        }
-                                        sourceFileName = fileName;
+                                if (docInfo != null) {
+                                    if (docInfo.getSourceUrl() != null) {
+                                        sourceFileUrl = docInfo.getSourceUrl();
                                     }
-                                } else {
-                                    
-                                    // log.info("문서 정보가 null이거나 sourceUrl이 null: videoId={}, documentId={}, docInfo={}", 
-                                    //     v.getId(), documentId, docInfo != null ? "not null" : "null");
+                                    // title을 원본 파일명으로 사용 (sourceUrl은 UUID 형식이므로 사용 불가)
+                                    if (docInfo.getTitle() != null && !docInfo.getTitle().isBlank()) {
+                                        sourceFileName = docInfo.getTitle();
+                                    }
                                 }
                             } catch (Exception ex) {
                                 // 에러 메시지가 너무 길 경우 간단히 처리
