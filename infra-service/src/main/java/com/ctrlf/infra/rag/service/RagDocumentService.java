@@ -102,11 +102,16 @@ public class RagDocumentService {
         }
         documentRepository.save(d);
         String now = Instant.now().toString();
+
+        log.info("[DEBUG] @@@@ sourceUrl={} ", d.getSourceUrl());
         // 변경사항이 있으면 AI 서버 재처리 요청 (베스트Effort)
         if (d.getSourceUrl() != null && !d.getSourceUrl().isBlank()) {
             try {
                 // [FIX] S3 URL → Presigned URL 변환 (RAGFlow 404 오류 해결)
                 String presignedUrl = getPresignedSourceUrl(d.getSourceUrl());
+                // 원래 S3 URL에서 파일 확장자 추출
+                String fileExtension = RagAiClient.extractFileExtension(d.getSourceUrl());
+                log.info("[DEBUG] sourceUrl={}, fileExtension={}", d.getSourceUrl(), fileExtension);
                 ragAiClient.ingest(
                     d.getId(),
                     d.getDocumentId(),
@@ -114,7 +119,8 @@ public class RagDocumentService {
                     presignedUrl,
                     d.getDomain(),
                     d.getDepartment(),
-                    d.getTitle()
+                    d.getTitle(),
+                    fileExtension
                 );
             } catch (Exception e) {
                 log.warn("AI 서버 재처리 요청 실패: id={}, documentId={}, error={}",
@@ -163,6 +169,8 @@ public class RagDocumentService {
             try {
                 // [FIX] S3 URL → Presigned URL 변환 (RAGFlow 404 오류 해결)
                 String presignedUrl = getPresignedSourceUrl(d.getSourceUrl());
+                // 원래 S3 URL에서 파일 확장자 추출
+                String fileExtension = RagAiClient.extractFileExtension(d.getSourceUrl());
                 RagAiClient.AiResponse aiResp = ragAiClient.ingest(
                     d.getId(),
                     d.getDocumentId(),
@@ -170,7 +178,8 @@ public class RagDocumentService {
                     presignedUrl,
                     d.getDomain(),
                     d.getDepartment(),
-                    d.getTitle()
+                    d.getTitle(),
+                    fileExtension
                 );
                 received = aiResp.isReceived();
                 requestId = aiResp.getRequestId();
@@ -717,6 +726,8 @@ public class RagDocumentService {
                 // AI 서버는 처리 완료 후 PATCH /internal/rag/documents/{ragDocumentPk}/status 로 콜백을 보냅니다
                 // [FIX] S3 URL → Presigned URL 변환 (RAGFlow 404 오류 해결)
                 String presignedUrl = getPresignedSourceUrl(doc.getSourceUrl());
+                // 원래 S3 URL에서 파일 확장자 추출
+                String fileExtension = RagAiClient.extractFileExtension(doc.getSourceUrl());
                 RagAiClient.AiResponse aiResp = ragAiClient.ingest(
                     doc.getId(),  // UUID (AI 서버가 콜백 시 사용할 PK)
                     doc.getDocumentId(),
@@ -724,7 +735,8 @@ public class RagDocumentService {
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     doc.getDomain(),
                     doc.getDepartment(),
-                    doc.getTitle()
+                    doc.getTitle(),
+                    fileExtension
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
@@ -832,6 +844,8 @@ public class RagDocumentService {
                 // AI 서버는 처리 완료 후 PATCH /internal/rag/documents/{ragDocumentPk}/status 로 콜백을 보냅니다
                 // [FIX] S3 URL → Presigned URL 변환 (RAGFlow 404 오류 해결)
                 String presignedUrl = getPresignedSourceUrl(newVersionDoc.getSourceUrl());
+                // 원래 S3 URL에서 파일 확장자 추출
+                String fileExtension = RagAiClient.extractFileExtension(newVersionDoc.getSourceUrl());
                 RagAiClient.AiResponse aiResp = ragAiClient.ingest(
                     newVersionDoc.getId(),  // UUID (AI 서버가 콜백 시 사용할 PK)
                     newVersionDoc.getDocumentId(),
@@ -839,7 +853,8 @@ public class RagDocumentService {
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     newVersionDoc.getDomain(),
                     newVersionDoc.getDepartment(),
-                    newVersionDoc.getTitle()
+                    newVersionDoc.getTitle(),
+                    fileExtension
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     newVersionDoc.getId(), newVersionDoc.getDocumentId(), newVersionDoc.getVersion(),
@@ -937,6 +952,8 @@ public class RagDocumentService {
                 // AI 서버는 처리 완료 후 PATCH /internal/rag/documents/{ragDocumentPk}/status 로 콜백을 보냅니다
                 // [FIX] S3 URL → Presigned URL 변환 (RAGFlow 404 오류 해결)
                 String presignedUrl = getPresignedSourceUrl(doc.getSourceUrl());
+                // 원래 S3 URL에서 파일 확장자 추출
+                String fileExtension = RagAiClient.extractFileExtension(doc.getSourceUrl());
                 RagAiClient.AiResponse aiResp = ragAiClient.ingest(
                     doc.getId(),  // UUID (AI 서버가 콜백 시 사용할 PK)
                     doc.getDocumentId(),
@@ -944,7 +961,8 @@ public class RagDocumentService {
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     doc.getDomain(),
                     doc.getDepartment(),
-                    doc.getTitle()
+                    doc.getTitle(),
+                    fileExtension
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
@@ -1136,6 +1154,8 @@ public class RagDocumentService {
                 // AI 서버는 처리 완료 후 PATCH /internal/rag/documents/{ragDocumentPk}/status 로 콜백을 보냅니다
                 // [FIX] S3 URL → Presigned URL 변환 (RAGFlow 404 오류 해결)
                 String presignedUrl = getPresignedSourceUrl(doc.getSourceUrl());
+                // 원래 S3 URL에서 파일 확장자 추출
+                String fileExtension = RagAiClient.extractFileExtension(doc.getSourceUrl());
                 RagAiClient.AiResponse aiResp = ragAiClient.ingest(
                     doc.getId(),  // UUID (AI 서버가 콜백 시 사용할 PK)
                     doc.getDocumentId(),
@@ -1143,7 +1163,8 @@ public class RagDocumentService {
                     presignedUrl,  // S3 Presigned URL (12시간 유효)
                     doc.getDomain(),
                     doc.getDepartment(),
-                    doc.getTitle()
+                    doc.getTitle(),
+                    fileExtension
                 );
                 log.info("AI 서버 처리 요청 성공: id={}, documentId={}, version={}, received={}, status={}, requestId={}, traceId={}",
                     doc.getId(), doc.getDocumentId(), doc.getVersion(), aiResp.isReceived(), aiResp.getStatus(),
@@ -1171,25 +1192,31 @@ public class RagDocumentService {
      * 사규 상태 업데이트 (내부 API - AI → Backend).
      * AI 서버가 임베딩 처리를 완료한 후 콜백으로 호출합니다.
      * ragDocumentPk(UUID)로 문서를 찾아 상태를 업데이트합니다.
+     * RAGFlow가 ragDocumentPk를 덮어쓰는 경우가 있어, 못 찾으면 documentId+version으로 fallback 조회합니다.
      */
     public InternalUpdateStatusResponse updateDocumentStatus(UUID ragDocumentPk, InternalUpdateStatusRequest req) {
-        RagDocument doc = documentRepository.findById(ragDocumentPk)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
-                "Document not found: " + ragDocumentPk));
+        // 1차: ragDocumentPk(UUID)로 조회
+        RagDocument doc = documentRepository.findById(ragDocumentPk).orElse(null);
+        
+        // 2차: ragDocumentPk로 못 찾으면 documentId + version으로 fallback 조회
+        // (RAGFlow가 meta의 ragDocumentPk를 덮어쓰는 버그 대응)
+        if (doc == null && req.getDocumentId() != null && !req.getDocumentId().isBlank()) {
+            Integer version = req.getVersion() != null ? req.getVersion() : 1;
+            log.info("Document not found by ragDocumentPk={}, trying fallback with documentId={}, version={}", 
+                ragDocumentPk, req.getDocumentId(), version);
+            doc = documentRepository.findByDocumentIdAndVersion(req.getDocumentId(), version).orElse(null);
+        }
+        
+        if (doc == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "Document not found: " + ragDocumentPk);
+        }
 
         // 업데이트 전 상태 로깅
         log.info("Document update request received: id={}, documentId={}, version={}, currentStatus={}, newStatus={}, processedAt={}", 
             doc.getId(), doc.getDocumentId(), doc.getVersion(), 
             doc.getStatus() != null ? doc.getStatus().name() : "null",
             req.getStatus(), req.getProcessedAt());
-
-        // documentId 검증 (AI 서버가 보낸 값과 일치하는지 확인)
-        if (req.getDocumentId() != null && !req.getDocumentId().isBlank()) {
-            if (!req.getDocumentId().equals(doc.getDocumentId())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                    "DocumentId mismatch: expected " + doc.getDocumentId() + ", got " + req.getDocumentId());
-            }
-        }
 
         // version 검증 (AI 서버가 보낸 값과 일치하는지 확인)
         // version이 제공된 경우에만 검증 (null이면 검증 생략)
