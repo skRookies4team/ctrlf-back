@@ -1,0 +1,14 @@
+services:
+  backend-service:
+    image: ctrlf-back-main-backend-service
+    container_name: ctrlf-backend
+    ports:
+      - "9003:9003"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - ctrlf-network
+
+networks:
+  ctrlf-network:
+    external: true

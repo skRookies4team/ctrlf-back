@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://platform-postgres:5432/db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+server:
+  port: 9003
