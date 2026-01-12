@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
  * 또한 관리자는 수동으로 FAQ를 생성할 수도 있습니다.</p>
  */
 @RestController
-@RequestMapping("/api/faq")
+@RequestMapping("/faq")
 @RequiredArgsConstructor
 public class FaqController {
 
