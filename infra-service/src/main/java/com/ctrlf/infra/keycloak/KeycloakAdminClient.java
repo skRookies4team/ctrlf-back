@@ -219,6 +219,30 @@ public class KeycloakAdminClient {
             if (user == null) {
                 throw new IllegalStateException("사용자를 찾을 수 없습니다: " + userId);
             }
+
+            /*
+             * NOTE:
+             * Keycloak 버전/설정에 따라 GET /users/{id} 응답에 attributes가 포함되지 않는 경우가 있습니다.
+             * 반면 GET /users?briefRepresentation=false 는 attributes를 포함해서 반환하므로,
+             * 단건 조회에서도 username으로 목록 조회를 한 번 더 수행해 attributes를 보강합니다.
+             */
+            if (!user.containsKey("attributes")) {
+                Object usernameObj = user.get("username");
+                if (usernameObj instanceof String username && !username.isBlank()) {
+                    try {
+                        PageResponse<Map<String, Object>> page = listUsers(username, 0, 50);
+                        Map<String, Object> hit = page.getItems().stream()
+                            .filter(u -> userId.equals(String.valueOf(u.get("id"))))
+                            .findFirst()
+                            .orElse(null);
+                        if (hit != null && hit.containsKey("attributes")) {
+                            user.put("attributes", hit.get("attributes"));
+                        }
+                    } catch (Exception ignore) {
+                        // attributes 보강 실패는 치명적이지 않으므로 무시하고 base user 그대로 반환
+                    }
+                }
+            }
             
             // attributes에서 모든 속성을 추출하여 최상위 레벨에 추가
             @SuppressWarnings("unchecked")

@@ -50,5 +50,17 @@ subprojects {
         useJUnitPlatform()
     }
 
+    // Windows/CI 환경에서 한글 주석/문자열 컴파일 깨짐 방지
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    // 콘솔 로그 한글 깨짐 방지 (BootRun 실행 시 JVM 기본 인코딩 고정)
+    plugins.withId('org.springframework.boot') {
+        tasks.withType(org.springframework.boot.gradle.tasks.run.BootRun).configureEach {
+            jvmArgs '-Dfile.encoding=UTF-8'
+        }
+    }
+
     // Spotless removed
 }
