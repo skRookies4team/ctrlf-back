@@ -30,7 +30,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 
 @RestController
-@RequestMapping("/api-infra/files/presign")
+@RequestMapping("/api-infra/infra/files/presign")
 @RequiredArgsConstructor
 @Tag(name = "Infra - S3", description = "S3 Presigned URL API")
 public class S3Controller {
