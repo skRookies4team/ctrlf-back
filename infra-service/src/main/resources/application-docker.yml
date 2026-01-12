@@ -1,16 +1,23 @@
+server:
+  port: 9003
+
 spring:
   datasource:
+    driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://platform-postgres:5432/db
     username: postgres
     password: postgres
-    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: infra
 
   flyway:
     enabled: true
-
-server:
-  port: 9003
+    schemas: infra
+    default-schema: infra
+    baseline-on-migrate: true
+    validate-on-migrate: false

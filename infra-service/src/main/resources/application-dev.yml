@@ -9,6 +9,14 @@ spring:
         jwt:
           issuer-uri: http://localhost:8090/realms/ctrlf
 
+  flyway:
+    enabled: true
+    schemas: infra
+    default-schema: infra
+    locations: classpath:db/migration
+    validate-on-migrate: false
+    baseline-on-migrate: true   # ⭐⭐⭐ 이 줄이 핵심
+
 keycloak:
   admin:
     base-url: http://localhost:8090
