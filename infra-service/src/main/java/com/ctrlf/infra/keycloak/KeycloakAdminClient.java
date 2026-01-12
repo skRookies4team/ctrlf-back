@@ -68,33 +68,33 @@ public class KeycloakAdminClient {
         try {
             ResponseEntity<List<Map<String, Object>>> resp = restTemplate.exchange(
                 url, HttpMethod.GET, req, new ParameterizedTypeReference<List<Map<String, Object>>>() {});
-            
+
             List<Map<String, Object>> users = resp.getBody();
             if (users == null) {
                 users = new ArrayList<>();
             }
-            
-            // Keycloak은 총 개수를 직접 반환하지 않으므로, 
+
+            // Keycloak은 총 개수를 직접 반환하지 않으므로,
             // 현재 페이지가 마지막 페이지인지 확인하여 총 개수를 추정
             // 정확한 총 개수를 얻기 위해 추가 조회가 필요할 수 있음
             long total = users.size() < size ? (long) first + users.size() : (long) first + users.size() + 1;
-            
+
             // 더 정확한 총 개수를 얻기 위해 count 쿼리 시도 (Keycloak이 지원하는 경우)
             // 현재는 추정값을 사용하지만, 필요시 별도 count API 호출 가능
-            
+
             return new PageResponse<>(users, page, size, total);
         } catch (HttpClientErrorException.Forbidden e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 접근 권한이 없습니다. " +
-                "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
-                "realm-management 클라이언트에 'view-users', 'manage-users' 등의 권한이 할당되어 있는지 확인하세요. " +
-                "에러 상세: " + e.getMessage(), e);
+                    "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
+                    "realm-management 클라이언트에 'view-users', 'manage-users' 등의 권한이 할당되어 있는지 확인하세요. " +
+                    "에러 상세: " + e.getMessage(), e);
         } catch (HttpClientErrorException e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 호출 실패: " + e.getStatusCode() + " - " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * 사용자 총 개수 조회 (정확한 총 개수를 얻기 위해)
      * @param search 검색어 (옵션)
@@ -151,9 +151,9 @@ public class KeycloakAdminClient {
         } catch (HttpClientErrorException.Forbidden e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 접근 권한이 없습니다. " +
-                "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
-                "realm-management 클라이언트에 'manage-users' 권한이 할당되어 있는지 확인하세요. " +
-                "에러 상세: " + e.getMessage(), e);
+                    "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
+                    "realm-management 클라이언트에 'manage-users' 권한이 할당되어 있는지 확인하세요. " +
+                    "에러 상세: " + e.getMessage(), e);
         } catch (HttpClientErrorException e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 호출 실패: " + e.getStatusCode() + " - " + e.getMessage(), e);
@@ -171,9 +171,9 @@ public class KeycloakAdminClient {
         } catch (HttpClientErrorException.Forbidden e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 접근 권한이 없습니다. " +
-                "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
-                "realm-management 클라이언트에 'manage-users' 권한이 할당되어 있는지 확인하세요. " +
-                "에러 상세: " + e.getMessage(), e);
+                    "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
+                    "realm-management 클라이언트에 'manage-users' 권한이 할당되어 있는지 확인하세요. " +
+                    "에러 상세: " + e.getMessage(), e);
         } catch (HttpClientErrorException e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 호출 실패: " + e.getStatusCode() + " - " + e.getMessage(), e);
@@ -196,9 +196,9 @@ public class KeycloakAdminClient {
         } catch (HttpClientErrorException.Forbidden e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 접근 권한이 없습니다. " +
-                "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
-                "realm-management 클라이언트에 'manage-users' 권한이 할당되어 있는지 확인하세요. " +
-                "에러 상세: " + e.getMessage(), e);
+                    "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
+                    "realm-management 클라이언트에 'manage-users' 권한이 할당되어 있는지 확인하세요. " +
+                    "에러 상세: " + e.getMessage(), e);
         } catch (HttpClientErrorException e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 호출 실패: " + e.getStatusCode() + " - " + e.getMessage(), e);
@@ -214,12 +214,36 @@ public class KeycloakAdminClient {
         try {
             ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
                 url, HttpMethod.GET, req, new ParameterizedTypeReference<Map<String, Object>>() {});
-            
+
             Map<String, Object> user = resp.getBody();
             if (user == null) {
                 throw new IllegalStateException("사용자를 찾을 수 없습니다: " + userId);
             }
-            
+
+            /*
+             * NOTE:
+             * Keycloak 버전/설정에 따라 GET /users/{id} 응답에 attributes가 포함되지 않는 경우가 있습니다.
+             * 반면 GET /users?briefRepresentation=false 는 attributes를 포함해서 반환하므로,
+             * 단건 조회에서도 username으로 목록 조회를 한 번 더 수행해 attributes를 보강합니다.
+             */
+            if (!user.containsKey("attributes")) {
+                Object usernameObj = user.get("username");
+                if (usernameObj instanceof String username && !username.isBlank()) {
+                    try {
+                        PageResponse<Map<String, Object>> page = listUsers(username, 0, 50);
+                        Map<String, Object> hit = page.getItems().stream()
+                            .filter(u -> userId.equals(String.valueOf(u.get("id"))))
+                            .findFirst()
+                            .orElse(null);
+                        if (hit != null && hit.containsKey("attributes")) {
+                            user.put("attributes", hit.get("attributes"));
+                        }
+                    } catch (Exception ignore) {
+                        // attributes 보강 실패는 치명적이지 않으므로 무시하고 base user 그대로 반환
+                    }
+                }
+            }
+
             // attributes에서 모든 속성을 추출하여 최상위 레벨에 추가
             @SuppressWarnings("unchecked")
             Map<String, Object> attributes = (Map<String, Object>) user.get("attributes");
@@ -233,16 +257,16 @@ public class KeycloakAdminClient {
                     }
                 }
             }
-            
+
             return user;
         } catch (HttpClientErrorException.NotFound e) {
             throw new IllegalStateException("사용자를 찾을 수 없습니다: " + userId, e);
         } catch (HttpClientErrorException.Forbidden e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 접근 권한이 없습니다. " +
-                "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
-                "realm-management 클라이언트에 'view-users' 권한이 할당되어 있는지 확인하세요. " +
-                "에러 상세: " + e.getMessage(), e);
+                    "Keycloak에서 클라이언트 '" + props.getClientId() + "'의 Service Account가 활성화되어 있고, " +
+                    "realm-management 클라이언트에 'view-users' 권한이 할당되어 있는지 확인하세요. " +
+                    "에러 상세: " + e.getMessage(), e);
         } catch (HttpClientErrorException e) {
             throw new IllegalStateException(
                 "Keycloak Admin API 호출 실패: " + e.getStatusCode() + " - " + e.getMessage(), e);
@@ -363,7 +387,7 @@ public class KeycloakAdminClient {
             if (allRoles == null) {
                 return new ArrayList<>();
             }
-            
+
             // 커스텀 역할만 필터링 (Keycloak 기본 역할 제외)
             // 커스텀 역할: SYSTEM_ADMIN, COMPLAINT_MANAGER, VIDEO_CREATOR, CONTENTS_REVIEWER, EMPLOYEE
             List<String> customRoleNames = List.of(
@@ -373,7 +397,7 @@ public class KeycloakAdminClient {
                 "CONTENTS_REVIEWER",
                 "EMPLOYEE"
             );
-            
+
             return allRoles.stream()
                 .filter(role -> {
                     String roleName = (String) role.get("name");
@@ -402,7 +426,7 @@ public class KeycloakAdminClient {
             if (allRoles == null) {
                 return new ArrayList<>();
             }
-            
+
             // 커스텀 역할만 필터링
             List<String> customRoleNames = List.of(
                 "SYSTEM_ADMIN",
@@ -411,7 +435,7 @@ public class KeycloakAdminClient {
                 "CONTENTS_REVIEWER",
                 "EMPLOYEE"
             );
-            
+
             return allRoles.stream()
                 .filter(role -> {
                     String roleName = (String) role.get("name");
