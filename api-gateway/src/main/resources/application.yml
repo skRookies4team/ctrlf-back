@@ -1,5 +1,7 @@
 server:
   port: 8085
+  # Docker/외부(컨테이너)에서 host.docker.internal 로 접근할 수 있도록 바인딩 주소를 명시
+  address: 0.0.0.0
 
 spring:
   application:
