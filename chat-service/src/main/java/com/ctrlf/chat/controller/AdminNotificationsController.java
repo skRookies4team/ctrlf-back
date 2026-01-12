@@ -1,3 +1,4 @@
+// === path : AdminNotificationsController.java
 package com.ctrlf.chat.controller;
 
 import com.ctrlf.chat.dto.response.NotificationDtos;
@@ -33,9 +34,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 관리자 알림 API 컨트롤러
- * 
+ *
  * <p>관리자 대시보드에서 실시간 알림을 수신하는 API를 제공합니다.</p>
- * 
+ *
  * @author CtrlF Team
  * @since 1.0.0
  */
@@ -55,7 +56,7 @@ public class AdminNotificationsController {
 
     /**
      * SSE 스트림 구독
-     * 
+     *
      * <p>Server-Sent Events를 통해 실시간 알림을 수신합니다.</p>
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -162,7 +163,7 @@ public class AdminNotificationsController {
         @Parameter(description = "최대 조회 개수", example = "50")
         @RequestParam(value = "limit", required = false, defaultValue = "50") int limit
     ) {
-        List<NotificationDtos.NotificationResponse> notifications = 
+        List<NotificationDtos.NotificationResponse> notifications =
             notificationService.getRecentNotifications(limit);
 
         return ResponseEntity.ok(
@@ -172,7 +173,7 @@ public class AdminNotificationsController {
 
     /**
      * 주기적으로 새 알림을 확인하고 SSE 클라이언트에게 전송
-     * 
+     *
      * <p>30초마다 실행되며, 최근 알림을 전송합니다.</p>
      */
     @Scheduled(fixedRate = 30000) // 30초마다
@@ -183,7 +184,7 @@ public class AdminNotificationsController {
 
         try {
             // 최근 알림 조회
-            List<NotificationDtos.NotificationResponse> newNotifications = 
+            List<NotificationDtos.NotificationResponse> newNotifications =
                 notificationService.getRecentNotifications(20);
 
             if (newNotifications.isEmpty()) {
@@ -204,8 +205,8 @@ public class AdminNotificationsController {
                     }
                 }
             }
-            
-            log.debug("알림 브로드캐스트 완료: {}개 알림을 {}개 연결에 전송", 
+
+            log.debug("알림 브로드캐스트 완료: {}개 알림을 {}개 연결에 전송",
                 newNotifications.size(), emitters.size());
         } catch (Exception e) {
             // DB 커넥션 풀 고갈 등으로 실패해도 다음 주기에서 재시도
@@ -215,7 +216,7 @@ public class AdminNotificationsController {
 
     /**
      * 테스트용 알림 생성 (개발/테스트 전용)
-     * 
+     *
      * <p>StrategyEvent를 생성하여 테스트 알림을 만듭니다.</p>
      */
     @PostMapping("/test")
@@ -245,10 +246,10 @@ public class AdminNotificationsController {
         // StrategyEvent 생성 (StrategyState.recordEvent를 통해 이벤트 기록)
         Map<String, Object> oldStrategy = new HashMap<>();
         oldStrategy.put("reason", "OLD_REASON");
-        
+
         Map<String, Object> newStrategy = new HashMap<>();
         // 메시지를 reason으로 사용
-        String reason = type.equals("warning") ? "LATENCY_WARNING" : 
+        String reason = type.equals("warning") ? "LATENCY_WARNING" :
                        type.equals("error") ? "ERROR_OCCURRED" : message;
         newStrategy.put("reason", reason);
 
@@ -261,7 +262,7 @@ public class AdminNotificationsController {
         }
 
         // NotificationService를 통해 알림 변환
-        NotificationDtos.NotificationResponse notification = 
+        NotificationDtos.NotificationResponse notification =
             new NotificationDtos.NotificationResponse(
                 "test-" + System.currentTimeMillis(),
                 LocalDateTime.now().toString(),
@@ -284,6 +285,79 @@ public class AdminNotificationsController {
         }
 
         return ResponseEntity.ok(notification);
+    }
+
+    /**
+     * 시연용 더미 알림 시드(3종) 생성 (데모/시연 영상용)
+     *
+     * <p>Normal → Warning → Critical 더미 알림을 SSE로 즉시 전송합니다.</p>
+     */
+    @PostMapping("/demo/seed")
+    @Operation(
+        summary = "시연용 더미 알림 시드(3종) 생성",
+        description = "Normal → Warning → Critical 더미 알림을 SSE로 즉시 전송합니다. (데모/시연 영상용)"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "성공"),
+        @ApiResponse(responseCode = "401", description = "인증 실패"),
+        @ApiResponse(responseCode = "403", description = "권한 없음")
+    })
+    public ResponseEntity<Map<String, Object>> seedDemoNotifications(
+        @Parameter(description = "도메인", example = "AI")
+        @RequestParam(value = "domain", required = false, defaultValue = "AI") String domain
+    ) {
+        NotificationDtos.NotificationResponse n1 =
+            new NotificationDtos.NotificationResponse(
+                "demo-normal-" + System.currentTimeMillis(),
+                LocalDateTime.now().toString(),
+                "info",
+                "🟢 AI System: Normal\nLLM: EXAONE\nRAG: Milvus\nRPS: 43 / 50",
+                null
+            );
+
+        NotificationDtos.NotificationResponse n2 =
+            new NotificationDtos.NotificationResponse(
+                "demo-warning-" + (System.currentTimeMillis() + 1),
+                LocalDateTime.now().toString(),
+                "warning",
+                "🟡 AI System: Degraded\nLatency high\nRetrying RAG…",
+                null
+            );
+
+        NotificationDtos.NotificationResponse n3 =
+            new NotificationDtos.NotificationResponse(
+                "demo-critical-" + (System.currentTimeMillis() + 2),
+                LocalDateTime.now().toString(),
+                "error",
+                "🔴 AI System: Safe Mode\n\nReason: Infrastructure failure\nAction Taken:\n✔ RAG switched to RAGFlow\n✔ LLM switched to OpenAI\n✔ Traffic throttled\n\nUser experience protected.",
+                null
+            );
+
+        broadcastNotification(n1);
+        broadcastNotification(n2);
+        broadcastNotification(n3);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("domain", domain);
+        result.put("seeded", 3);
+        result.put("sentToEmitters", emitters.size());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * NotificationResponse를 모든 SSE 연결에 브로드캐스트합니다.
+     */
+    private void broadcastNotification(NotificationDtos.NotificationResponse notification) {
+        try {
+            String jsonData = objectMapper.writeValueAsString(notification);
+            for (SseEmitter emitter : emitters) {
+                safeSend(emitter, SseEmitter.event()
+                    .name("notification")
+                    .data(jsonData));
+            }
+        } catch (Exception e) {
+            log.warn("Demo notification broadcast failed: {}", e.getMessage());
+        }
     }
 
     /**
@@ -317,4 +391,3 @@ public class AdminNotificationsController {
         }
     }
 }
-
