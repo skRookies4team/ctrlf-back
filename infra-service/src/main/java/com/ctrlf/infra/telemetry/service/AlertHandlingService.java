@@ -14,8 +14,9 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class AlertHandlingService {
 
-    private final AlertEventRepository repository;
+    private final AlertEventRepository alertEventRepository;
     private final ObjectMapper objectMapper;
+    private final StrategyEngine strategyEngine;
 
     @Transactional
     public void handle(AlertEvent event) {
@@ -27,9 +28,14 @@ public class AlertHandlingService {
             .status(event.status())
             .title(event.title())
             .receivedAt(Instant.now())
-            .payload(objectMapper.valueToTree(event.rawPayload()))   // 🔥 Map → JsonNode 변환
+            .payload(objectMapper.valueToTree(event.rawPayload()))   // 🔥 핵심
             .build();
 
-        repository.save(entity);
+        AlertEventEntity saved = alertEventRepository.save(entity);
+
+        // 🚨 CRITICAL → 자동 운영 제어
+        if ("critical".equalsIgnoreCase(saved.getSeverity())) {
+            strategyEngine.onCritical(saved);
+        }
     }
 }
